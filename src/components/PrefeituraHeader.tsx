@@ -1,0 +1,35 @@
+import { SidebarTrigger } from "@/components/ui/sidebar";
+import { Button } from "@/components/ui/button";
+import { Bell, Settings, User } from "lucide-react";
+
+export const PrefeituraHeader = () => {
+  return (
+    <header className="sticky top-0 z-50 w-full border-b bg-white shadow-sm">
+      <div className="flex h-16 items-center px-6">
+        <SidebarTrigger className="mr-4" />
+        
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-prefeitura-primary rounded-md flex items-center justify-center">
+            <span className="text-white font-bold text-sm">P</span>
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-prefeitura-primary">PNAB</h1>
+            <p className="text-xs text-prefeitura-muted">Painel Administrativo</p>
+          </div>
+        </div>
+
+        <div className="ml-auto flex items-center gap-2">
+          <Button variant="ghost" size="icon" className="text-prefeitura-muted hover:text-prefeitura-primary">
+            <Bell className="h-5 w-5" />
+          </Button>
+          <Button variant="ghost" size="icon" className="text-prefeitura-muted hover:text-prefeitura-primary">
+            <Settings className="h-5 w-5" />
+          </Button>
+          <Button variant="ghost" size="icon" className="text-prefeitura-muted hover:text-prefeitura-primary">
+            <User className="h-5 w-5" />
+          </Button>
+        </div>
+      </div>
+    </header>
+  );
+};
