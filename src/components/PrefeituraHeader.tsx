@@ -1,8 +1,10 @@
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { Bell, Settings, User } from "lucide-react";
+import { Bell, Settings, User, LogOut } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 export const PrefeituraHeader = () => {
+  const { signOut } = useAuth();
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-white shadow-sm">
       <div className="flex h-16 items-center px-6">
@@ -27,6 +29,14 @@ export const PrefeituraHeader = () => {
           </Button>
           <Button variant="ghost" size="icon" className="text-prefeitura-muted hover:text-prefeitura-primary">
             <User className="h-5 w-5" />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={signOut}
+            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+          >
+            <LogOut className="h-5 w-5" />
           </Button>
         </div>
       </div>

@@ -15,6 +15,7 @@ import {
   ChevronDown,
   ChevronRight,
 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 import {
   Sidebar,
   SidebarContent,
@@ -42,6 +43,7 @@ const otherItems = [
 ];
 
 export const DashboardSidebar = () => {
+  const { signOut } = useAuth();
   const { open } = useSidebar();
   const navigate = useNavigate();
   const [minhaContaOpen, setMinhaContaOpen] = useState(true);
@@ -106,7 +108,10 @@ export const DashboardSidebar = () => {
               ))}
               
               <SidebarMenuItem>
-                <SidebarMenuButton className="text-red-600 hover:text-red-700 hover:bg-red-50">
+                <SidebarMenuButton 
+                  onClick={signOut}
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                >
                   <LogOut className="h-4 w-4" />
                   {open && <span>Sair</span>}
                 </SidebarMenuButton>

@@ -11,6 +11,7 @@ import {
   Home
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 import {
   Sidebar,
   SidebarContent,
@@ -64,6 +65,7 @@ const menuItems = [
 export const PrefeituraSidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { signOut } = useAuth();
   const { state } = useSidebar();
 
   const handleNavigation = (url: string) => {
@@ -104,7 +106,7 @@ export const PrefeituraSidebar = () => {
 
         <div className="mt-auto p-4">
           <SidebarMenuButton
-            onClick={() => navigate('/')}
+            onClick={signOut}
             className="flex items-center gap-3 px-3 py-2 text-destructive hover:bg-destructive/10 rounded-lg cursor-pointer transition-colors"
           >
             <LogOut className="h-5 w-5" />

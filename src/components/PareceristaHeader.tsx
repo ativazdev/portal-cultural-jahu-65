@@ -1,8 +1,10 @@
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { User, LogOut } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 export const PareceristaHeader = () => {
+  const { signOut } = useAuth();
   return (
     <header className="h-16 border-b bg-white flex items-center justify-between px-4">
       <div className="flex items-center gap-4">
@@ -22,7 +24,12 @@ export const PareceristaHeader = () => {
           <User className="w-4 h-4 text-gray-600" />
           <span className="text-sm text-gray-700">Olá, Parecerista</span>
         </div>
-        <Button variant="ghost" size="sm">
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={signOut}
+          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+        >
           <LogOut className="w-4 h-4" />
         </Button>
       </div>

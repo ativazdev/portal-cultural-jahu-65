@@ -8,6 +8,7 @@ import {
   HelpCircle,
   LogOut,
 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 import {
   Sidebar,
   SidebarContent,
@@ -28,6 +29,7 @@ const menuItems = [
 ];
 
 export const PareceristaSidebar = () => {
+  const { signOut } = useAuth();
   const { open } = useSidebar();
   const navigate = useNavigate();
 
@@ -47,7 +49,10 @@ export const PareceristaSidebar = () => {
               ))}
               
               <SidebarMenuItem>
-                <SidebarMenuButton className="text-red-600 hover:text-red-700 hover:bg-red-50">
+                <SidebarMenuButton 
+                  onClick={signOut}
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                >
                   <LogOut className="h-4 w-4" />
                   {open && <span>Sair</span>}
                 </SidebarMenuButton>
