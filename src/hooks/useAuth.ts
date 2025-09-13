@@ -22,18 +22,23 @@ export const useAuth = () => {
   const { toast } = useToast();
 
   useEffect(() => {
+    console.log("useAuth: Setting up auth listener");
+    
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        console.log("useAuth: Auth state changed", event, !!session);
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
+          console.log("useAuth: User found, fetching profile");
           // Fetch user profile
           setTimeout(() => {
             fetchProfile(session.user.id);
           }, 0);
         } else {
+          console.log("useAuth: No user, clearing profile");
           setProfile(null);
         }
         setLoading(false);
@@ -42,11 +47,15 @@ export const useAuth = () => {
 
     // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log("useAuth: Initial session check", !!session);
       setSession(session);
       setUser(session?.user ?? null);
       
       if (session?.user) {
+        console.log("useAuth: Initial user found, fetching profile");
         fetchProfile(session.user.id);
+      } else {
+        console.log("useAuth: No initial session");
       }
       setLoading(false);
     });
@@ -56,13 +65,18 @@ export const useAuth = () => {
 
   const fetchProfile = async (userId: string) => {
     try {
+      console.log("useAuth: Fetching profile for user", userId);
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
         .eq("id", userId)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("useAuth: Profile fetch error", error);
+        throw error;
+      }
+      console.log("useAuth: Profile fetched successfully", data);
       setProfile(data);
     } catch (error) {
       console.error("Error fetching profile:", error);

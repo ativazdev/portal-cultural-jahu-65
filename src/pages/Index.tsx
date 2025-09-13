@@ -12,7 +12,9 @@ const Index = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    console.log("Index: useEffect triggered", { loading, user: !!user, profile: !!profile });
     if (!loading && user && profile) {
+      console.log("Index: Navigating to dashboard", profile.user_type);
       navigate(getDashboardRoute(profile.user_type));
     }
   }, [user, profile, loading, navigate, getDashboardRoute]);
