@@ -32,10 +32,7 @@ const PareceristaLoginForm = () => {
           setFullName("");
         }
       } else {
-        const { error } = await signIn(email, password);
-        if (!error && profile) {
-          navigate(getDashboardRoute(profile.user_type));
-        }
+        await signIn(email, password);
       }
     } finally {
       setIsLoading(false);
