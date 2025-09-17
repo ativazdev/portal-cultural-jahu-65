@@ -107,19 +107,7 @@ const Comunicacao = () => {
         <div className="flex-1 flex flex-col">
           <DashboardHeader />
           <main className="flex-1 p-6 space-y-6">
-            {/* Breadcrumb */}
-            <div className="flex items-center gap-2">
-              <Breadcrumb>
-                <BreadcrumbList>
-                  <BreadcrumbItem>
-                    <BreadcrumbLink href="/dashboard" className="flex items-center gap-1 text-blue-600 hover:text-blue-800">
-                      <ChevronLeft className="h-4 w-4" />
-                      Voltar para página anterior
-                    </BreadcrumbLink>
-                  </BreadcrumbItem>
-                </BreadcrumbList>
-              </Breadcrumb>
-            </div>
+           
 
             {/* Título Principal */}
             <div className="text-center">

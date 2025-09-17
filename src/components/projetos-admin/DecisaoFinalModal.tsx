@@ -115,7 +115,7 @@ export const DecisaoFinalModal = ({
             </div>
           </div>
 
-          {/* Botões de Decisão */}
+          {/* Botões de Decisão 
           <div>
             <h4 className="font-semibold mb-3">Sua Decisão</h4>
             <div className="grid grid-cols-2 gap-4">
@@ -138,7 +138,7 @@ export const DecisaoFinalModal = ({
             </div>
           </div>
 
-          {/* Justificativa */}
+           Justificativa 
           <div>
             <label className="text-sm font-medium">Justificativa da Decisão *</label>
             <Textarea
@@ -148,20 +148,14 @@ export const DecisaoFinalModal = ({
               className="mt-2"
               rows={4}
             />
-          </div>
+          </div>*/}
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={handleFechar}>
-            Cancelar
+            Fechar
           </Button>
-          <Button 
-            onClick={handleConfirmar}
-            disabled={!decisao || !justificativa.trim()}
-            className="bg-prefeitura-primary hover:bg-prefeitura-primary/90"
-          >
-            Confirmar Decisão
-          </Button>
+          
         </DialogFooter>
       </DialogContent>
     </Dialog>

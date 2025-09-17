@@ -491,7 +491,7 @@ export const ComunicacoesAdminMain = () => {
                                   )}
                                   {mensagem.status === "Respondida" && (
                                     <Button variant="outline" size="sm" onClick={() => handleMarcarResolvida(mensagem.id)}>
-                                      <X className="h-4 w-4" />
+                                      <CheckCircle className="h-4 w-4" />
                                     </Button>
                                   )}
                                 </div>
@@ -748,6 +748,7 @@ export const ComunicacoesAdminMain = () => {
 
                       {/* Botões de Ação */}
                       <div className="flex justify-end gap-3 pt-4 border-t">
+                         {/* Botões de Responder 
                         {selectedMessage.status === "Pendente" && (
                           <Button onClick={() => {
                             setIsViewModalOpen(false);
@@ -756,7 +757,7 @@ export const ComunicacoesAdminMain = () => {
                             <Send className="h-4 w-4 mr-2" />
                             Responder
                           </Button>
-                        )}
+                        )}*/}
                         
                         {selectedMessage.status === "Respondida" && (
                           <Button 

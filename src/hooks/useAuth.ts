@@ -15,149 +15,73 @@ export interface UserProfile {
 }
 
 export const useAuth = () => {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
+  // Mock user data - sistema sem autenticação
+  const mockUser = {
+    id: "mock-user-id",
+    email: "demo@sistema.com",
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    aud: "authenticated",
+    role: "authenticated"
+  } as User;
+
+  const mockSession = {
+    user: mockUser,
+    access_token: "mock-token",
+    expires_at: Date.now() + 86400000, // 24 horas
+    refresh_token: "mock-refresh-token",
+    token_type: "bearer"
+  } as Session;
+
+  const [user, setUser] = useState<User | null>(mockUser);
+  const [session, setSession] = useState<Session | null>(mockSession);
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // Sem loading pois não há autenticação real
   const { toast } = useToast();
 
   useEffect(() => {
-    console.log("useAuth: Setting up auth listener");
-    
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        console.log("useAuth: Auth state changed", event, !!session);
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          console.log("useAuth: User found, fetching profile");
-          // Fetch user profile
-          setTimeout(() => {
-            fetchProfile(session.user.id);
-          }, 0);
-        } else {
-          console.log("useAuth: No user, clearing profile");
-          setProfile(null);
-        }
-        setLoading(false);
-      }
-    );
-
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log("useAuth: Initial session check", !!session);
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        console.log("useAuth: Initial user found, fetching profile");
-        fetchProfile(session.user.id);
-      } else {
-        console.log("useAuth: No initial session");
-      }
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
+    // Sistema sem autenticação - sempre define um perfil padrão
+    setLoading(false);
   }, []);
 
-  const fetchProfile = async (userId: string) => {
-    try {
-      console.log("useAuth: Fetching profile for user", userId);
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", userId)
-        .single();
-
-      if (error) {
-        console.error("useAuth: Profile fetch error", error);
-        throw error;
-      }
-      console.log("useAuth: Profile fetched successfully", data);
-      setProfile(data);
-    } catch (error) {
-      console.error("Error fetching profile:", error);
-    }
-  };
-
+  // Funções simplificadas para sistema sem autenticação
   const signUp = async (email: string, password: string, userType: UserType, fullName?: string) => {
-    try {
-      const redirectUrl = `${window.location.origin}/`;
-      
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: redirectUrl,
-          data: {
-            user_type: userType,
-            full_name: fullName,
-          },
-        },
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: "Cadastro realizado com sucesso!",
-        description: "Verifique seu email para confirmar a conta.",
-      });
-
-      return { error: null };
-    } catch (error: any) {
-      toast({
-        title: "Erro no cadastro",
-        description: error.message,
-        variant: "destructive",
-      });
-      return { error };
-    }
+    // Simula sucesso no cadastro
+    toast({
+      title: "Acesso liberado!",
+      description: "Redirecionando para o sistema...",
+    });
+    return { error: null };
   };
 
   const signIn = async (email: string, password: string) => {
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: "Login realizado com sucesso!",
-        description: "Bem-vindo de volta!",
-      });
-
-      return { error: null };
-    } catch (error: any) {
-      toast({
-        title: "Erro no login",
-        description: error.message,
-        variant: "destructive",
-      });
-      return { error };
-    }
+    // Simula sucesso no login
+    toast({
+      title: "Acesso liberado!",
+      description: "Redirecionando para o sistema...",
+    });
+    return { error: null };
   };
 
   const signOut = async () => {
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      
-      toast({
-        title: "Logout realizado com sucesso!",
-        description: "Até mais!",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Erro no logout",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
+    // Simula logout
+    toast({
+      title: "Logout realizado!",
+      description: "Voltando à tela inicial...",
+    });
+  };
+
+  // Define um perfil padrão baseado no tipo de usuário selecionado
+  const setMockProfile = (userType: UserType) => {
+    const mockProfile: UserProfile = {
+      id: "mock-user-id",
+      user_type: userType,
+      email: "demo@sistema.com",
+      full_name: `Usuário Demo ${userType}`,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    setProfile(mockProfile);
   };
 
   const getDashboardRoute = (userType: UserType) => {
@@ -182,5 +106,6 @@ export const useAuth = () => {
     signIn,
     signOut,
     getDashboardRoute,
+    setMockProfile,
   };
 };

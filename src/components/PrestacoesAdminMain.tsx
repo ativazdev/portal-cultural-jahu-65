@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,6 +50,7 @@ interface StatusCard {
 
 export const PrestacoesAdminMain = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("todos");
   const [prazoFilter, setPrazoFilter] = useState("todos");
@@ -56,6 +58,7 @@ export const PrestacoesAdminMain = () => {
   const [selectedPrestacao, setSelectedPrestacao] = useState<Prestacao | null>(null);
   const [isAnaliseModalOpen, setIsAnaliseModalOpen] = useState(false);
   const [isCorrecoesModalOpen, setIsCorrecoesModalOpen] = useState(false);
+  const [isOpenBankingModalOpen, setIsOpenBankingModalOpen] = useState(false);
 
   const statusCards: StatusCard[] = [
     {
@@ -205,6 +208,101 @@ export const PrestacoesAdminMain = () => {
     setIsCorrecoesModalOpen(true);
   };
 
+  // Novas funções para ações dos botões
+  const handleAprovarPrestacao = (prestacao: Prestacao) => {
+    toast({
+      title: "Prestação aprovada!",
+      description: `A prestação do projeto "${prestacao.projeto}" foi aprovada com sucesso.`,
+    });
+  };
+
+  const handleOpenBanking = (prestacao: Prestacao) => {
+    setSelectedPrestacao(prestacao);
+    setIsOpenBankingModalOpen(true);
+  };
+
+  // Ações em lote
+  const handleAprovarSelecionadas = () => {
+    toast({
+      title: `${selectedPrestacoes.length} prestações aprovadas!`,
+      description: "As prestações selecionadas foram aprovadas com sucesso.",
+    });
+    setSelectedPrestacoes([]);
+  };
+
+  const handleMarcarEmAnalise = () => {
+    toast({
+      title: `${selectedPrestacoes.length} prestações em análise!`,
+      description: "As prestações selecionadas foram marcadas como em análise.",
+    });
+    setSelectedPrestacoes([]);
+  };
+
+  const handleExportarSelecionadas = () => {
+    toast({
+      title: "Exportação iniciada!",
+      description: `Exportando ${selectedPrestacoes.length} prestações selecionadas.`,
+    });
+  };
+
+  // Ações dos relatórios
+  const handleRelatorioConformidade = () => {
+    toast({
+      title: "Relatório de Conformidade",
+      description: "Gerando relatório de conformidade das prestações...",
+    });
+  };
+
+  const handleExportarPrestacoes = () => {
+    toast({
+      title: "Exportação iniciada!",
+      description: "Exportando todas as prestações de contas...",
+    });
+  };
+
+  const handleRelatorioOpenBanking = () => {
+    navigate("/openbanking-admin");
+  };
+
+  // Ações do modal de análise
+  const handleSalvarAnalise = () => {
+    toast({
+      title: "Análise salva!",
+      description: "A análise técnica foi salva com sucesso.",
+    });
+  };
+
+  const handleAprovarPrestacaoModal = () => {
+    toast({
+      title: "Prestação aprovada!",
+      description: `A prestação do projeto "${selectedPrestacao?.projeto}" foi aprovada.`,
+    });
+    setIsAnaliseModalOpen(false);
+  };
+
+  const handleSolicitarCorrecoes = () => {
+    setIsAnaliseModalOpen(false);
+    setIsCorrecoesModalOpen(true);
+  };
+
+  const handleRejeitarPrestacao = () => {
+    toast({
+      title: "Prestação rejeitada!",
+      description: `A prestação do projeto "${selectedPrestacao?.projeto}" foi rejeitada.`,
+      variant: "destructive",
+    });
+    setIsAnaliseModalOpen(false);
+  };
+
+  // Ação do modal de correções
+  const handleEnviarSolicitacao = () => {
+    toast({
+      title: "Solicitação enviada!",
+      description: "A solicitação de correções foi enviada ao proponente.",
+    });
+    setIsCorrecoesModalOpen(false);
+  };
+
   const filteredPrestacoes = prestacoes.filter(prestacao => {
     const matchesSearch = prestacao.projeto.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          prestacao.proponente.toLowerCase().includes(searchTerm.toLowerCase());
@@ -330,13 +428,25 @@ export const PrestacoesAdminMain = () => {
                 {selectedPrestacoes.length} selecionada(s)
               </span>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={handleAprovarSelecionadas}
+                >
                   Aprovar Selecionadas
                 </Button>
-                <Button variant="outline" size="sm">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={handleMarcarEmAnalise}
+                >
                   Marcar como Em Análise
                 </Button>
-                <Button variant="outline" size="sm">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={handleExportarSelecionadas}
+                >
                   <Download className="h-4 w-4 mr-2" />
                   Exportar Selecionadas
                 </Button>
@@ -423,7 +533,13 @@ export const PrestacoesAdminMain = () => {
                           <Eye className="h-4 w-4" />
                         </Button>
                         {prestacao.status === "Recebida" && (
-                          <Button variant="ghost" size="sm" className="text-green-600">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="text-green-600"
+                            onClick={() => handleAprovarPrestacao(prestacao)}
+                            title="Aprovar prestação"
+                          >
                             <CheckCircle className="h-4 w-4" />
                           </Button>
                         )}
@@ -432,10 +548,17 @@ export const PrestacoesAdminMain = () => {
                           size="sm"
                           className="text-orange-600"
                           onClick={() => handleCorrecoesClick(prestacao)}
+                          title="Solicitar correções"
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="sm" className="text-blue-600">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-blue-600"
+                          onClick={() => handleOpenBanking(prestacao)}
+                          title="Ver Open Banking"
+                        >
                           <Building2 className="h-4 w-4" />
                         </Button>
                       </div>
@@ -455,15 +578,24 @@ export const PrestacoesAdminMain = () => {
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-4">
-            <Button variant="outline">
+            <Button 
+              variant="outline"
+              onClick={handleRelatorioConformidade}
+            >
               <FileText className="h-4 w-4 mr-2" />
               Relatório de Conformidade
             </Button>
-            <Button variant="outline">
+            <Button 
+              variant="outline"
+              onClick={handleExportarPrestacoes}
+            >
               <Download className="h-4 w-4 mr-2" />
               Exportar Prestações
             </Button>
-            <Button variant="outline">
+            <Button 
+              variant="outline"
+              onClick={handleRelatorioOpenBanking}
+            >
               <Building2 className="h-4 w-4 mr-2" />
               Relatório Open Banking
             </Button>
@@ -609,16 +741,29 @@ export const PrestacoesAdminMain = () => {
             <Button variant="outline" onClick={() => setIsAnaliseModalOpen(false)}>
               Fechar
             </Button>
-            <Button variant="outline">
+            <Button 
+              variant="outline"
+              onClick={handleSalvarAnalise}
+            >
               Salvar Análise
             </Button>
-            <Button className="bg-green-600 hover:bg-green-700">
+            <Button 
+              className="bg-green-600 hover:bg-green-700"
+              onClick={handleAprovarPrestacaoModal}
+            >
               Aprovar Prestação
             </Button>
-            <Button variant="outline" className="border-orange-500 text-orange-600">
+            <Button 
+              variant="outline" 
+              className="border-orange-500 text-orange-600"
+              onClick={handleSolicitarCorrecoes}
+            >
               Solicitar Correções
             </Button>
-            <Button variant="destructive">
+            <Button 
+              variant="destructive"
+              onClick={handleRejeitarPrestacao}
+            >
               Rejeitar
             </Button>
           </DialogFooter>
@@ -694,8 +839,259 @@ export const PrestacoesAdminMain = () => {
             <Button variant="outline" onClick={() => setIsCorrecoesModalOpen(false)}>
               Cancelar
             </Button>
-            <Button className="bg-orange-600 hover:bg-orange-700">
+            <Button 
+              className="bg-orange-600 hover:bg-orange-700"
+              onClick={handleEnviarSolicitacao}
+            >
               Enviar Solicitação
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Open Banking */}
+      <Dialog open={isOpenBankingModalOpen} onOpenChange={setIsOpenBankingModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Extrato Open Banking - {selectedPrestacao?.projeto}</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-6">
+            {/* Informações do Projeto */}
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <Label className="font-medium text-sm text-gray-600">Projeto</Label>
+                  <p className="font-medium">{selectedPrestacao?.projeto}</p>
+                </div>
+                <div>
+                  <Label className="font-medium text-sm text-gray-600">Proponente</Label>
+                  <p className="font-medium">{selectedPrestacao?.proponente}</p>
+                </div>
+                <div>
+                  <Label className="font-medium text-sm text-gray-600">Valor do Projeto</Label>
+                  <p className="font-medium text-green-600">
+                    {selectedPrestacao && formatCurrency(selectedPrestacao.valor)}
+                  </p>
+                </div>
+                <div>
+                  <Label className="font-medium text-sm text-gray-600">Status Open Banking</Label>
+                  <div className="flex items-center gap-2">
+                    {selectedPrestacao && getOpenBankingIcon(selectedPrestacao.openBanking)}
+                    <span className="text-sm font-medium">
+                      {selectedPrestacao?.openBanking === "conforme" ? "Conforme" :
+                       selectedPrestacao?.openBanking === "alerta" ? "Com Alertas" :
+                       selectedPrestacao?.openBanking === "irregularidade" ? "Irregularidade" : "Não Monitorado"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Resumo Financeiro */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Card>
+                <CardContent className="p-4">
+                  <div className="text-center">
+                    <p className="text-sm text-gray-600">Valor Recebido</p>
+                    <p className="text-2xl font-bold text-green-600">
+                      {selectedPrestacao && formatCurrency(selectedPrestacao.valor)}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4">
+                  <div className="text-center">
+                    <p className="text-sm text-gray-600">Valor Gasto</p>
+                    <p className="text-2xl font-bold text-red-600">
+                      {selectedPrestacao && formatCurrency(selectedPrestacao.valor * 0.95)}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4">
+                  <div className="text-center">
+                    <p className="text-sm text-gray-600">Saldo Restante</p>
+                    <p className="text-2xl font-bold text-blue-600">
+                      {selectedPrestacao && formatCurrency(selectedPrestacao.valor * 0.05)}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Extrato de Movimentações */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Extrato de Movimentações</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border-l-4 border-green-500">
+                    <div>
+                      <p className="font-medium">Recebimento PNAB</p>
+                      <p className="text-sm text-gray-600">15/10/2024 - 14:30</p>
+                      <p className="text-xs text-gray-500">PIX - Prefeitura Municipal de Jaú</p>
+                    </div>
+                    <span className="text-lg font-bold text-green-600">
+                      + {selectedPrestacao && formatCurrency(selectedPrestacao.valor)}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg border-l-4 border-red-500">
+                    <div>
+                      <p className="font-medium">Pagamento - Equipamentos de Som</p>
+                      <p className="text-sm text-gray-600">18/10/2024 - 10:15</p>
+                      <p className="text-xs text-gray-500">TED - Som & Cia Equipamentos</p>
+                    </div>
+                    <span className="text-lg font-bold text-red-600">
+                      - {formatCurrency(8500)}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg border-l-4 border-red-500">
+                    <div>
+                      <p className="font-medium">Pagamento - Cachê Artistas</p>
+                      <p className="text-sm text-gray-600">20/10/2024 - 16:45</p>
+                      <p className="text-xs text-gray-500">PIX - Diversos</p>
+                    </div>
+                    <span className="text-lg font-bold text-red-600">
+                      - {formatCurrency(12000)}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg border-l-4 border-red-500">
+                    <div>
+                      <p className="font-medium">Pagamento - Material Gráfico</p>
+                      <p className="text-sm text-gray-600">22/10/2024 - 09:20</p>
+                      <p className="text-xs text-gray-500">DOC - Gráfica Rápida</p>
+                    </div>
+                    <span className="text-lg font-bold text-red-600">
+                      - {formatCurrency(2500)}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg border-l-4 border-red-500">
+                    <div>
+                      <p className="font-medium">Pagamento - Alimentação Equipe</p>
+                      <p className="text-sm text-gray-600">25/10/2024 - 12:30</p>
+                      <p className="text-xs text-gray-500">Cartão - Restaurante Central</p>
+                    </div>
+                    <span className="text-lg font-bold text-red-600">
+                      - {formatCurrency(1750)}
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Análise de Conformidade */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Análise de Conformidade</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {selectedPrestacao?.openBanking === "conforme" ? (
+                    <div className="p-4 bg-green-50 rounded-lg border-l-4 border-green-500">
+                      <div className="flex items-center gap-3">
+                        <span className="text-green-600 text-2xl">✅</span>
+                        <div>
+                          <h4 className="font-medium text-green-800">Movimentações Conformes</h4>
+                          <p className="text-sm text-green-700">
+                            Todos os gastos estão dentro das categorias permitidas pelo edital.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : selectedPrestacao?.openBanking === "alerta" ? (
+                    <div className="p-4 bg-yellow-50 rounded-lg border-l-4 border-yellow-500">
+                      <div className="flex items-center gap-3">
+                        <span className="text-yellow-600 text-2xl">⚠️</span>
+                        <div>
+                          <h4 className="font-medium text-yellow-800">Alertas Identificados</h4>
+                          <p className="text-sm text-yellow-700">
+                            Algumas movimentações precisam de verificação adicional.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-4 bg-red-50 rounded-lg border-l-4 border-red-500">
+                      <div className="flex items-center gap-3">
+                        <span className="text-red-600 text-2xl">❌</span>
+                        <div>
+                          <h4 className="font-medium text-red-800">Irregularidades Detectadas</h4>
+                          <p className="text-sm text-red-700">
+                            Foram identificadas movimentações que não estão em conformidade com o edital.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                    <div className="p-3 border rounded-lg">
+                      <h5 className="font-medium text-sm">Categorias Permitidas</h5>
+                      <div className="mt-2 space-y-1">
+                        <div className="flex justify-between text-sm">
+                          <span>Equipamentos</span>
+                          <span className="text-green-600">✓ Conforme</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span>Cachê Artistas</span>
+                          <span className="text-green-600">✓ Conforme</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span>Material Gráfico</span>
+                          <span className="text-green-600">✓ Conforme</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span>Alimentação</span>
+                          <span className="text-green-600">✓ Conforme</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-3 border rounded-lg">
+                      <h5 className="font-medium text-sm">Limites por Categoria</h5>
+                      <div className="mt-2 space-y-1">
+                        <div className="flex justify-between text-sm">
+                          <span>Equipamentos (40%)</span>
+                          <span className="text-blue-600">34% usado</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span>Cachê (50%)</span>
+                          <span className="text-blue-600">48% usado</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span>Material (10%)</span>
+                          <span className="text-blue-600">10% usado</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span>Alimentação (5%)</span>
+                          <span className="text-blue-600">7% usado</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setIsOpenBankingModalOpen(false)}>
+              Fechar
+            </Button>
+            <Button variant="outline">
+              <Download className="h-4 w-4 mr-2" />
+              Exportar Extrato
+            </Button>
+            <Button onClick={() => navigate("/openbanking-admin")}>
+              Ver Análise Completa
             </Button>
           </DialogFooter>
         </DialogContent>

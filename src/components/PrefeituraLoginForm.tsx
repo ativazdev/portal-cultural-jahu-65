@@ -15,7 +15,7 @@ const PrefeituraLoginForm = () => {
   const [isRegistering, setIsRegistering] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   
-  const { signIn, signUp, profile, getDashboardRoute } = useAuth();
+  const { signIn, signUp, setMockProfile, getDashboardRoute } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -23,17 +23,19 @@ const PrefeituraLoginForm = () => {
     setIsLoading(true);
 
     try {
+      // Define o perfil mock para prefeitura
+      setMockProfile("prefeitura");
+      
       if (isRegistering) {
-        const { error } = await signUp(email, password, "prefeitura", fullName);
-        if (!error) {
-          setIsRegistering(false);
-          setEmail("");
-          setPassword("");
-          setFullName("");
-        }
+        await signUp(email, password, "prefeitura", fullName);
       } else {
         await signIn(email, password);
       }
+      
+      // Redireciona diretamente para o dashboard da prefeitura
+      setTimeout(() => {
+        navigate(getDashboardRoute("prefeitura"));
+      }, 1000);
     } finally {
       setIsLoading(false);
     }
@@ -133,29 +135,7 @@ const PrefeituraLoginForm = () => {
             </a>
           )}
           
-          <div className="border-t border-muted pt-4">
-            <p className="text-sm text-muted-foreground mb-3">
-              {isRegistering ? "Já tem uma conta?" : "Não tem acesso?"}
-            </p>
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full border-prefeitura-secondary text-prefeitura-primary hover:bg-prefeitura-primary hover:text-prefeitura-primary-foreground"
-              onClick={() => setIsRegistering(!isRegistering)}
-            >
-              {isRegistering ? (
-                <>
-                  <Building2 className="w-4 h-4 mr-2" />
-                  Fazer Login
-                </>
-              ) : (
-                <>
-                  <UserPlus className="w-4 h-4 mr-2" />
-                  Criar Conta Institucional
-                </>
-              )}
-            </Button>
-          </div>
+          
         </div>
       </CardContent>
     </Card>

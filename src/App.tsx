@@ -31,6 +31,7 @@ import PlanilhaOrcamentaria from "./pages/PlanilhaOrcamentaria";
 import NotFound from "./pages/NotFound";
 import RelatoriosAdmin from "./pages/RelatoriosAdmin";
 import ComunicacoesAdmin from "./pages/ComunicacoesAdmin";
+import CadastroPareceristas from "./pages/CadastroPareceristas";
 
 const queryClient = new QueryClient();
 
@@ -52,6 +53,7 @@ const App = () => (
           <Route path="/openbanking-admin" element={<OpenBankingAdmin />} />
           <Route path="/relatorios-admin" element={<RelatoriosAdmin />} />
           <Route path="/comunicacoes-admin" element={<ComunicacoesAdmin />} />
+          <Route path="/cadastro-pareceristas" element={<CadastroPareceristas />} />
         <Route path="/projetos-avaliar" element={<ProjetosAvaliar />} />
         <Route path="/projetos-avaliados" element={<ProjetosAvaliados />} />
         <Route path="/avaliar-projeto/:id" element={<AvaliarProjeto />} />

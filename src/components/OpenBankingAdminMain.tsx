@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,6 +49,7 @@ interface StatusCard {
 
 export const OpenBankingAdminMain = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [periodoFilter, setPeriodoFilter] = useState("30");
   const [selectedConta, setSelectedConta] = useState<ContaMonitorada | null>(null);
@@ -194,6 +196,32 @@ export const OpenBankingAdminMain = () => {
   const handleExtratoClick = (conta: ContaMonitorada) => {
     setSelectedConta(conta);
     setIsExtratoModalOpen(true);
+    toast({
+      title: "Extrato carregado!",
+      description: `Extrato do projeto "${conta.projeto}" carregado com sucesso.`,
+    });
+  };
+
+  // Funções para botões de extração
+  const handleExtratoConsolidado = () => {
+    toast({
+      title: "Extrato Consolidado",
+      description: "Gerando extrato consolidado de todas as contas monitoradas...",
+    });
+  };
+
+  const handleRelatorioContas = () => {
+    toast({
+      title: "Relatório de Contas",
+      description: "Gerando relatório detalhado das contas bancárias...",
+    });
+  };
+
+  const handleExportarExtrato = () => {
+    toast({
+      title: "Exportação iniciada!",
+      description: `Exportando extrato do projeto "${selectedConta?.projeto}"...`,
+    });
   };
 
   const filteredContas = contasMonitoradas.filter(conta => {
@@ -366,11 +394,19 @@ export const OpenBankingAdminMain = () => {
           <CardTitle>Relatórios Open Banking</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <Button className="w-full" variant="outline">
+          <Button 
+            className="w-full" 
+            variant="outline"
+            onClick={handleExtratoConsolidado}
+          >
             <Download className="h-4 w-4 mr-2" />
             Extrato Consolidado
           </Button>
-          <Button className="w-full" variant="outline">
+          <Button 
+            className="w-full" 
+            variant="outline"
+            onClick={handleRelatorioContas}
+          >
             <Download className="h-4 w-4 mr-2" />
             Relatório de Contas
           </Button>
@@ -453,7 +489,11 @@ export const OpenBankingAdminMain = () => {
 
               {/* Botões de Ação */}
               <div className="flex gap-4 pt-4 border-t">
-                <Button className="flex-1" variant="outline">
+                <Button 
+                  className="flex-1" 
+                  variant="outline"
+                  onClick={handleExportarExtrato}
+                >
                   <Download className="h-4 w-4 mr-2" />
                   Exportar Extrato
                 </Button>

@@ -2,9 +2,16 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Bell, Settings, User, LogOut } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
 
 export const PrefeituraHeader = () => {
   const { signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate("/");
+  };
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-white shadow-sm">
       <div className="flex h-16 items-center px-6">
@@ -21,7 +28,7 @@ export const PrefeituraHeader = () => {
         </div>
 
         <div className="ml-auto flex items-center gap-2">
-          <Button variant="ghost" size="icon" className="text-prefeitura-muted hover:text-prefeitura-primary">
+          {/*<Button variant="ghost" size="icon" className="text-prefeitura-muted hover:text-prefeitura-primary">
             <Bell className="h-5 w-5" />
           </Button>
           <Button variant="ghost" size="icon" className="text-prefeitura-muted hover:text-prefeitura-primary">
@@ -29,11 +36,11 @@ export const PrefeituraHeader = () => {
           </Button>
           <Button variant="ghost" size="icon" className="text-prefeitura-muted hover:text-prefeitura-primary">
             <User className="h-5 w-5" />
-          </Button>
+          </Button>*/}
           <Button 
             variant="ghost" 
             size="icon" 
-            onClick={signOut}
+            onClick={handleLogout}
             className="text-red-600 hover:text-red-700 hover:bg-red-50"
           >
             <LogOut className="h-5 w-5" />

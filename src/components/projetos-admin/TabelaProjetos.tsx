@@ -133,14 +133,14 @@ export const TabelaProjetos = ({
                           >
                             <FileCheck className="h-4 w-4" />
                           </Button>
-                          <Button
+                          {/*<Button
                             variant="outline"
                             size="sm"
                             onClick={() => onAprovarRejeitar(projeto)}
                             className="text-green-600 hover:text-green-700"
                           >
                             <ThumbsUp className="h-4 w-4" />
-                          </Button>
+                          </Button>*/}
                         </>
                       )}
                     </div>

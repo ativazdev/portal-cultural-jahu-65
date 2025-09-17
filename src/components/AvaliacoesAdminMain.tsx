@@ -371,13 +371,13 @@ export const AvaliacoesAdminMain = () => {
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-4">
-                  <Button 
+                  {/* <Button 
                     onClick={() => setModalRankingAuto(true)}
                     className="bg-blue-600 hover:bg-blue-700 text-white"
                   >
                     <List className="h-4 w-4 mr-2" />
                     Gerar Ranking Automático
-                  </Button>
+                  </Button>*/}
                   
                   <Button 
                     onClick={() => setModalRelatorioClass(true)}

@@ -1,9 +1,9 @@
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { PrefeituraHeader } from "@/components/PrefeituraHeader";
 import { PrefeituraSidebar } from "@/components/PrefeituraSidebar";
-import { PrefeituraMain } from "@/components/PrefeituraMain";
+import { CadastroPareceristaMain } from "@/components/CadastroPareceristaMain";
 
-const DashboardPrefeitura = () => {
+const CadastroPareceristas = () => {
   // Sistema sem autenticação - acesso livre
   return (
     <SidebarProvider>
@@ -11,11 +11,11 @@ const DashboardPrefeitura = () => {
         <PrefeituraSidebar />
         <div className="flex-1 flex flex-col">
           <PrefeituraHeader />
-          <PrefeituraMain />
+          <CadastroPareceristaMain />
         </div>
       </div>
     </SidebarProvider>
   );
 };
 
-export default DashboardPrefeitura;
+export default CadastroPareceristas;

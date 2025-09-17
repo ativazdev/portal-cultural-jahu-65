@@ -12,20 +12,6 @@ const dashboardCards = [
     link: "/meus-projetos",
   },
   {
-    title: "Editais vigentes",
-    description: "Lista de editais disponíveis para inscrição",
-    icon: Calendar,
-    color: "bg-cultural-secondary",
-    link: null,
-  },
-  {
-    title: "Prestação de contas",
-    description: "Para projetos cadastrados até 14/04/2022",
-    icon: CreditCard,
-    color: "bg-cultural-accent",
-    link: "/prestacao-contas",
-  },
-  {
     title: "Pendências",
     description: "Suas pendências serão exibidas aqui",
     icon: AlertTriangle,

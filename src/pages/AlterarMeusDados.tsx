@@ -15,13 +15,7 @@ const AlterarMeusDados = () => {
         <div className="flex-1 flex flex-col">
           <DashboardHeader />
           <main className="flex-1 p-6">
-            {/* Breadcrumb */}
-            <div className="mb-4">
-              <Button variant="ghost" className="text-blue-600 hover:text-blue-800 p-0 h-auto">
-                <ArrowLeft className="h-4 w-4 mr-1" />
-                Voltar para a página anterior
-              </Button>
-            </div>
+            
 
             {/* Título */}
             <h1 className="text-2xl font-bold text-gray-900 mb-6">Alterar Meus Dados</h1>

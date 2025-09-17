@@ -15,7 +15,7 @@ const ProponenteLoginForm = () => {
   const [isRegistering, setIsRegistering] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   
-  const { signIn, signUp, profile, getDashboardRoute } = useAuth();
+  const { signIn, signUp, setMockProfile, getDashboardRoute } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -23,17 +23,19 @@ const ProponenteLoginForm = () => {
     setIsLoading(true);
 
     try {
+      // Define o perfil mock para proponente
+      setMockProfile("proponente");
+      
       if (isRegistering) {
-        const { error } = await signUp(email, password, "proponente", fullName);
-        if (!error) {
-          setIsRegistering(false);
-          setEmail("");
-          setPassword("");
-          setFullName("");
-        }
+        await signUp(email, password, "proponente", fullName);
       } else {
         await signIn(email, password);
       }
+      
+      // Redireciona diretamente para o dashboard do proponente
+      setTimeout(() => {
+        navigate(getDashboardRoute("proponente"));
+      }, 1000);
     } finally {
       setIsLoading(false);
     }

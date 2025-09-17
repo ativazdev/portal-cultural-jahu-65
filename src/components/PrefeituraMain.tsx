@@ -1,7 +1,11 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { 
   FileText, 
   Clock, 
@@ -16,9 +20,14 @@ import {
   Plus,
   BarChart3,
   Download,
-  Settings
+  Settings,
+  MessageSquare,
+  Send
 } from "lucide-react";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { DetalhesProjetoModal } from "@/components/projetos-admin/DetalhesProjetoModal";
+import { AtribuirPareceristaModal } from "@/components/projetos-admin/AtribuirPareceristaModal";
+import { useToast } from "@/hooks/use-toast";
 
 // Dados para os gráficos
 const categoriaData = [
@@ -40,11 +49,74 @@ const statusData = [
 
 // Dados para as tabelas
 const projetosRecentes = [
-  { id: 1, nome: "Festival de Música Popular", proponente: "João Silva", data: "15/11/2024", status: "avaliacao" },
-  { id: 2, nome: "Teatro na Praça", proponente: "Maria Santos", data: "14/11/2024", status: "aguardando" },
-  { id: 3, nome: "Oficina de Dança", proponente: "Pedro Costa", data: "13/11/2024", status: "aprovado" },
-  { id: 4, nome: "Arte Urbana", proponente: "Ana Oliveira", data: "12/11/2024", status: "execucao" },
-  { id: 5, nome: "Literatura na Escola", proponente: "Carlos Mendes", data: "11/11/2024", status: "rejeitado" },
+  { 
+    id: "1", 
+    nome: "Festival de Música Popular", 
+    proponente: "João Silva", 
+    data: "15/11/2024", 
+    status: "avaliacao",
+    categoria: "Música",
+    tipoProponente: "PF" as const,
+    valorSolicitado: 15000,
+    dataSubmissao: "2024-11-15",
+    descricao: "Festival de música popular com artistas locais"
+  },
+  { 
+    id: "2", 
+    nome: "Teatro na Praça", 
+    proponente: "Maria Santos", 
+    data: "14/11/2024", 
+    status: "aguardando",
+    categoria: "Teatro",
+    tipoProponente: "PF" as const,
+    valorSolicitado: 8500,
+    dataSubmissao: "2024-11-14",
+    descricao: "Apresentações teatrais em praças públicas"
+  },
+  { 
+    id: "3", 
+    nome: "Oficina de Dança", 
+    proponente: "Pedro Costa", 
+    data: "13/11/2024", 
+    status: "aprovado",
+    categoria: "Dança",
+    tipoProponente: "PF" as const,
+    valorSolicitado: 12000,
+    dataSubmissao: "2024-11-13",
+    descricao: "Oficinas de dança para jovens da comunidade"
+  },
+  { 
+    id: "4", 
+    nome: "Arte Urbana", 
+    proponente: "Ana Oliveira", 
+    data: "12/11/2024", 
+    status: "execucao",
+    categoria: "Artes Visuais",
+    tipoProponente: "PJ" as const,
+    valorSolicitado: 20000,
+    dataSubmissao: "2024-11-12",
+    descricao: "Projeto de arte urbana em muros da cidade"
+  },
+  { 
+    id: "5", 
+    nome: "Literatura na Escola", 
+    proponente: "Carlos Mendes", 
+    data: "11/11/2024", 
+    status: "rejeitado",
+    categoria: "Literatura",
+    tipoProponente: "PF" as const,
+    valorSolicitado: 5000,
+    dataSubmissao: "2024-11-11",
+    descricao: "Programa de incentivo à leitura nas escolas"
+  },
+];
+
+// Dados dos pareceristas
+const pareceristas = [
+  { id: "1", nome: "Dr. Ana Costa", especialidade: "Música", projetosEmAnalise: 3 },
+  { id: "2", nome: "Prof. João Santos", especialidade: "Teatro", projetosEmAnalise: 2 },
+  { id: "3", nome: "Dra. Maria Silva", especialidade: "Artes Visuais", projetosEmAnalise: 4 },
+  { id: "4", nome: "Prof. Pedro Lima", especialidade: "Dança", projetosEmAnalise: 1 },
 ];
 
 const alertas = [
@@ -72,6 +144,88 @@ const getPrioridadeColor = (prioridade: string) => {
 };
 
 export const PrefeituraMain = () => {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  
+  // Estados para modais
+  const [modalDetalhesAberto, setModalDetalhesAberto] = useState(false);
+  const [modalPareceristaAberto, setModalPareceristaAberto] = useState(false);
+  const [modalComunicacaoAberto, setModalComunicacaoAberto] = useState(false);
+  const [projetoSelecionado, setProjetoSelecionado] = useState<any>(null);
+  const [alertaSelecionado, setAlertaSelecionado] = useState<any>(null);
+  const [mensagemComunicacao, setMensagemComunicacao] = useState("");
+
+  // Funções para ações dos projetos
+  const handleVerDetalhes = (projeto: any) => {
+    setProjetoSelecionado(projeto);
+    setModalDetalhesAberto(true);
+  };
+
+  const handleAtribuirParecerista = (projeto: any) => {
+    setProjetoSelecionado(projeto);
+    setModalPareceristaAberto(true);
+  };
+
+  const handleConfirmarAtribuicao = (projetoId: string, pareceristaId: string) => {
+    toast({
+      title: "Parecerista atribuído!",
+      description: "O projeto foi atribuído ao parecerista com sucesso.",
+    });
+    setModalPareceristaAberto(false);
+  };
+
+  // Funções para alertas e comunicações
+  const handleResolverAlerta = (alerta: any) => {
+    if (alerta.tipo === "avaliacao") {
+      navigate("/projetos-admin");
+    } else if (alerta.tipo === "prestacao") {
+      navigate("/prestacoes-admin");
+    } else if (alerta.tipo === "banking") {
+      navigate("/openbanking-admin");
+    } else {
+      setAlertaSelecionado(alerta);
+      setModalComunicacaoAberto(true);
+    }
+  };
+
+  const handleEnviarComunicacao = () => {
+    toast({
+      title: "Comunicação enviada!",
+      description: "A mensagem foi enviada com sucesso.",
+    });
+    setModalComunicacaoAberto(false);
+    setMensagemComunicacao("");
+  };
+
+  // Funções para ações rápidas
+  const handleNovoEdital = () => {
+    toast({
+      title: "Funcionalidade em desenvolvimento",
+      description: "A criação de novos editais estará disponível em breve.",
+    });
+  };
+
+  const handleRelatorioExecutivo = () => {
+    navigate("/relatorios-admin");
+  };
+
+  const handleExportarDados = () => {
+    toast({
+      title: "Exportação iniciada",
+      description: "Os dados estão sendo preparados para download.",
+    });
+  };
+
+  const handleAtribuirPareceristas = () => {
+    navigate("/projetos-admin");
+  };
+
+  const handleConfiguracoes = () => {
+    toast({
+      title: "Configurações",
+      description: "Painel de configurações em desenvolvimento.",
+    });
+  };
   return (
     <main className="flex-1 p-6 space-y-8">
       {/* Cards de Métricas */}
@@ -222,10 +376,21 @@ export const PrefeituraMain = () => {
                     <TableCell>{getStatusBadge(projeto.status)}</TableCell>
                     <TableCell>
                       <div className="flex gap-1">
-                        <Button size="sm" variant="ghost">
+                        <Button 
+                          size="sm" 
+                          variant="ghost"
+                          onClick={() => handleVerDetalhes(projeto)}
+                          title="Ver detalhes"
+                        >
                           <Eye className="h-3 w-3" />
                         </Button>
-                        <Button size="sm" variant="ghost">
+                        <Button 
+                          size="sm" 
+                          variant="ghost"
+                          onClick={() => handleAtribuirParecerista(projeto)}
+                          title="Atribuir parecerista"
+                          disabled={projeto.status === "aprovado" || projeto.status === "rejeitado"}
+                        >
                           <UserPlus className="h-3 w-3" />
                         </Button>
                       </div>
@@ -254,7 +419,11 @@ export const PrefeituraMain = () => {
                       {alerta.tipo}
                     </Badge>
                   </div>
-                  <Button size="sm" variant="outline">
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => handleResolverAlerta(alerta)}
+                  >
                     Resolver
                   </Button>
                 </div>
@@ -264,7 +433,7 @@ export const PrefeituraMain = () => {
         </Card>
       </div>
 
-      {/* Ações Rápidas */}
+      {/* Ações Rápidas 
       <Card>
         <CardHeader>
           <CardTitle>Ações Rápidas</CardTitle>
@@ -272,29 +441,98 @@ export const PrefeituraMain = () => {
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-4">
-            <Button className="bg-prefeitura-primary hover:bg-prefeitura-primary/90">
+            <Button 
+              className="bg-prefeitura-primary hover:bg-prefeitura-primary/90"
+              onClick={handleNovoEdital}
+            >
               <Plus className="h-4 w-4 mr-2" />
               Novo Edital
             </Button>
-            <Button variant="outline" className="border-green-600 text-green-600 hover:bg-green-50">
+            <Button 
+              variant="outline" 
+              className="border-green-600 text-green-600 hover:bg-green-50"
+              onClick={handleRelatorioExecutivo}
+            >
               <BarChart3 className="h-4 w-4 mr-2" />
               Relatório Executivo
             </Button>
-            <Button variant="outline">
+            <Button 
+              variant="outline"
+              onClick={handleExportarDados}
+            >
               <Download className="h-4 w-4 mr-2" />
               Exportar Dados
             </Button>
-            <Button variant="outline" className="border-orange-600 text-orange-600 hover:bg-orange-50">
+            <Button 
+              variant="outline" 
+              className="border-orange-600 text-orange-600 hover:bg-orange-50"
+              onClick={handleAtribuirPareceristas}
+            >
               <UserPlus className="h-4 w-4 mr-2" />
               Atribuir Pareceristas
             </Button>
-            <Button variant="outline">
+            <Button 
+              variant="outline"
+              onClick={handleConfiguracoes}
+            >
               <Settings className="h-4 w-4 mr-2" />
               Configurações
             </Button>
           </div>
         </CardContent>
       </Card>
+
+      {/* Modais */}
+      <DetalhesProjetoModal
+        aberto={modalDetalhesAberto}
+        projeto={projetoSelecionado}
+        onFechar={() => setModalDetalhesAberto(false)}
+      />
+
+      <AtribuirPareceristaModal
+        aberto={modalPareceristaAberto}
+        projeto={projetoSelecionado}
+        pareceristas={pareceristas}
+        onFechar={() => setModalPareceristaAberto(false)}
+        onConfirmar={handleConfirmarAtribuicao}
+      />
+
+      {/* Modal de Comunicação */}
+      <Dialog open={modalComunicacaoAberto} onOpenChange={setModalComunicacaoAberto}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Enviar Comunicação</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm text-muted-foreground mb-2">
+                Sobre: {alertaSelecionado?.mensagem}
+              </p>
+            </div>
+            <Textarea
+              placeholder="Digite sua mensagem..."
+              value={mensagemComunicacao}
+              onChange={(e) => setMensagemComunicacao(e.target.value)}
+              className="min-h-[100px]"
+            />
+            <div className="flex gap-2 justify-end">
+              <Button 
+                variant="outline" 
+                onClick={() => setModalComunicacaoAberto(false)}
+              >
+                Cancelar
+              </Button>
+              <Button 
+                onClick={handleEnviarComunicacao}
+                disabled={!mensagemComunicacao.trim()}
+              >
+                <Send className="h-4 w-4 mr-2" />
+                Enviar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </main>
   );
 };

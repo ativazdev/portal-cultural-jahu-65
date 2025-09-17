@@ -2,9 +2,16 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { User, LogOut } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
 
 export const PareceristaHeader = () => {
   const { signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate("/");
+  };
   return (
     <header className="h-16 border-b bg-white flex items-center justify-between px-4">
       <div className="flex items-center gap-4">
@@ -27,7 +34,7 @@ export const PareceristaHeader = () => {
         <Button 
           variant="ghost" 
           size="sm" 
-          onClick={signOut}
+          onClick={handleLogout}
           className="text-red-600 hover:text-red-700 hover:bg-red-50"
         >
           <LogOut className="w-4 h-4" />

@@ -49,6 +49,11 @@ export const DashboardSidebar = () => {
   const [minhaContaOpen, setMinhaContaOpen] = useState(true);
   const [ajudaOpen, setAjudaOpen] = useState(false);
 
+  const handleLogout = async () => {
+    await signOut();
+    navigate("/");
+  };
+
   return (
     <Sidebar className={open ? "w-64" : "w-14"} collapsible="icon">
       <SidebarContent className="bg-white border-r">
@@ -109,7 +114,7 @@ export const DashboardSidebar = () => {
               
               <SidebarMenuItem>
                 <SidebarMenuButton 
-                  onClick={signOut}
+                  onClick={handleLogout}
                   className="text-red-600 hover:text-red-700 hover:bg-red-50"
                 >
                   <LogOut className="h-4 w-4" />

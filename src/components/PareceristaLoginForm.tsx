@@ -15,7 +15,7 @@ const PareceristaLoginForm = () => {
   const [isRegistering, setIsRegistering] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   
-  const { signIn, signUp, profile, getDashboardRoute } = useAuth();
+  const { signIn, signUp, setMockProfile, getDashboardRoute } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -23,17 +23,19 @@ const PareceristaLoginForm = () => {
     setIsLoading(true);
 
     try {
+      // Define o perfil mock para parecerista
+      setMockProfile("parecerista");
+      
       if (isRegistering) {
-        const { error } = await signUp(email, password, "parecerista", fullName);
-        if (!error) {
-          setIsRegistering(false);
-          setEmail("");
-          setPassword("");
-          setFullName("");
-        }
+        await signUp(email, password, "parecerista", fullName);
       } else {
         await signIn(email, password);
       }
+      
+      // Redireciona diretamente para o dashboard do parecerista
+      setTimeout(() => {
+        navigate(getDashboardRoute("parecerista"));
+      }, 1000);
     } finally {
       setIsLoading(false);
     }
@@ -138,29 +140,7 @@ const PareceristaLoginForm = () => {
             </a>
           )}
           
-          <div className="border-t border-muted pt-4">
-            <p className="text-sm text-parecerista-muted mb-3">
-              {isRegistering ? "Já tem uma conta?" : "Não tem cadastro?"}
-            </p>
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full border-parecerista-secondary text-parecerista-primary hover:bg-parecerista-primary hover:text-parecerista-primary-foreground"
-              onClick={() => setIsRegistering(!isRegistering)}
-            >
-              {isRegistering ? (
-                <>
-                  <Search className="w-4 h-4 mr-2" />
-                  Fazer Login
-                </>
-              ) : (
-                <>
-                  <UserPlus className="w-4 h-4 mr-2" />
-                  Criar Conta de Parecerista
-                </>
-              )}
-            </Button>
-          </div>
+          
         </div>
       </CardContent>
     </Card>

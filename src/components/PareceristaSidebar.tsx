@@ -33,6 +33,11 @@ export const PareceristaSidebar = () => {
   const { open } = useSidebar();
   const navigate = useNavigate();
 
+  const handleLogout = async () => {
+    await signOut();
+    navigate("/");
+  };
+
   return (
     <Sidebar className={open ? "w-64" : "w-14"} collapsible="icon">
       <SidebarContent className="bg-white border-r">
@@ -50,7 +55,7 @@ export const PareceristaSidebar = () => {
               
               <SidebarMenuItem>
                 <SidebarMenuButton 
-                  onClick={signOut}
+                  onClick={handleLogout}
                   className="text-red-600 hover:text-red-700 hover:bg-red-50"
                 >
                   <LogOut className="h-4 w-4" />

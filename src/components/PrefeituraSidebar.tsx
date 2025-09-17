@@ -8,7 +8,8 @@ import {
   PieChart,
   MessageSquare,
   LogOut,
-  Home
+  Home,
+  UserPlus
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -41,6 +42,11 @@ const menuItems = [
     icon: Users,
   },
   {
+    title: "Pareceristas",
+    url: "/cadastro-pareceristas",
+    icon: UserPlus,
+  },
+  {
     title: "Prestações",
     url: "/prestacoes-admin",
     icon: CreditCard,
@@ -67,6 +73,11 @@ export const PrefeituraSidebar = () => {
   const location = useLocation();
   const { signOut } = useAuth();
   const { state } = useSidebar();
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate("/");
+  };
 
   const handleNavigation = (url: string) => {
     navigate(url);
@@ -106,7 +117,7 @@ export const PrefeituraSidebar = () => {
 
         <div className="mt-auto p-4">
           <SidebarMenuButton
-            onClick={signOut}
+            onClick={handleLogout}
             className="flex items-center gap-3 px-3 py-2 text-destructive hover:bg-destructive/10 rounded-lg cursor-pointer transition-colors"
           >
             <LogOut className="h-5 w-5" />

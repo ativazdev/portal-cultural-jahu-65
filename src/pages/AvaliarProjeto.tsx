@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
@@ -266,17 +267,195 @@ const AvaliarProjeto = () => {
                     Ver Detalhes do Projeto
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-2xl">
+                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
-                    <DialogTitle>Detalhes do Projeto</DialogTitle>
+                    <DialogTitle>Detalhes Completos do Projeto</DialogTitle>
                     <DialogDescription>
-                      Informações completas sobre o projeto em avaliação.
+                      Informações detalhadas sobre o projeto submetido para avaliação.
                     </DialogDescription>
                   </DialogHeader>
-                  <div className="p-4">
-                    <p className="text-gray-600">
-                      Aqui seriam exibidos todos os detalhes completos do projeto submetido pelo proponente.
-                    </p>
+                  
+                  <div className="space-y-6">
+                    {/* Informações Básicas */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-3">
+                        <div>
+                          <Label className="font-medium text-gray-600">Nome do Projeto</Label>
+                          <p className="text-lg font-semibold">{projeto.nome}</p>
+                        </div>
+                        <div>
+                          <Label className="font-medium text-gray-600">Modalidade</Label>
+                          <Badge variant="secondary" className="mt-1">{projeto.modalidade}</Badge>
+                        </div>
+                        <div>
+                          <Label className="font-medium text-gray-600">Valor Solicitado</Label>
+                          <p className="text-xl font-bold text-green-600">{projeto.valorSolicitado}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-3">
+                        <div>
+                          <Label className="font-medium text-gray-600">Proponente</Label>
+                          <p className="font-medium">{projeto.proponente}</p>
+                        </div>
+                        <div>
+                          <Label className="font-medium text-gray-600">Programa</Label>
+                          <p>{projeto.programa}</p>
+                        </div>
+                        <div>
+                          <Label className="font-medium text-gray-600">Data de Submissão</Label>
+                          <p>15/11/2024</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Descrição do Projeto */}
+                    <div className="space-y-3">
+                      <Label className="font-medium text-gray-600">Descrição do Projeto</Label>
+                      <div className="p-4 bg-gray-50 rounded-lg">
+                        <p className="text-gray-700">
+                          O Festival de Inverno é um evento cultural que visa promover a música brasileira 
+                          durante o período de inverno, oferecendo apresentações gratuitas para a população 
+                          de Jaú. O projeto incluirá workshops, apresentações ao vivo e atividades educativas 
+                          para diferentes faixas etárias, fortalecendo a identidade cultural local e 
+                          democratizando o acesso à arte musical.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Objetivos */}
+                    <div className="space-y-3">
+                      <Label className="font-medium text-gray-600">Objetivos</Label>
+                      <div className="p-4 bg-blue-50 rounded-lg">
+                        <ul className="space-y-2 text-sm text-gray-700">
+                          <li>• Promover a música brasileira na região</li>
+                          <li>• Oferecer acesso gratuito à cultura para toda a população</li>
+                          <li>• Capacitar jovens músicos locais através de workshops</li>
+                          <li>• Fortalecer a identidade cultural de Jaú</li>
+                          <li>• Estimular a economia criativa local</li>
+                        </ul>
+                      </div>
+                    </div>
+
+                    {/* Cronograma */}
+                    <div className="space-y-3">
+                      <Label className="font-medium text-gray-600">Cronograma de Execução</Label>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="p-3 border rounded-lg">
+                          <Label className="text-sm font-medium">Pré-produção</Label>
+                          <p className="text-sm text-gray-600">Janeiro - Fevereiro 2025</p>
+                          <p className="text-xs text-gray-500">Contratações e preparação</p>
+                        </div>
+                        <div className="p-3 border rounded-lg">
+                          <Label className="text-sm font-medium">Execução</Label>
+                          <p className="text-sm text-gray-600">Março - Maio 2025</p>
+                          <p className="text-xs text-gray-500">Workshops e apresentações</p>
+                        </div>
+                        <div className="p-3 border rounded-lg">
+                          <Label className="text-sm font-medium">Pós-produção</Label>
+                          <p className="text-sm text-gray-600">Junho 2025</p>
+                          <p className="text-xs text-gray-500">Relatórios e prestação</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Orçamento Detalhado */}
+                    <div className="space-y-3">
+                      <Label className="font-medium text-gray-600">Orçamento Detalhado</Label>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b">
+                              <th className="text-left p-2">Item</th>
+                              <th className="text-right p-2">Quantidade</th>
+                              <th className="text-right p-2">Valor Unitário</th>
+                              <th className="text-right p-2">Valor Total</th>
+                            </tr>
+                          </thead>
+                          <tbody className="text-gray-700">
+                            <tr className="border-b">
+                              <td className="p-2">Cachê dos Artistas</td>
+                              <td className="text-right p-2">5</td>
+                              <td className="text-right p-2">R$ 2.000,00</td>
+                              <td className="text-right p-2 font-medium">R$ 10.000,00</td>
+                            </tr>
+                            <tr className="border-b">
+                              <td className="p-2">Equipamentos de Som</td>
+                              <td className="text-right p-2">1</td>
+                              <td className="text-right p-2">R$ 8.000,00</td>
+                              <td className="text-right p-2 font-medium">R$ 8.000,00</td>
+                            </tr>
+                            <tr className="border-b">
+                              <td className="p-2">Material Gráfico</td>
+                              <td className="text-right p-2">1</td>
+                              <td className="text-right p-2">R$ 3.000,00</td>
+                              <td className="text-right p-2 font-medium">R$ 3.000,00</td>
+                            </tr>
+                            <tr className="border-b">
+                              <td className="p-2">Alimentação e Hospedagem</td>
+                              <td className="text-right p-2">1</td>
+                              <td className="text-right p-2">R$ 2.500,00</td>
+                              <td className="text-right p-2 font-medium">R$ 2.500,00</td>
+                            </tr>
+                            <tr className="border-b">
+                              <td className="p-2">Despesas Administrativas</td>
+                              <td className="text-right p-2">1</td>
+                              <td className="text-right p-2">R$ 1.500,00</td>
+                              <td className="text-right p-2 font-medium">R$ 1.500,00</td>
+                            </tr>
+                            <tr className="border-t-2 border-gray-300">
+                              <td className="p-2 font-bold">TOTAL</td>
+                              <td className="text-right p-2"></td>
+                              <td className="text-right p-2"></td>
+                              <td className="text-right p-2 font-bold text-lg text-green-600">R$ 25.000,00</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    {/* Dados do Proponente */}
+                    <div className="space-y-3">
+                      <Label className="font-medium text-gray-600">Dados do Proponente</Label>
+                      <div className="p-4 bg-gray-50 rounded-lg">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <span className="font-medium">Nome:</span>
+                            <p>João Silva</p>
+                          </div>
+                          <div>
+                            <span className="font-medium">CPF:</span>
+                            <p>123.456.789-01</p>
+                          </div>
+                          <div>
+                            <span className="font-medium">Email:</span>
+                            <p>joao.silva@email.com</p>
+                          </div>
+                          <div>
+                            <span className="font-medium">Telefone:</span>
+                            <p>(14) 99999-1234</p>
+                          </div>
+                          <div className="md:col-span-2">
+                            <span className="font-medium">Endereço:</span>
+                            <p>Rua das Flores, 123 - Centro - Jaú/SP - CEP: 17201-000</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Justificativa */}
+                    <div className="space-y-3">
+                      <Label className="font-medium text-gray-600">Justificativa</Label>
+                      <div className="p-4 bg-purple-50 rounded-lg">
+                        <p className="text-gray-700">
+                          O projeto se justifica pela necessidade de fortalecer a cena musical local 
+                          e oferecer oportunidades de formação e apresentação para artistas da região. 
+                          O inverno é uma época propícia para eventos culturais em espaços fechados, 
+                          e o festival contribuirá para movimentar a economia criativa e promover 
+                          a integração social através da música.
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </DialogContent>
               </Dialog>
