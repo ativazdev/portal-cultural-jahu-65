@@ -149,8 +149,12 @@ const MeusProjetos = () => {
     });
   };
 
+  // Carrega rascunhos locais
+  const rascunhos: any[] = JSON.parse(localStorage.getItem('rascunhosProjetos') || '[]');
+  const todosProjetos = [...rascunhos, ...projetos];
+
   // Filtrar projetos
-  const projetosFiltrados = projetos.filter(projeto => {
+  const projetosFiltrados = todosProjetos.filter(projeto => {
     const matchesSearch = projeto.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          projeto.numeroInscricao.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesPrograma = programaFilter === "todos-programas" || projeto.programa === programaFilter;

@@ -4,6 +4,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Plus, Save, ArrowLeft, CheckCircle, Trash2, DollarSign, AlertTriangle } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -21,7 +24,18 @@ const formSchema = z.object({
     valorUnitario: z.number().min(0.01, "Valor unitário deve ser maior que zero"),
     quantidade: z.number().min(1, "Quantidade deve ser pelo menos 1"),
     referenciaPreco: z.string().optional()
-  })).min(3, "Pelo menos 3 itens são obrigatórios")
+  })).min(3, "Pelo menos 3 itens são obrigatórios"),
+  recursosOutrasFontes: z.string().min(1, "Campo obrigatório"),
+  detalhamentoRecursos: z.string().optional()
+}).refine((data) => {
+  // Se outras fontes foram selecionadas (exceto "nao"), detalhamento é obrigatório
+  if (data.recursosOutrasFontes && data.recursosOutrasFontes !== "nao") {
+    return data.detalhamentoRecursos && data.detalhamentoRecursos.trim().length > 0;
+  }
+  return true;
+}, {
+  message: "Detalhamento é obrigatório quando outras fontes de recursos são informadas",
+  path: ["detalhamentoRecursos"]
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -63,7 +77,7 @@ export default function PlanilhaOrcamentaria() {
         {
           descricao: "Material de divulgação",
           justificativa: "Impressão de cartazes e folders",
-          unidadeMedida: "Unidade", 
+          unidadeMedida: "Unidade",
           valorUnitario: 250,
           quantidade: 100,
           referenciaPreco: "3 orçamentos"
@@ -76,7 +90,9 @@ export default function PlanilhaOrcamentaria() {
           quantidade: 5,
           referenciaPreco: "Cotação local"
         }
-      ]
+      ],
+      recursosOutrasFontes: "",
+      detalhamentoRecursos: ""
     }
   });
 
@@ -274,7 +290,117 @@ export default function PlanilhaOrcamentaria() {
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            
+
+            {/* Recursos de Outras Fontes */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <DollarSign className="h-5 w-5" />
+                  Recursos Financeiros de Outras Fontes
+                </CardTitle>
+                <CardDescription>
+                  Informe se o projeto prevê apoio financeiro de outras fontes além do recurso solicitado
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div>
+                  <Label className="text-base font-medium mb-4 block">
+                    Projeto possui recursos financeiros de outras fontes? Se sim, quais? *
+                  </Label>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Informe se o projeto prevê apoio financeiro, tais como cobrança de ingressos, patrocínio e/ou outras fontes de financiamento.
+                    Caso positivo, informe a previsão de valores e onde serão empregados no projeto.
+                  </p>
+
+                  <FormField
+                    control={form.control}
+                    name="recursosOutrasFontes"
+                    render={({ field }) => (
+                      <RadioGroup
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        className="space-y-3"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="nao" id="recursos-nao" />
+                          <Label htmlFor="recursos-nao">Não, o projeto não possui outras fontes de recursos financeiros</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="apoio-municipal" id="recursos-municipal" />
+                          <Label htmlFor="recursos-municipal">Apoio financeiro municipal</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="apoio-estadual" id="recursos-estadual" />
+                          <Label htmlFor="recursos-estadual">Apoio financeiro estadual</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="lei-incentivo-municipal" id="recursos-lei-municipal" />
+                          <Label htmlFor="recursos-lei-municipal">Recursos de Lei de Incentivo Municipal</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="lei-incentivo-estadual" id="recursos-lei-estadual" />
+                          <Label htmlFor="recursos-lei-estadual">Recursos de Lei de Incentivo Estadual</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="lei-incentivo-federal" id="recursos-lei-federal" />
+                          <Label htmlFor="recursos-lei-federal">Recursos de Lei de Incentivo Federal</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="patrocinio-privado" id="recursos-patrocinio" />
+                          <Label htmlFor="recursos-patrocinio">Patrocínio privado direto</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="patrocinio-internacional" id="recursos-internacional" />
+                          <Label htmlFor="recursos-internacional">Patrocínio de instituição internacional</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="doacoes-pf" id="recursos-doacoes-pf" />
+                          <Label htmlFor="recursos-doacoes-pf">Doações de Pessoas Físicas</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="doacoes-empresas" id="recursos-doacoes-empresas" />
+                          <Label htmlFor="recursos-doacoes-empresas">Doações de Empresas</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="cobranca-ingressos" id="recursos-ingressos" />
+                          <Label htmlFor="recursos-ingressos">Cobrança de ingressos</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="outros" id="recursos-outros" />
+                          <Label htmlFor="recursos-outros">Outros</Label>
+                        </div>
+                      </RadioGroup>
+                    )}
+                  />
+                </div>
+
+                {/* Campo de detalhamento que aparece quando não é "não" */}
+                {form.watch("recursosOutrasFontes") && form.watch("recursosOutrasFontes") !== "nao" && (
+                  <div>
+                    <Label htmlFor="detalhamento-recursos" className="text-base font-medium">
+                      Detalhamento dos recursos *
+                    </Label>
+                    <p className="text-sm text-muted-foreground mb-2">
+                      Se o projeto tem outras fontes de financiamento, detalhe quais são, o valor do financiamento e onde os recursos serão empregados no projeto.
+                    </p>
+                    <FormField
+                      control={form.control}
+                      name="detalhamentoRecursos"
+                      render={({ field }) => (
+                        <Textarea
+                          {...field}
+                          id="detalhamento-recursos"
+                          placeholder="Descreva detalhadamente as outras fontes de financiamento, valores previstos e onde serão aplicados no projeto..."
+                          rows={4}
+                          className="mt-2"
+                        />
+                      )}
+                    />
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             {/* Tabela de Orçamento */}
             <Card>
               <CardHeader>

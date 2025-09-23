@@ -32,6 +32,8 @@ import NotFound from "./pages/NotFound";
 import RelatoriosAdmin from "./pages/RelatoriosAdmin";
 import ComunicacoesAdmin from "./pages/ComunicacoesAdmin";
 import CadastroPareceristas from "./pages/CadastroPareceristas";
+import SelecionarEdital from "./pages/SelecionarEdital";
+import EditaisAdmin from "./pages/EditaisAdmin";
 
 const queryClient = new QueryClient();
 
@@ -45,7 +47,9 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/dashboard-parecerista" element={<DashboardParecerista />} />
+        <Route path="/selecionar-edital" element={<SelecionarEdital />} />
           <Route path="/dashboard-prefeitura" element={<DashboardPrefeitura />} />
+          <Route path="/editais-admin" element={<EditaisAdmin />} />
           <Route path="/projetos-admin" element={<ProjetosAdmin />} />
           <Route path="/avaliacoes-admin" element={<AvaliacoesAdmin />} />
           <Route path="/ranking-avaliacoes" element={<RankingAvaliacoes />} />

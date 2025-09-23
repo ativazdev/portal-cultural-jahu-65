@@ -91,7 +91,9 @@ export const useAuth = () => {
       case "proponente":
         return "/dashboard";
       case "parecerista":
-        return "/dashboard-parecerista";
+        // Verificar se já tem um edital selecionado
+        const editalSelecionado = localStorage.getItem("editalSelecionado");
+        return editalSelecionado ? "/dashboard-parecerista" : "/selecionar-edital";
       default:
         return "/";
     }

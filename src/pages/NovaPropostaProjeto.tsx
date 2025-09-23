@@ -112,10 +112,10 @@ const acessibilidadeComunicacionalOptions = [
 ];
 
 const acessibilidadeAtitudinalOptions = [
-  "Capacitação de equipes",
-  "Contratação de profissionais com deficiência",
-  "Formação e sensibilização",
-  "Eliminação de atitudes capacitistas"
+  "Capacitação de equipes atuantes nos projetos culturais",
+  "Contratação de profissionais com deficiência e profissionais especializados em acessibilidade cultural",
+  "Formação e sensibilização de agentes culturais, público e todos os envolvidos na cadeia produtiva cultural",
+  "Outras medidas que visem a eliminação de atitudes capacitistas"
 ];
 
 const tiposOutrasFontesOptions = [
@@ -223,10 +223,44 @@ export default function NovaPropostaProjeto() {
   };
 
   const salvarRascunho = () => {
+    const values = form.getValues();
+    const proponenteId = searchParams.get('proponente') || 'sem-id';
+    const proponenteNome = searchParams.get('nome') || 'Proponente';
+    const now = new Date();
+    const ano = String(now.getFullYear());
+    const rascunho = {
+      id: `rasc-${now.getTime()}`,
+      numeroInscricao: `RASC-${now.getTime()}`,
+      nome: values.nomeProjeto || 'Projeto Cultural',
+      edital: 'EDITAL PNAB - CULTURA JAÚ',
+      modalidade: values.modalidade || 'Outros',
+      proponente: proponenteNome,
+      status: 'Projetos em Edição',
+      ano,
+      statusColor: 'gray',
+      buttonText: 'Editar',
+      proponenteId,
+      salvoEm: now.toISOString(),
+    };
+
+    const existentes = JSON.parse(localStorage.getItem('rascunhosProjetos') || '[]');
+    // Se já existir um rascunho com o mesmo numeroInscricao, substitui
+    const atualizados = [rascunho, ...existentes.filter((p: any) => p.numeroInscricao !== rascunho.numeroInscricao)];
+    localStorage.setItem('rascunhosProjetos', JSON.stringify(atualizados));
+
+    // Marca proponente como inscrito neste programa
+    const inscritos: string[] = JSON.parse(localStorage.getItem('inscritosPNAB') || '[]');
+    if (!inscritos.includes(proponenteId)) {
+      localStorage.setItem('inscritosPNAB', JSON.stringify([...inscritos, proponenteId]));
+    }
+
     toast({
-      title: "Rascunho salvo!",
-      description: "Seu progresso foi salvo automaticamente.",
+      title: 'Rascunho salvo!',
+      description: 'Sua proposta foi salva localmente e você já está inscrito no programa.',
     });
+
+    // Retorna para tela anterior para refletir inscrição
+    navigate('/detalhes-edital');
   };
 
   const voltarDetalhesEdital = () => {
@@ -307,7 +341,7 @@ export default function NovaPropostaProjeto() {
                           name="modalidade"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Modalidade do Projeto *</FormLabel>
+                              <FormLabel>Escolha a categoria a que vai concorrer *</FormLabel>
                               <Select onValueChange={field.onChange} value={field.value}>
                                 <FormControl>
                                   <SelectTrigger>

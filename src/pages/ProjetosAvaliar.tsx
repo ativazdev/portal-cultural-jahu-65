@@ -100,7 +100,7 @@ const ProjetosAvaliar = () => {
         <Breadcrumb>
           <BreadcrumbList>
             <BreadcrumbItem>
-              <BreadcrumbLink 
+              <BreadcrumbLink
                 onClick={() => navigate("/dashboard-parecerista")}
                 className="cursor-pointer flex items-center gap-2 hover:text-primary"
               >
@@ -193,7 +193,7 @@ const ProjetosAvaliar = () => {
                     </p>
                   </div>
                   <div className="flex justify-end">
-                    <Button 
+                    <Button
                       onClick={() => navigate(`/avaliar-projeto/${projeto.id}`)}
                       className="bg-primary hover:bg-primary/90"
                     >

@@ -1,15 +1,16 @@
 import { useState } from "react";
-import { 
-  BarChart3, 
-  FileText, 
-  Users, 
-  CreditCard, 
-  Banknote, 
+import {
+  BarChart3,
+  FileText,
+  Users,
+  CreditCard,
+  Banknote,
   PieChart,
   MessageSquare,
   LogOut,
   Home,
-  UserPlus
+  UserPlus,
+  FolderOpen
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -30,6 +31,11 @@ const menuItems = [
     title: "Dashboard",
     url: "/dashboard-prefeitura",
     icon: Home,
+  },
+  {
+    title: "Editais",
+    url: "/editais-admin",
+    icon: FolderOpen,
   },
   {
     title: "Projetos",

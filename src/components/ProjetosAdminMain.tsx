@@ -7,6 +7,19 @@ import { AtribuirPareceristaModal } from "@/components/projetos-admin/AtribuirPa
 import { DecisaoFinalModal } from "@/components/projetos-admin/DecisaoFinalModal";
 
 // Tipos
+export interface DocumentoHabilitacao {
+  id: string;
+  nome: string;
+  descricao: string;
+  arquivo?: {
+    nome: string;
+    url: string;
+    dataUpload: string;
+  };
+  obrigatorio: boolean;
+  dataSolicitacao: string;
+}
+
 export interface Projeto {
   id: string;
   nome: string;
@@ -17,6 +30,8 @@ export interface Projeto {
   dataSubmissao: string;
   status: "Recebido" | "Em Avaliação" | "Avaliado" | "Aprovado" | "Rejeitado";
   parecerista?: string;
+  edital: string;
+  documentosHabilitacao?: DocumentoHabilitacao[];
 }
 
 export interface Parecerista {
@@ -36,7 +51,8 @@ const projetosExemplo: Projeto[] = [
     tipoProponente: "PF",
     valorSolicitado: 15000,
     dataSubmissao: "2024-11-15",
-    status: "Recebido"
+    status: "Recebido",
+    edital: "PNAB-2025-001"
   },
   {
     id: "2",
@@ -47,7 +63,8 @@ const projetosExemplo: Projeto[] = [
     valorSolicitado: 8500,
     dataSubmissao: "2024-11-14",
     status: "Em Avaliação",
-    parecerista: "Ana Costa"
+    parecerista: "Ana Costa",
+    edital: "PNAB-2025-002"
   },
   {
     id: "3",
@@ -58,7 +75,8 @@ const projetosExemplo: Projeto[] = [
     valorSolicitado: 12000,
     dataSubmissao: "2024-11-13",
     status: "Avaliado",
-    parecerista: "Carlos Lima"
+    parecerista: "Carlos Lima",
+    edital: "PNAB-2025-001"
   },
   {
     id: "4",
@@ -69,7 +87,36 @@ const projetosExemplo: Projeto[] = [
     valorSolicitado: 20000,
     dataSubmissao: "2024-11-12",
     status: "Aprovado",
-    parecerista: "Lucia Mendes"
+    parecerista: "Lucia Mendes",
+    edital: "PNAB-2025-003",
+    documentosHabilitacao: [
+      {
+        id: "1",
+        nome: "Certidão Negativa de Débitos",
+        descricao: "Certidão emitida pela Receita Federal comprovando a regularidade fiscal da organização",
+        obrigatorio: true,
+        dataSolicitacao: "2024-11-20",
+        arquivo: {
+          nome: "certidao_negativa_debitos.pdf",
+          url: "/uploads/certidao_negativa_debitos.pdf",
+          dataUpload: "2024-11-22"
+        }
+      },
+      {
+        id: "2",
+        nome: "Comprovante de Conta Bancária",
+        descricao: "Extrato ou documento que comprove a conta bancária da organização para transferência de recursos",
+        obrigatorio: true,
+        dataSolicitacao: "2024-11-20"
+      },
+      {
+        id: "3",
+        nome: "Ata de Assembleia",
+        descricao: "Ata da assembleia que aprovou a participação no edital (apenas para organizações)",
+        obrigatorio: false,
+        dataSolicitacao: "2024-11-20"
+      }
+    ]
   }
 ];
 
@@ -80,11 +127,20 @@ const pareceristas: Parecerista[] = [
   { id: "4", nome: "Roberto Silva", especialidade: "Dança", projetosEmAnalise: 3 }
 ];
 
+// Dados dos editais
+const editais = [
+  { codigo: "PNAB-2025-001", nome: "PNAB 2025 - Edital de Fomento Cultural" },
+  { codigo: "PNAB-2025-002", nome: "Edital de Apoio às Artes Cênicas" },
+  { codigo: "PNAB-2025-003", nome: "Fomento à Música Popular Brasileira" },
+  { codigo: "PNAB-2025-004", nome: "Artes Visuais e Exposições" }
+];
+
 export const ProjetosAdminMain = () => {
   const [projetos, setProjetos] = useState<Projeto[]>(projetosExemplo);
   const [filtros, setFiltros] = useState({
     busca: "",
-    parecerista: "Todos"
+    parecerista: "Todos",
+    edital: "Todos"
   });
   
   // Estados dos modais
@@ -98,14 +154,19 @@ export const ProjetosAdminMain = () => {
     const matchBusca = projeto.nome.toLowerCase().includes(filtros.busca.toLowerCase()) ||
                       projeto.proponente.toLowerCase().includes(filtros.busca.toLowerCase()) ||
                       projeto.categoria.toLowerCase().includes(filtros.busca.toLowerCase());
-    
+
     // Filtro por parecerista
-    const matchParecerista = 
-      filtros.parecerista === "Todos" || 
+    const matchParecerista =
+      filtros.parecerista === "Todos" ||
       (filtros.parecerista === "Não atribuído" && !projeto.parecerista) ||
       projeto.parecerista === filtros.parecerista;
-    
-    return matchBusca && matchParecerista;
+
+    // Filtro por edital
+    const matchEdital =
+      filtros.edital === "Todos" ||
+      projeto.edital === filtros.edital;
+
+    return matchBusca && matchParecerista && matchEdital;
   });
 
   // Calcular métricas
@@ -144,12 +205,18 @@ export const ProjetosAdminMain = () => {
   };
 
   const confirmarDecisao = (projetoId: string, decisao: "Aprovado" | "Rejeitado", justificativa: string) => {
-    setProjetos(prev => prev.map(p => 
-      p.id === projetoId 
+    setProjetos(prev => prev.map(p =>
+      p.id === projetoId
         ? { ...p, status: decisao }
         : p
     ));
     setModalDecisao({ aberto: false });
+  };
+
+  const handleAtualizarProjeto = (projetoAtualizado: Projeto) => {
+    setProjetos(prev => prev.map(p =>
+      p.id === projetoAtualizado.id ? projetoAtualizado : p
+    ));
   };
 
   return (
@@ -165,10 +232,11 @@ export const ProjetosAdminMain = () => {
         <StatusCards metricas={metricas} />
 
         {/* Filtros e Busca */}
-        <FiltrosEBusca 
-          filtros={filtros} 
-          setFiltros={setFiltros} 
-          pareceristas={pareceristas.map(p => ({ id: p.id, nome: p.nome }))} 
+        <FiltrosEBusca
+          filtros={filtros}
+          setFiltros={setFiltros}
+          pareceristas={pareceristas.map(p => ({ id: p.id, nome: p.nome }))}
+          editais={editais}
         />
 
         {/* Tabela de Projetos */}
@@ -181,10 +249,11 @@ export const ProjetosAdminMain = () => {
         />
 
         {/* Modais */}
-        <DetalhesProjetoModal 
+        <DetalhesProjetoModal
           aberto={modalDetalhes.aberto}
           projeto={modalDetalhes.projeto}
           onFechar={() => setModalDetalhes({ aberto: false })}
+          onAtualizarProjeto={handleAtualizarProjeto}
         />
 
         <AtribuirPareceristaModal 
