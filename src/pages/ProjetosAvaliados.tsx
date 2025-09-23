@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Search, ArrowLeft, Calendar, FileText, Music, Eye, Star, Trophy, Medal, Award, Palette, BookOpen } from "lucide-react";
@@ -10,6 +10,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { PareceristaHeader } from "@/components/PareceristaHeader";
+import { PareceristaSidebar } from "@/components/PareceristaSidebar";
+import { useEditalSelecionado } from "@/hooks/useEditalSelecionado";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -19,89 +23,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 
-// Dados de exemplo dos projetos avaliados
-const projetosAvaliados = [
-  {
-    id: 1,
-    nome: "Projeto PNAB - Teatro na Praça",
-    programa: "PNAB 2025 - Edital de Fomento",
-    modalidade: "Teatro",
-    dataAvaliacao: "05/08/2025",
-    notaFinal: "59",
-    status: "Avaliação Concluída",
-    proponente: "Companhia Teatral Lua Nova"
-  },
-  {
-    id: 2,
-    nome: "Festival de Jazz do Interior",
-    programa: "PNAB 2025 - Edital de Fomento",
-    modalidade: "Música",
-    dataAvaliacao: "12/07/2025",
-    notaFinal: "64",
-    status: "Avaliação Concluída",
-    proponente: "Associação Musical Harmonia"
-  },
-  {
-    id: 3,
-    nome: "Exposição Fotografia Urbana",
-    programa: "PNAB 2025 - Edital de Fomento",
-    modalidade: "Artes Visuais",
-    dataAvaliacao: "28/06/2025",
-    notaFinal: "55",
-    status: "Avaliação Concluída",
-    proponente: "Coletivo Olhar Periférico"
-  },
-  {
-    id: 4,
-    nome: "Workshop de Dança Contemporânea",
-    programa: "PNAB 2025 - Edital de Fomento",
-    modalidade: "Dança",
-    dataAvaliacao: "15/06/2025",
-    notaFinal: "62",
-    status: "Avaliação Concluída",
-    proponente: "Estúdio de Movimento Livre"
-  },
-  {
-    id: 5,
-    nome: "Sarau Literário Comunitário",
-    programa: "PNAB 2025 - Edital de Fomento",
-    modalidade: "Literatura",
-    dataAvaliacao: "03/06/2025",
-    notaFinal: "52",
-    status: "Avaliação Concluída",
-    proponente: "Biblioteca Popular do Bairro"
-  },
-  {
-    id: 6,
-    nome: "Concerto de Música Clássica",
-    programa: "PNAB 2025 - Edital de Fomento",
-    modalidade: "Música",
-    dataAvaliacao: "20/07/2025",
-    notaFinal: "57",
-    status: "Avaliação Concluída",
-    proponente: "Orquestra Sinfônica Municipal"
-  },
-  {
-    id: 7,
-    nome: "Mostra de Cinema Independente",
-    programa: "PNAB 2025 - Edital de Fomento",
-    modalidade: "Artes Visuais",
-    dataAvaliacao: "10/08/2025",
-    notaFinal: "63",
-    status: "Avaliação Concluída",
-    proponente: "Coletivo Audiovisual Cidade"
-  },
-  {
-    id: 8,
-    nome: "Espetáculo Infantil Musical",
-    programa: "PNAB 2025 - Edital de Fomento",
-    modalidade: "Teatro",
-    dataAvaliacao: "25/07/2025",
-    notaFinal: "51",
-    status: "Avaliação Concluída",
-    proponente: "Cia Palhaços e Sonhos"
-  }
-];
+
 
 const ProjetosAvaliados = () => {
   const navigate = useNavigate();
@@ -110,6 +32,33 @@ const ProjetosAvaliados = () => {
   const [modalidadeFiltro, setModalidadeFiltro] = useState<string>("all");
   const [isModalAvaliacaoAberto, setIsModalAvaliacaoAberto] = useState(false);
   const [projetoSelecionado, setProjetoSelecionado] = useState<any>(null);
+  const { editalSelecionado, loading, obterProjetosAvaliados } = useEditalSelecionado();
+
+  useEffect(() => {
+    if (!loading && !editalSelecionado) {
+      navigate("/selecionar-edital");
+    }
+  }, [loading, editalSelecionado, navigate]);
+
+  if (loading) {
+    return (
+      <SidebarProvider>
+        <div className="min-h-screen flex w-full bg-gray-50">
+          <PareceristaSidebar />
+          <div className="flex-1 flex flex-col">
+            <PareceristaHeader />
+            <main className="flex-1 p-6">Carregando...</main>
+          </div>
+        </div>
+      </SidebarProvider>
+    );
+  }
+
+  if (!editalSelecionado) {
+    return null;
+  }
+
+  const projetosAvaliados = obterProjetosAvaliados();
 
   // Função para ver avaliação
   const handleVerAvaliacao = (projeto: any) => {
@@ -211,32 +160,19 @@ const ProjetosAvaliados = () => {
   };
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Cabeçalho com Breadcrumb */}
-      <div className="space-y-4">
-        <Breadcrumb>
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink 
-                onClick={() => navigate("/dashboard-parecerista")}
-                className="cursor-pointer flex items-center gap-2 hover:text-primary"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Dashboard
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbPage>Projetos Avaliados</BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Projetos Avaliados</h1>
-          <p className="text-gray-600 mt-2">Histórico de projetos que você já concluiu a avaliação</p>
-        </div>
-      </div>
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full bg-gray-50">
+        <PareceristaSidebar />
+        <div className="flex-1 flex flex-col">
+          <PareceristaHeader />
+          <main className="flex-1 p-6 space-y-6">
+            {/* Cabeçalho com Breadcrumb */}
+            <div className="space-y-4">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">Projetos Avaliados - {editalSelecionado.nome}</h1>
+                <p className="text-gray-600 mt-2">Histórico de projetos do edital {editalSelecionado.codigo} que você já concluiu a avaliação</p>
+              </div>
+            </div>
 
       {/* Barra de Busca e Filtros */}
       <div className="flex items-center space-x-4">
@@ -611,7 +547,10 @@ const ProjetosAvaliados = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+          </main>
+        </div>
+      </div>
+    </SidebarProvider>
   );
 };
 

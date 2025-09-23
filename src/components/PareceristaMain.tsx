@@ -1,33 +1,46 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText, CheckSquare, Clock } from "lucide-react";
+import { FileText, CheckSquare, Clock, FolderOpen, Calendar, DollarSign } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-
-const dashboardCards = [
-  {
-    title: "Projetos Pendentes",
-    value: "5",
-    description: "Projetos aguardando sua avaliação",
-    icon: FileText,
-    color: "bg-blue-500",
-  },
-  {
-    title: "Projetos Avaliados",
-    value: "12",
-    description: "Projetos já avaliados por você",
-    icon: CheckSquare,
-    color: "bg-green-500",
-  },
-  {
-    title: "Prazo Próximo",
-    value: "15/01/2025",
-    description: "Data máxima para entrega da análise",
-    icon: Clock,
-    color: "bg-orange-500",
-  },
-];
+import { useEditalSelecionado } from "@/hooks/useEditalSelecionado";
+import { Badge } from "@/components/ui/badge";
 
 export const PareceristaMain = () => {
   const navigate = useNavigate();
+  const { editalSelecionado, loading, obterEstatisticasProjetos } = useEditalSelecionado();
+
+  if (loading) {
+    return <main className="flex-1 p-6">Carregando...</main>;
+  }
+
+  if (!editalSelecionado) {
+    return <main className="flex-1 p-6">Nenhum edital selecionado</main>;
+  }
+
+  const estatisticas = obterEstatisticasProjetos();
+
+  const dashboardCards = [
+    {
+      title: "Projetos Pendentes",
+      value: estatisticas.pendentes.toString(),
+      description: "Projetos aguardando sua avaliação",
+      icon: FileText,
+      color: "bg-blue-500",
+    },
+    {
+      title: "Projetos Avaliados",
+      value: estatisticas.avaliados.toString(),
+      description: "Projetos já avaliados por você",
+      icon: CheckSquare,
+      color: "bg-green-500",
+    },
+    {
+      title: "Prazo para Avaliação",
+      value: `${editalSelecionado.prazoAvaliacao} dias`,
+      description: "Tempo limite para avaliar cada projeto",
+      icon: Clock,
+      color: "bg-orange-500",
+    },
+  ];
 
   const handleCardClick = (title: string) => {
     if (title === "Projetos Pendentes") {
@@ -40,8 +53,78 @@ export const PareceristaMain = () => {
   return (
     <main className="flex-1 p-6">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Dashboard do Parecerista</h1>
-        <p className="text-gray-600">Acompanhe suas atividades de avaliação de projetos</p>
+        <div className="flex items-center gap-3 mb-4">
+          <FolderOpen className="h-8 w-8 text-primary" />
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">{editalSelecionado.nome}</h1>
+            <p className="text-gray-600">{editalSelecionado.codigo}</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-blue-600" />
+                <div>
+                  <p className="text-sm text-gray-500">Período</p>
+                  <p className="font-medium">{editalSelecionado.dataInicio} a {editalSelecionado.dataFim}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <DollarSign className="h-4 w-4 text-green-600" />
+                <div>
+                  <p className="text-sm text-gray-500">Valor Máximo</p>
+                  <p className="font-medium">R$ {editalSelecionado.valorMaximo.toLocaleString()}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <FileText className="h-4 w-4 text-purple-600" />
+                <div>
+                  <p className="text-sm text-gray-500">Total de Projetos</p>
+                  <p className="font-medium">{editalSelecionado.totalProjetos}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className="text-xs">
+                  {editalSelecionado.status}
+                </Badge>
+                <div>
+                  <p className="text-sm text-gray-500">Status</p>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {editalSelecionado.modalidades.slice(0, 2).map((modalidade) => (
+                      <Badge key={modalidade} variant="outline" className="text-xs">
+                        {modalidade}
+                      </Badge>
+                    ))}
+                    {editalSelecionado.modalidades.length > 2 && (
+                      <Badge variant="outline" className="text-xs">
+                        +{editalSelecionado.modalidades.length - 2}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <p className="text-gray-600">{editalSelecionado.descricao}</p>
       </div>
 
       {/* Dashboard Cards */}

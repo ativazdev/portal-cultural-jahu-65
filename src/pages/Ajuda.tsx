@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { PareceristaHeader } from "@/components/PareceristaHeader";
 import { PareceristaSidebar } from "@/components/PareceristaSidebar";
@@ -10,7 +10,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
-import { Send, HelpCircle, MessageSquare, Clock, CheckCircle, AlertCircle } from "lucide-react";
+import { useEditalSelecionado } from "@/hooks/useEditalSelecionado";
+import { useNavigate } from "react-router-dom";
+import { Send, HelpCircle, MessageSquare, Clock, CheckCircle, AlertCircle, FolderOpen } from "lucide-react";
 
 // Mock data para dúvidas enviadas
 const duvidasEnviadas = [
@@ -45,6 +47,8 @@ const duvidasEnviadas = [
 
 const Ajuda = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const { editalSelecionado, loading } = useEditalSelecionado();
   const [formData, setFormData] = useState({
     assunto: "",
     categoria: "",
@@ -84,6 +88,12 @@ const Ajuda = () => {
     });
   };
 
+  useEffect(() => {
+    if (!loading && !editalSelecionado) {
+      navigate("/selecionar-edital");
+    }
+  }, [loading, editalSelecionado, navigate]);
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "Respondida":
@@ -97,6 +107,24 @@ const Ajuda = () => {
     }
   };
 
+  if (loading) {
+    return (
+      <SidebarProvider>
+        <div className="min-h-screen flex w-full bg-gray-50">
+          <PareceristaSidebar />
+          <div className="flex-1 flex flex-col">
+            <PareceristaHeader />
+            <main className="flex-1 p-6">Carregando...</main>
+          </div>
+        </div>
+      </SidebarProvider>
+    );
+  }
+
+  if (!editalSelecionado) {
+    return null;
+  }
+
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-gray-50">
@@ -107,12 +135,40 @@ const Ajuda = () => {
           <main className="flex-1 p-6">
             <div className="max-w-4xl mx-auto space-y-6">
               {/* Header da página */}
-              <div className="flex items-center gap-3">
-                <HelpCircle className="w-8 h-8 text-blue-600" />
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900">Central de Ajuda</h1>
-                  <p className="text-gray-600">Tire suas dúvidas sobre o sistema e processo de avaliação</p>
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <FolderOpen className="w-8 h-8 text-primary" />
+                  <div>
+                    <h1 className="text-2xl font-bold text-gray-900">Central de Ajuda - {editalSelecionado.nome}</h1>
+                    <p className="text-gray-600">Tire suas dúvidas sobre o edital {editalSelecionado.codigo} e processo de avaliação</p>
+                  </div>
                 </div>
+
+                {/* Informações específicas do edital */}
+                <Card className="bg-blue-50 border-blue-200">
+                  <CardContent className="p-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <p className="text-sm font-medium text-blue-900">Modalidades Aceitas</p>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {editalSelecionado.modalidades.map((modalidade) => (
+                            <Badge key={modalidade} variant="secondary" className="text-xs">
+                              {modalidade}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-blue-900">Prazo de Avaliação</p>
+                        <p className="text-sm text-blue-800">{editalSelecionado.prazoAvaliacao} dias por projeto</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-blue-900">Valor Máximo</p>
+                        <p className="text-sm text-blue-800">R$ {editalSelecionado.valorMaximo.toLocaleString()}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -124,7 +180,7 @@ const Ajuda = () => {
                       Enviar Nova Dúvida
                     </CardTitle>
                     <CardDescription>
-                      Descreva sua dúvida de forma clara. Nossa equipe responderá em até 2 dias úteis.
+                      Descreva sua dúvida sobre o edital {editalSelecionado.codigo}. Nossa equipe responderá em até 2 dias úteis.
                     </CardDescription>
                   </CardHeader>
                   <CardContent>

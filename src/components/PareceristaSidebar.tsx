@@ -48,10 +48,27 @@ export const PareceristaSidebar = () => {
 
   // Carregar edital selecionado do localStorage
   useEffect(() => {
-    const editalId = localStorage.getItem("editalSelecionado");
-    if (editalId) {
-      setEditalSelecionado(parseInt(editalId));
-    }
+    const carregarEditalSelecionado = () => {
+      const editalId = localStorage.getItem("editalSelecionado");
+      if (editalId) {
+        setEditalSelecionado(parseInt(editalId));
+      } else {
+        setEditalSelecionado(null);
+      }
+    };
+
+    carregarEditalSelecionado();
+
+    // Listener para mudanças no edital selecionado
+    const handleEditalChange = () => {
+      carregarEditalSelecionado();
+    };
+
+    window.addEventListener("editalSelecionadoChanged", handleEditalChange);
+
+    return () => {
+      window.removeEventListener("editalSelecionadoChanged", handleEditalChange);
+    };
   }, []);
 
   const handleLogout = async () => {
@@ -62,6 +79,10 @@ export const PareceristaSidebar = () => {
   const handleSelecionarEdital = (editalId: number) => {
     setEditalSelecionado(editalId);
     localStorage.setItem("editalSelecionado", editalId.toString());
+
+    // Dispara evento para atualizar outros componentes
+    window.dispatchEvent(new CustomEvent("editalSelecionadoChanged"));
+
     setEditaisOpen(false);
   };
 

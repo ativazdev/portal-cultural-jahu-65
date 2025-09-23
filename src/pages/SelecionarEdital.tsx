@@ -87,8 +87,12 @@ const SelecionarEdital = () => {
   };
 
   const handleSelecionarEdital = (editalId: number) => {
-    // Salvar edital selecionado no localStorage ou contexto
+    // Salvar edital selecionado no localStorage
     localStorage.setItem("editalSelecionado", editalId.toString());
+
+    // Dispara evento para atualizar outros componentes
+    window.dispatchEvent(new CustomEvent("editalSelecionadoChanged"));
+
     navigate("/dashboard-parecerista");
   };
 
@@ -138,72 +142,72 @@ const SelecionarEdital = () => {
       </div>
 
       {/* Lista de Editais */}
-      <div className="grid gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {editaisFiltrados.length === 0 ? (
-          <Card>
-            <CardContent className="flex items-center justify-center py-12">
-              <div className="text-center">
-                <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum edital encontrado</h3>
-                <p className="text-gray-500">
-                  {searchTerm ? "Tente ajustar os filtros de busca." : "Não há editais disponíveis no momento."}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="col-span-full">
+            <Card>
+              <CardContent className="flex items-center justify-center py-12">
+                <div className="text-center">
+                  <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum edital encontrado</h3>
+                  <p className="text-gray-500">
+                    {searchTerm ? "Tente ajustar os filtros de busca." : "Não há editais disponíveis no momento."}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         ) : (
           editaisFiltrados.map((edital) => (
-            <Card key={edital.id} className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="space-y-2">
-                    <CardTitle className="text-xl text-gray-900 flex items-center gap-2">
-                      <FolderOpen className="h-5 w-5 text-primary" />
-                      {edital.nome}
-                    </CardTitle>
-                    <div className="space-y-1">
-                      <p className="text-sm text-gray-600">
-                        <span className="font-medium">Código:</span> {edital.codigo}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        <span className="font-medium">Período:</span> {edital.dataInicio} a {edital.dataFim}
-                      </p>
-                    </div>
-                  </div>
-                  <Badge className={getStatusColor(edital.status)}>
+            <Card key={edital.id} className="w-[300px] h-[480px] hover:shadow-lg transition-shadow flex flex-col">
+              <CardHeader className="flex-shrink-0 p-4">
+                <div className="flex items-start justify-between mb-3">
+                  <FolderOpen className="h-6 w-6 text-primary flex-shrink-0" />
+                  <Badge className={`${getStatusColor(edital.status)} text-sm px-2 py-1`}>
                     {edital.status}
                   </Badge>
                 </div>
+                <CardTitle className="text-lg text-gray-900 line-clamp-3 leading-tight mb-2">
+                  {edital.nome}
+                </CardTitle>
+                <p className="text-sm text-gray-600 font-medium">
+                  {edital.codigo}
+                </p>
+                <p className="text-sm text-gray-500 mt-2">
+                  <span className="font-medium">Período:</span> {edital.dataInicio} a {edital.dataFim}
+                </p>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                  <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4 text-blue-600" />
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">Total de Projetos</label>
-                      <p className="text-lg font-bold text-gray-900">{edital.totalProjetos}</p>
+              <CardContent className="flex-1 p-4 pt-0 flex flex-col justify-between">
+                <div className="space-y-4 mb-4">
+                  <div className="grid grid-cols-1 gap-3">
+                    <div className="flex items-center gap-3">
+                      <Users className="h-5 w-5 text-blue-600" />
+                      <div>
+                        <label className="text-sm font-medium text-gray-500">Total de Projetos</label>
+                        <p className="text-xl font-bold text-gray-900">{edital.totalProjetos}</p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-yellow-600" />
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">Aguardando Avaliação</label>
-                      <p className="text-lg font-bold text-yellow-600">{edital.projetosAguardando}</p>
+                    <div className="flex items-center gap-3">
+                      <Calendar className="h-5 w-5 text-yellow-600" />
+                      <div>
+                        <label className="text-sm font-medium text-gray-500">Aguardando Avaliação</label>
+                        <p className="text-xl font-bold text-yellow-600">{edital.projetosAguardando}</p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-green-600" />
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">Em Andamento</label>
-                      <p className="text-lg font-bold text-green-600">{edital.projetosEmAndamento}</p>
+                    <div className="flex items-center gap-3">
+                      <FileText className="h-5 w-5 text-green-600" />
+                      <div>
+                        <label className="text-sm font-medium text-gray-500">Em Andamento</label>
+                        <p className="text-xl font-bold text-green-600">{edital.projetosEmAndamento}</p>
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row gap-3">
+                <div className="space-y-3">
                   <Button
                     onClick={() => handleSelecionarEdital(edital.id)}
-                    className="bg-primary hover:bg-primary/90 flex-1"
+                    className="w-full bg-primary hover:bg-primary/90"
                   >
                     <FolderOpen className="h-4 w-4 mr-2" />
                     Acessar Edital
@@ -211,7 +215,7 @@ const SelecionarEdital = () => {
                   <Button
                     variant="outline"
                     onClick={() => handleVisualizarEdital(edital.linkEdital)}
-                    className="flex-1 sm:flex-none"
+                    className="w-full"
                   >
                     <ExternalLink className="h-4 w-4 mr-2" />
                     Visualizar Documento

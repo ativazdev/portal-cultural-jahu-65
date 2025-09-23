@@ -23,6 +23,9 @@ const PareceristaLoginForm = () => {
     setIsLoading(true);
 
     try {
+      // Limpa qualquer edital selecionado anteriormente
+      localStorage.removeItem("editalSelecionado");
+
       // Define o perfil mock para parecerista
       setMockProfile("parecerista");
       
@@ -32,7 +35,7 @@ const PareceristaLoginForm = () => {
         await signIn(email, password);
       }
       
-      // Redireciona diretamente para o dashboard do parecerista
+      // Redireciona usando a lógica do getDashboardRoute que verifica se tem edital selecionado
       setTimeout(() => {
         navigate(getDashboardRoute("parecerista"));
       }, 1000);
