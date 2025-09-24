@@ -45,7 +45,7 @@ const avaliacoesExemplo: Avaliacao[] = [
     projeto: { nome: "Festival de Música Popular", categoria: "Música" },
     proponente: { nome: "João Silva", tipo: "PF" },
     parecerista: "Ana Costa",
-    notaFinal: 8.5,
+    notaFinal: 59.5,
     dataAvaliacao: "2024-11-15",
     status: "Avaliado",
     criterios: { relevancia: 8.5, viabilidade: 7.0, impacto: 9.0, orcamento: 6.5, inovacao: 4.0, sustentabilidade: 3.5 },
@@ -57,7 +57,7 @@ const avaliacoesExemplo: Avaliacao[] = [
     projeto: { nome: "Teatro na Praça", categoria: "Teatro" },
     proponente: { nome: "Maria Santos", tipo: "PF" },
     parecerista: "Carlos Lima",
-    notaFinal: 7.2,
+    notaFinal: 50.4,
     dataAvaliacao: "2024-11-14",
     status: "Aprovado",
     criterios: { relevancia: 7.5, viabilidade: 8.0, impacto: 7.0, orcamento: 7.5, inovacao: 3.0, sustentabilidade: 2.5 },
@@ -69,7 +69,7 @@ const avaliacoesExemplo: Avaliacao[] = [
     projeto: { nome: "Oficina de Dança", categoria: "Dança" },
     proponente: { nome: "Pedro Costa", tipo: "PJ" },
     parecerista: "Lúcia Mendes",
-    notaFinal: 6.8,
+    notaFinal: 47.6,
     dataAvaliacao: "2024-11-13",
     status: "Avaliado",
     criterios: { relevancia: 7.0, viabilidade: 6.0, impacto: 7.5, orcamento: 6.0, inovacao: 3.5, sustentabilidade: 4.0 },
@@ -81,7 +81,7 @@ const avaliacoesExemplo: Avaliacao[] = [
     projeto: { nome: "Arte Urbana", categoria: "Artes Visuais" },
     proponente: { nome: "Coletivo Arte", tipo: "PJ" },
     parecerista: "Roberto Silva",
-    notaFinal: 9.1,
+    notaFinal: 63.7,
     dataAvaliacao: "2024-11-12",
     status: "Aprovado",
     criterios: { relevancia: 9.0, viabilidade: 8.5, impacto: 9.5, orcamento: 8.0, inovacao: 5.0, sustentabilidade: 4.5 },
@@ -115,7 +115,7 @@ export const AvaliacoesAdminMain = () => {
   const [justificativa, setJustificativa] = useState("");
   const [configRanking, setConfigRanking] = useState({
     edital: "Edital PNAB 2024/01",
-    notaMinima: 6.0,
+    notaMinima: 30.0,
     considerarOrcamento: true,
     orcamentos: {
       "Música": 500000,
@@ -161,10 +161,10 @@ export const AvaliacoesAdminMain = () => {
 
   // Funções
   const getNotaColor = (nota: number) => {
-    if (nota >= 8.0) return "text-green-600 bg-green-50";
-    if (nota >= 6.0) return "text-blue-600 bg-blue-50";
-    if (nota >= 4.0) return "text-orange-600 bg-orange-50";
-    return "text-red-600 bg-red-50";
+    if (nota >= 60) return "text-green-600 bg-green-50"; // 85%+ da nota máxima (70)
+    if (nota >= 50) return "text-blue-600 bg-blue-50";  // 70%+ da nota máxima (70)
+    if (nota >= 40) return "text-orange-600 bg-orange-50"; // 55%+ da nota máxima (70)
+    return "text-red-600 bg-red-50"; // Abaixo de 55%
   };
 
   const getStatusBadge = (status: string) => {
@@ -627,7 +627,7 @@ export const AvaliacoesAdminMain = () => {
                         <div className="flex justify-between items-center">
                           <span className="font-semibold">Nota Final:</span>
                           <span className={`text-xl font-bold ${getNotaColor(modalDetalhes.avaliacao.notaFinal).split(' ')[0]}`}>
-                            {modalDetalhes.avaliacao.notaFinal.toFixed(1)}/10
+                            {modalDetalhes.avaliacao.notaFinal.toFixed(1)}/70
                           </span>
                         </div>
                       </div>

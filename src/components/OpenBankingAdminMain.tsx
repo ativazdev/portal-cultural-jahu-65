@@ -8,15 +8,14 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { 
-  Building2, 
-  AlertTriangle, 
-  CheckCircle, 
+import {
+  Building2,
+  AlertTriangle,
+  CheckCircle,
   DollarSign,
-  Eye, 
+  Eye,
   Download,
-  Filter,
-  ArrowLeft
+  Filter
 } from "lucide-react";
 
 interface ContaMonitorada {
@@ -236,16 +235,6 @@ export const OpenBankingAdminMain = () => {
       {/* Cabeçalho */}
       <div className="flex items-center justify-between mb-6">
         <div className="space-y-2">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              onClick={() => navigate("/dashboard-prefeitura")}
-              className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Voltar ao Dashboard
-            </Button>
-          </div>
           <h1 className="text-3xl font-bold tracking-tight text-prefeitura-primary">
             Open Banking
           </h1>

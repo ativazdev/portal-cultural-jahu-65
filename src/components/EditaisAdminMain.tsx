@@ -33,6 +33,8 @@ const editaisIniciais = [
     codigo: "PNAB-2025-001",
     nome: "PNAB 2025 - Edital de Fomento Cultural",
     dataAbertura: "2025-07-01",
+    dataFinalEnvioProjeto: "2025-12-31",
+    horarioFinalEnvioProjeto: "23:59",
     status: "Ativo",
     totalProjetos: 15,
     arquivos: [
@@ -47,6 +49,8 @@ const editaisIniciais = [
     codigo: "PNAB-2025-002",
     nome: "Edital de Apoio às Artes Cênicas",
     dataAbertura: "2025-08-15",
+    dataFinalEnvioProjeto: "2025-11-15",
+    horarioFinalEnvioProjeto: "18:00",
     status: "Ativo",
     totalProjetos: 8,
     arquivos: [
@@ -60,6 +64,8 @@ const editaisIniciais = [
     codigo: "PNAB-2024-005",
     nome: "Fomento Cultural 2024 - Encerrado",
     dataAbertura: "2024-03-01",
+    dataFinalEnvioProjeto: "2024-12-31",
+    horarioFinalEnvioProjeto: "23:59",
     status: "Arquivado",
     totalProjetos: 25,
     arquivos: [
@@ -83,6 +89,8 @@ export const EditaisAdminMain = () => {
     nome: "",
     codigo: "",
     dataAbertura: "",
+    dataFinalEnvioProjeto: "",
+    horarioFinalEnvioProjeto: "",
     arquivos: [] as File[]
   });
 
@@ -173,6 +181,8 @@ export const EditaisAdminMain = () => {
       nome: "",
       codigo: "",
       dataAbertura: "",
+      dataFinalEnvioProjeto: "",
+      horarioFinalEnvioProjeto: "",
       arquivos: []
     });
     setEditalEditando(null);
@@ -189,13 +199,15 @@ export const EditaisAdminMain = () => {
       nome: edital.nome,
       codigo: edital.codigo,
       dataAbertura: edital.dataAbertura,
+      dataFinalEnvioProjeto: edital.dataFinalEnvioProjeto || "",
+      horarioFinalEnvioProjeto: edital.horarioFinalEnvioProjeto || "",
       arquivos: []
     });
     setIsModalAberto(true);
   };
 
   const handleSalvarEdital = () => {
-    if (!formData.nome || !formData.codigo || !formData.dataAbertura) {
+    if (!formData.nome || !formData.codigo || !formData.dataAbertura || !formData.dataFinalEnvioProjeto || !formData.horarioFinalEnvioProjeto) {
       toast({
         title: "Erro de validação",
         description: "Preencha todos os campos obrigatórios.",
@@ -214,6 +226,8 @@ export const EditaisAdminMain = () => {
               ...edital,
               nome: formData.nome,
               dataAbertura: formData.dataAbertura,
+              dataFinalEnvioProjeto: formData.dataFinalEnvioProjeto,
+              horarioFinalEnvioProjeto: formData.horarioFinalEnvioProjeto,
               atualizadoEm: agora,
               arquivos: formData.arquivos.length > 0
                 ? [...edital.arquivos, ...formData.arquivos.map(file => ({
@@ -237,6 +251,8 @@ export const EditaisAdminMain = () => {
         codigo: formData.codigo,
         nome: formData.nome,
         dataAbertura: formData.dataAbertura,
+        dataFinalEnvioProjeto: formData.dataFinalEnvioProjeto,
+        horarioFinalEnvioProjeto: formData.horarioFinalEnvioProjeto,
         status: "Ativo",
         totalProjetos: 0,
         arquivos: formData.arquivos.map(file => ({
@@ -392,6 +408,9 @@ export const EditaisAdminMain = () => {
                         <p className="text-sm text-gray-600">
                           <span className="font-medium">Data de Abertura:</span> {formatarData(edital.dataAbertura)}
                         </p>
+                        <p className="text-sm text-gray-600">
+                          <span className="font-medium">Data Final para Envio:</span> {formatarData(edital.dataFinalEnvioProjeto)} às {edital.horarioFinalEnvioProjeto}
+                        </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -512,6 +531,27 @@ export const EditaisAdminMain = () => {
                   value={formData.dataAbertura}
                   onChange={(e) => handleInputChange("dataAbertura", e.target.value)}
                 />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="dataFinalEnvioProjeto">Data Final de Envio de Projeto *</Label>
+                  <Input
+                    id="dataFinalEnvioProjeto"
+                    type="date"
+                    value={formData.dataFinalEnvioProjeto}
+                    onChange={(e) => handleInputChange("dataFinalEnvioProjeto", e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="horarioFinalEnvioProjeto">Horário Final de Envio de Projeto *</Label>
+                  <Input
+                    id="horarioFinalEnvioProjeto"
+                    type="time"
+                    value={formData.horarioFinalEnvioProjeto}
+                    onChange={(e) => handleInputChange("horarioFinalEnvioProjeto", e.target.value)}
+                  />
+                </div>
               </div>
 
               <div>

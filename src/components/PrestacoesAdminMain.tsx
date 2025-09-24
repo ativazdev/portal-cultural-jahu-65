@@ -12,19 +12,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { 
-  FileText, 
-  Search, 
-  CheckCircle, 
-  AlertTriangle, 
-  Eye, 
-  Edit, 
+import {
+  FileText,
+  Search,
+  CheckCircle,
+  AlertTriangle,
+  Eye,
+  Edit,
   Building2,
   Clock,
   X,
   Download,
-  Filter,
-  ArrowLeft
+  Filter
 } from "lucide-react";
 
 interface Prestacao {
@@ -320,16 +319,6 @@ export const PrestacoesAdminMain = () => {
       {/* Cabeçalho */}
       <div className="flex items-center justify-between mb-6">
         <div className="space-y-2">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              onClick={() => navigate("/dashboard-prefeitura")}
-              className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Voltar ao Dashboard
-            </Button>
-          </div>
           <h1 className="text-3xl font-bold tracking-tight text-prefeitura-primary">
             Prestações de Contas
           </h1>

@@ -1,5 +1,20 @@
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { PrefeituraHeader } from "@/components/PrefeituraHeader";
+import { PrefeituraSidebar } from "@/components/PrefeituraSidebar";
 import { PrestacoesAdminMain } from "@/components/PrestacoesAdminMain";
 
-export default function PrestacoesAdmin() {
-  return <PrestacoesAdminMain />;
-}
+const PrestacoesAdmin = () => {
+  return (
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full bg-prefeitura-accent">
+        <PrefeituraSidebar />
+        <div className="flex-1 flex flex-col">
+          <PrefeituraHeader />
+          <PrestacoesAdminMain />
+        </div>
+      </div>
+    </SidebarProvider>
+  );
+};
+
+export default PrestacoesAdmin;
