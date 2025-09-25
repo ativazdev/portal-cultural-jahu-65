@@ -1,5 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { FileText, Calendar, CreditCard, AlertTriangle, ExternalLink } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -63,28 +64,101 @@ export const DashboardMain = () => {
             <CardTitle className="text-xl text-cultural-primary">
               Programas disponíveis
             </CardTitle>
-            <Button variant="link" className="text-cultural-primary">
-              Saiba Mais <ExternalLink className="ml-1 h-4 w-4" />
-            </Button>
           </div>
         </CardHeader>
         <CardContent>
-          <div 
-            className="bg-gradient-cultural p-6 rounded-lg text-white cursor-pointer hover:opacity-90 transition-opacity"
-            onClick={() => navigate('/detalhes-edital')}
-          >
-            <div className="flex flex-col items-center text-center">
-              <div className="text-4xl font-bold mb-2">
-                <span className="text-yellow-300">P</span>
-                <span className="text-orange-300">N</span>
-                <span className="text-blue-300">A</span>
-                <span className="text-green-300">B</span>
-              </div>
-              <div className="text-lg font-semibold mb-4">
-                JAHU <span className="bg-white text-cultural-primary px-2 py-1 rounded">SP</span>
-              </div>
-              <h3 className="text-xl font-bold">PNAB - Jahu</h3>
-            </div>
+          {/* Lista de Editais */}
+          <div className="grid gap-6">
+            <Card className="hover:shadow-md transition-shadow">
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div className="space-y-2">
+                    <CardTitle className="text-xl text-gray-900 flex items-center gap-2">
+                      <FileText className="h-5 w-5 text-cultural-primary" />
+                      PNAB 2025 - Edital de Fomento Cultural
+                    </CardTitle>
+                    <div className="space-y-1">
+                      <p className="text-sm text-gray-600">
+                        <span className="font-medium">Código:</span> PNAB-2025-001
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        <span className="font-medium">Data de abertura:</span> 01/07/2025
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        <span className="font-medium">Data final para envio:</span> 31/12/2025
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        <span className="font-medium">Horário final para envio:</span> 23:59
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-green-100 text-green-800 border-green-200">
+                      Ativo
+                    </Badge>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Vagas Disponíveis</label>
+                      <p className="text-lg font-bold text-gray-900">50</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Valor Máximo</label>
+                      <p className="text-lg font-bold text-gray-900">R$ 25.000</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Prazo Final</label>
+                      <p className="text-lg font-bold text-gray-900">30 dias</p>
+                    </div>
+                  </div>
+
+                  {/* Arquivos do Edital */}
+                  <div>
+                    <label className="text-sm font-medium text-gray-500 mb-2 block">Documentos</label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      <div className="flex items-center justify-between p-2 bg-gray-50 rounded-md">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-blue-600" />
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">edital-pnab-2025-001.pdf</p>
+                            <p className="text-xs text-gray-500">2.5 MB</p>
+                          </div>
+                        </div>
+                        <Button variant="ghost" size="sm" onClick={() => window.open('#', '_blank')}>
+                          <ExternalLink className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <div className="flex items-center justify-between p-2 bg-gray-50 rounded-md">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-blue-600" />
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">anexo-formularios.pdf</p>
+                            <p className="text-xs text-gray-500">1.2 MB</p>
+                          </div>
+                        </div>
+                        <Button variant="ghost" size="sm" onClick={() => window.open('#', '_blank')}>
+                          <ExternalLink className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-2">
+                    <Button
+                      onClick={() => navigate('/detalhes-edital')}
+                      className="w-full bg-cultural-primary hover:bg-cultural-primary/90"
+                    >
+                      <FileText className="h-4 w-4 mr-2" />
+                      Inscrever Projeto
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </CardContent>
       </Card>

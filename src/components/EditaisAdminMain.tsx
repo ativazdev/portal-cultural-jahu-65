@@ -406,10 +406,13 @@ export const EditaisAdminMain = () => {
                           <span className="font-medium">Código:</span> {edital.codigo}
                         </p>
                         <p className="text-sm text-gray-600">
-                          <span className="font-medium">Data de Abertura:</span> {formatarData(edital.dataAbertura)}
+                          <span className="font-medium">Data de abertura:</span> {formatarData(edital.dataAbertura)}
                         </p>
                         <p className="text-sm text-gray-600">
-                          <span className="font-medium">Data Final para Envio:</span> {formatarData(edital.dataFinalEnvioProjeto)} às {edital.horarioFinalEnvioProjeto}
+                          <span className="font-medium">Data final para envio:</span> {formatarData(edital.dataFinalEnvioProjeto)}
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          <span className="font-medium">Horário final para envio:</span> {edital.horarioFinalEnvioProjeto}
                         </p>
                       </div>
                     </div>
