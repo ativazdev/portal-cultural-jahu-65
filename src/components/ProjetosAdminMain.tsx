@@ -18,6 +18,8 @@ export interface DocumentoHabilitacao {
   };
   obrigatorio: boolean;
   dataSolicitacao: string;
+  status?: "pendente" | "enviado" | "aprovado" | "rejeitado";
+  tipo?: "rg" | "cpf" | "certidao_negativa" | "certidao_trabalhista" | "comprovante_residencia" | "cnpj" | "atos_constitutivos" | "certidao_falencia" | "crf_fgts" | "declaracao_representacao" | "outros";
 }
 
 export interface Projeto {
@@ -25,13 +27,14 @@ export interface Projeto {
   nome: string;
   categoria: string;
   proponente: string;
-  tipoProponente: "PF" | "PJ";
+  tipoProponente: "PF" | "PJ" | "Grupo";
   valorSolicitado: number;
   dataSubmissao: string;
   status: "Recebido" | "Em Avaliação" | "Avaliado" | "Aprovado" | "Rejeitado";
   parecerista?: string;
   edital: string;
   documentosHabilitacao?: DocumentoHabilitacao[];
+  necessitaComprovanteResidencia?: boolean;
 }
 
 export interface Parecerista {
@@ -74,49 +77,21 @@ const projetosExemplo: Projeto[] = [
     tipoProponente: "PJ",
     valorSolicitado: 12000,
     dataSubmissao: "2024-11-13",
-    status: "Avaliado",
+    status: "Aprovado",
     parecerista: "Carlos Lima",
     edital: "PNAB-2025-001"
   },
   {
-    id: "4",
-    nome: "Arte Urbana",
-    categoria: "Artes Visuais",
-    proponente: "Coletivo Arte",
-    tipoProponente: "PJ",
-    valorSolicitado: 20000,
-    dataSubmissao: "2024-11-12",
+    id: "5",
+    nome: "Manifestação Cultural Indígena",
+    categoria: "Cultura Popular",
+    proponente: "Grupo Raízes da Terra",
+    tipoProponente: "Grupo",
+    valorSolicitado: 18000,
+    dataSubmissao: "2024-11-11",
     status: "Aprovado",
-    parecerista: "Lucia Mendes",
-    edital: "PNAB-2025-003",
-    documentosHabilitacao: [
-      {
-        id: "1",
-        nome: "Certidão Negativa de Débitos",
-        descricao: "Certidão emitida pela Receita Federal comprovando a regularidade fiscal da organização",
-        obrigatorio: true,
-        dataSolicitacao: "2024-11-20",
-        arquivo: {
-          nome: "certidao_negativa_debitos.pdf",
-          url: "/uploads/certidao_negativa_debitos.pdf",
-          dataUpload: "2024-11-22"
-        }
-      },
-      {
-        id: "2",
-        nome: "Comprovante de Conta Bancária",
-        descricao: "Extrato ou documento que comprove a conta bancária da organização para transferência de recursos",
-        obrigatorio: true,
-        dataSolicitacao: "2024-11-20"
-      },
-      {
-        id: "3",
-        nome: "Ata de Assembleia",
-        descricao: "Ata da assembleia que aprovou a participação no edital (apenas para organizações)",
-        obrigatorio: false,
-        dataSolicitacao: "2024-11-20"
-      }
-    ]
+    parecerista: "Ana Costa",
+    edital: "PNAB-2025-001"
   }
 ];
 

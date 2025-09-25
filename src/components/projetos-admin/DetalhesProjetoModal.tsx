@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Download, Upload, FileText, Clock, CheckCircle, AlertCircle } from "lucide-react";
+import { Plus, Download, Upload, FileText, Clock, CheckCircle, AlertCircle, Send } from "lucide-react";
 import { Projeto, DocumentoHabilitacao } from "@/components/ProjetosAdminMain";
 
 interface DetalhesProjetoModalProps {
@@ -21,6 +21,7 @@ export const DetalhesProjetoModal = ({ aberto, projeto, onFechar, onAtualizarPro
   const [novoDocumento, setNovoDocumento] = useState({ nome: "", descricao: "", obrigatorio: false });
   const [mostrarFormNovoDoc, setMostrarFormNovoDoc] = useState(false);
   const [documentosHabilitacao, setDocumentosHabilitacao] = useState<DocumentoHabilitacao[]>([]);
+  const [necessitaComprovanteResidencia, setNecessitaComprovanteResidencia] = useState<boolean | null>(null);
 
   // Inicializar documentos de habilitação quando o projeto mudar
   useEffect(() => {
@@ -73,6 +74,205 @@ export const DetalhesProjetoModal = ({ aberto, projeto, onFechar, onAtualizarPro
     setMostrarFormNovoDoc(false);
 
     console.log("Documento adicionado:", novoDoc);
+  };
+
+  const gerarDocumentosObrigatorios = () => {
+    if (!projeto) return [];
+
+    const documentos: DocumentoHabilitacao[] = [];
+    const hoje = new Date().toISOString().split('T')[0];
+
+    switch (projeto.tipoProponente) {
+      case "PF":
+        documentos.push(
+          {
+            id: "rg",
+            nome: "RG",
+            descricao: "Documento de identidade (RG) do proponente",
+            obrigatorio: true,
+            dataSolicitacao: hoje,
+            status: "pendente",
+            tipo: "rg"
+          },
+          {
+            id: "cpf",
+            nome: "CPF",
+            descricao: "Cadastro de Pessoa Física (CPF) do proponente",
+            obrigatorio: true,
+            dataSolicitacao: hoje,
+            status: "pendente",
+            tipo: "cpf"
+          },
+          {
+            id: "certidao_negativa",
+            nome: "Certidão Negativa de Débitos",
+            descricao: "Certidão negativa de débitos relativas ao crédito tributário estaduais e municipais",
+            obrigatorio: true,
+            dataSolicitacao: hoje,
+            status: "pendente",
+            tipo: "certidao_negativa"
+          },
+          {
+            id: "certidao_trabalhista",
+            nome: "Certidão Negativa de Débitos Trabalhista",
+            descricao: "Certidão negativa de débitos trabalhista",
+            obrigatorio: true,
+            dataSolicitacao: hoje,
+            status: "pendente",
+            tipo: "certidao_trabalhista"
+          }
+        );
+
+        // Comprovante de residência condicional
+        if (necessitaComprovanteResidencia === true) {
+          documentos.push({
+            id: "comprovante_residencia",
+            nome: "Comprovante de Residência",
+            descricao: "Comprovante de residência do proponente",
+            obrigatorio: true,
+            dataSolicitacao: hoje,
+            status: "pendente",
+            tipo: "comprovante_residencia"
+          });
+        }
+        break;
+
+      case "PJ":
+        documentos.push(
+          {
+            id: "cnpj",
+            nome: "CNPJ",
+            descricao: "Inscrição no cadastro nacional de pessoa jurídica - CNPJ",
+            obrigatorio: true,
+            dataSolicitacao: hoje,
+            status: "pendente",
+            tipo: "cnpj"
+          },
+          {
+            id: "atos_constitutivos",
+            nome: "Atos Constitutivos",
+            descricao: "Contrato social para no caso de pessoas jurídicas com fins lucrativos ou estatuto, nos casos de organizações da sociedade civil",
+            obrigatorio: true,
+            dataSolicitacao: hoje,
+            status: "pendente",
+            tipo: "atos_constitutivos"
+          },
+          {
+            id: "rg",
+            nome: "RG",
+            descricao: "Documento de identidade (RG) do representante legal",
+            obrigatorio: true,
+            dataSolicitacao: hoje,
+            status: "pendente",
+            tipo: "rg"
+          },
+          {
+            id: "cpf",
+            nome: "CPF",
+            descricao: "Cadastro de Pessoa Física (CPF) do representante legal",
+            obrigatorio: true,
+            dataSolicitacao: hoje,
+            status: "pendente",
+            tipo: "cpf"
+          },
+          {
+            id: "certidoes_pj",
+            nome: "Certidões da Pessoa Jurídica",
+            descricao: "Certidão negativa de falência e recuperação judicial, Certidão negativa de débitos relativos a crédito tributário, Certidão negativa de débitos estaduais e municipais, Certidão negativa de débitos trabalhistas - CNDT",
+            obrigatorio: true,
+            dataSolicitacao: hoje,
+            status: "pendente",
+            tipo: "certidao_falencia"
+          },
+          {
+            id: "crf_fgts",
+            nome: "CRF/FGTS",
+            descricao: "Certificado de regularidade do fundo de garantia do tempo de serviço - CRF/FGTS",
+            obrigatorio: true,
+            dataSolicitacao: hoje,
+            status: "pendente",
+            tipo: "crf_fgts"
+          }
+        );
+        break;
+
+      case "Grupo":
+        documentos.push(
+          {
+            id: "rg",
+            nome: "RG",
+            descricao: "Documento de identidade (RG) do representante do grupo",
+            obrigatorio: true,
+            dataSolicitacao: hoje,
+            status: "pendente",
+            tipo: "rg"
+          },
+          {
+            id: "cpf",
+            nome: "CPF",
+            descricao: "Cadastro de Pessoa Física (CPF) do representante do grupo",
+            obrigatorio: true,
+            dataSolicitacao: hoje,
+            status: "pendente",
+            tipo: "cpf"
+          },
+          {
+            id: "certidoes_grupo",
+            nome: "Certidões do Representante",
+            descricao: "Certidão negativa de débitos relativos créditos tributários federal e divida ativa da união em nome do representante do grupo, Certidões negativa de débito relativos ao crédito tributário estaduais e municipais, Certidão negativa de débitos trabalhistas - CNDT",
+            obrigatorio: true,
+            dataSolicitacao: hoje,
+            status: "pendente",
+            tipo: "certidao_negativa"
+          },
+          {
+            id: "comprovante_residencia",
+            nome: "Comprovante de Residência",
+            descricao: "Comprovante de residência do representante do grupo",
+            obrigatorio: true,
+            dataSolicitacao: hoje,
+            status: "pendente",
+            tipo: "comprovante_residencia"
+          },
+          {
+            id: "certidoes_positivas",
+            nome: "Certidões Positivas com Efeito de Negativas",
+            descricao: "Certidões positivas com efeito de negativas",
+            obrigatorio: true,
+            dataSolicitacao: hoje,
+            status: "pendente",
+            tipo: "outros"
+          },
+          {
+            id: "declaracao_representacao",
+            nome: "Declaração de Representação",
+            descricao: "Declaração de representação, se for concorrer como um coletivo sem CNPJ",
+            obrigatorio: true,
+            dataSolicitacao: hoje,
+            status: "pendente",
+            tipo: "declaracao_representacao"
+          }
+        );
+        break;
+    }
+
+    return documentos;
+  };
+
+  const handleEnviarPendencia = () => {
+    const documentosGerados = gerarDocumentosObrigatorios();
+    setDocumentosHabilitacao(documentosGerados);
+
+    if (onAtualizarProjeto && projeto) {
+      const projetoAtualizado = {
+        ...projeto,
+        documentosHabilitacao: documentosGerados,
+        necessitaComprovanteResidencia: necessitaComprovanteResidencia || false
+      };
+      onAtualizarProjeto(projetoAtualizado);
+    }
+
+    console.log("Pendência enviada com documentos:", documentosGerados);
   };
 
   return (
@@ -220,14 +420,26 @@ export const DetalhesProjetoModal = ({ aberto, projeto, onFechar, onAtualizarPro
             <div className="flex justify-between items-center">
               <h3 className="font-semibold">Documentação de Habilitação</h3>
               {projeto.status === "Aprovado" && (
-                <Button
-                  onClick={() => setMostrarFormNovoDoc(!mostrarFormNovoDoc)}
-                  size="sm"
-                  variant="outline"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Solicitar Documento
-                </Button>
+                <div className="flex gap-2">
+                  {!documentosHabilitacao.length && (
+                    <Button
+                      onClick={handleEnviarPendencia}
+                      size="sm"
+                      variant="default"
+                    >
+                      <Send className="h-4 w-4 mr-2" />
+                      Enviar Pendência
+                    </Button>
+                  )}
+                  <Button
+                    onClick={() => setMostrarFormNovoDoc(!mostrarFormNovoDoc)}
+                    size="sm"
+                    variant="outline"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Solicitar Documento
+                  </Button>
+                </div>
               )}
             </div>
 
@@ -236,6 +448,49 @@ export const DetalhesProjetoModal = ({ aberto, projeto, onFechar, onAtualizarPro
                 <AlertCircle className="h-12 w-12 mx-auto mb-4 text-gray-400" />
                 <p>A documentação de habilitação fica disponível apenas após a aprovação do projeto.</p>
               </div>
+            )}
+
+            {/* Pergunta sobre comprovante de residência para PF */}
+            {projeto.status === "Aprovado" && projeto.tipoProponente === "PF" && !documentosHabilitacao.length && (
+              <Card>
+                <CardContent className="p-4">
+                  <h4 className="font-medium mb-3">Comprovante de Residência</h4>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    O proponente se enquadra em alguma das seguintes situações?
+                  </p>
+                  <ul className="text-sm text-muted-foreground list-disc list-inside mb-4 space-y-1">
+                    <li>Pertencente indígena, quilombola, cigano ou circense</li>
+                    <li>Pertencente a população nômade ou itinerante</li>
+                    <li>Que se encontre em situação de rua</li>
+                  </ul>
+                  <div className="flex gap-2">
+                    <Button
+                      variant={necessitaComprovanteResidencia === false ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setNecessitaComprovanteResidencia(false)}
+                    >
+                      Sim
+                    </Button>
+                    <Button
+                      variant={necessitaComprovanteResidencia === true ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setNecessitaComprovanteResidencia(true)}
+                    >
+                      Não
+                    </Button>
+                  </div>
+                  {necessitaComprovanteResidencia === false && (
+                    <p className="text-xs text-green-600 mt-2">
+                      Comprovante de residência não será solicitado.
+                    </p>
+                  )}
+                  {necessitaComprovanteResidencia === true && (
+                    <p className="text-xs text-blue-600 mt-2">
+                      Comprovante de residência será incluído nos documentos obrigatórios.
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
             )}
 
             {/* Formulário para adicionar novo documento */}
@@ -305,15 +560,25 @@ export const DetalhesProjetoModal = ({ aberto, projeto, onFechar, onAtualizarPro
                             {doc.obrigatorio && (
                               <Badge variant="destructive" className="text-xs">Obrigatório</Badge>
                             )}
-                            {doc.arquivo ? (
+                            {doc.status === "enviado" || doc.arquivo ? (
                               <Badge variant="default" className="text-xs bg-green-100 text-green-800">
                                 <CheckCircle className="h-3 w-3 mr-1" />
                                 Enviado
                               </Badge>
+                            ) : doc.status === "aprovado" ? (
+                              <Badge variant="default" className="text-xs bg-green-600 text-white">
+                                <CheckCircle className="h-3 w-3 mr-1" />
+                                Aprovado
+                              </Badge>
+                            ) : doc.status === "rejeitado" ? (
+                              <Badge variant="destructive" className="text-xs">
+                                <AlertCircle className="h-3 w-3 mr-1" />
+                                Rejeitado
+                              </Badge>
                             ) : (
                               <Badge variant="outline" className="text-xs">
                                 <Clock className="h-3 w-3 mr-1" />
-                                Aguardando
+                                Pendente
                               </Badge>
                             )}
                           </div>
