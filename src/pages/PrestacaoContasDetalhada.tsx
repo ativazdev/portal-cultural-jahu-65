@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Input } from "@/components/ui/input";
@@ -43,7 +43,11 @@ interface ComiteGestor {
 export default function PrestacaoContasDetalhada() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  
+  const { id } = useParams();
+
+  // Estados do projeto
+  const [projeto, setProjeto] = useState<any>(null);
+
   // Estados do formulário
   const [acoesRealizadas, setAcoesRealizadas] = useState("");
   const [geralProdutos, setGeralProdutos] = useState("");
@@ -68,6 +72,48 @@ export default function PrestacaoContasDetalhada() {
   const [comiteGestor, setComiteGestor] = useState<ComiteGestor[]>([
     { id: "1", nomeEntidade: "", areaAtuacao: "", email: "", responsavel: "", telefone: "", tipo: "" }
   ]);
+
+  // Buscar dados do projeto baseado no ID
+  useEffect(() => {
+    if (id) {
+      // Simular busca de dados do projeto (normalmente seria uma API call)
+      const projetos = [
+        {
+          id: 1,
+          numeroInscricao: "08/2025-1756.7345.5351",
+          nome: "Projeto PNAB - Teatro",
+          edital: "EDITAL PNAB - CULTURA JAÚ",
+          modalidade: "Artes Cênicas",
+          proponente: "Ativar Produções LTDA",
+          status: "Aprovado",
+          ano: "2025",
+          programa: "PNAB 1",
+          termoExecucao: "TEC-2025-001",
+          vigencia: "01/01/2025 a 31/12/2025",
+          valorRepassado: "R$ 25.000,00"
+        },
+        {
+          id: 2,
+          numeroInscricao: "07/2025-1756.8912.3348",
+          nome: "Projeto PNAB - Dança",
+          edital: "EDITAL PNAB - CULTURA JAÚ",
+          modalidade: "Dança",
+          proponente: "Ativar Produções LTDA",
+          status: "Aprovado",
+          ano: "2025",
+          programa: "PNAB 2",
+          termoExecucao: "TEC-2025-002",
+          vigencia: "01/01/2025 a 31/12/2025",
+          valorRepassado: "R$ 18.000,00"
+        }
+      ];
+
+      const projetoEncontrado = projetos.find(p => p.id === parseInt(id));
+      if (projetoEncontrado) {
+        setProjeto(projetoEncontrado);
+      }
+    }
+  }, [id]);
 
   const adicionarMeta = () => {
     const novaMeta: Meta = {
@@ -171,6 +217,10 @@ export default function PrestacaoContasDetalhada() {
       title: "Rascunho salvo",
       description: "Suas informações foram salvas automaticamente.",
     });
+    // Voltar para meus projetos após salvar
+    setTimeout(() => {
+      navigate('/meus-projetos');
+    }, 1500);
   };
 
   const enviarPrestacaoContas = () => {
@@ -178,6 +228,10 @@ export default function PrestacaoContasDetalhada() {
       title: "Prestação de contas enviada",
       description: "Sua prestação de contas foi enviada com sucesso e está em análise.",
     });
+    // Voltar para meus projetos após enviar
+    setTimeout(() => {
+      navigate('/meus-projetos');
+    }, 1500);
   };
 
   return (
@@ -186,11 +240,11 @@ export default function PrestacaoContasDetalhada() {
       <div className="bg-white border-b">
         <div className="max-w-6xl mx-auto px-6 py-4">
           <button
-            onClick={() => navigate('/prestacao-contas')}
+            onClick={() => navigate('/meus-projetos')}
             className="flex items-center gap-2 text-gray-600 hover:text-gray-800 mb-2"
           >
             <ArrowLeft className="w-4 h-4" />
-            Voltar para validação do projeto
+            Voltar para projetos
           </button>
           <h1 className="text-2xl font-bold text-gray-900">Prestação de Contas</h1>
           <p className="text-gray-600 mt-1">Relatório de Objeto da Execução Cultural</p>
@@ -199,36 +253,38 @@ export default function PrestacaoContasDetalhada() {
 
       {/* Informações básicas do projeto */}
       <div className="max-w-6xl mx-auto px-6 py-4">
-        <Card className="mb-6">
-          <CardContent className="pt-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-              <div>
-                <span className="font-medium text-gray-600">Projeto:</span>
-                <p className="text-gray-900">Projeto Musical da Cidade</p>
+        {projeto && (
+          <Card className="mb-6">
+            <CardContent className="pt-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                <div>
+                  <span className="font-medium text-gray-600">Projeto:</span>
+                  <p className="text-gray-900">{projeto.nome}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-600">Termo:</span>
+                  <p className="text-gray-900">{projeto.termoExecucao}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-600">Valor repassado:</span>
+                  <p className="text-gray-900">{projeto.valorRepassado}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-600">Vigência:</span>
+                  <p className="text-gray-900">{projeto.vigencia}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-600">Entidade:</span>
+                  <p className="text-gray-900">{projeto.proponente}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-600">Data de entrega:</span>
+                  <p className="text-gray-900">{format(new Date(), "dd/MM/yyyy")}</p>
+                </div>
               </div>
-              <div>
-                <span className="font-medium text-gray-600">Termo:</span>
-                <p className="text-gray-900">TEC-2024-001</p>
-              </div>
-              <div>
-                <span className="font-medium text-gray-600">Valor repassado:</span>
-                <p className="text-gray-900">R$ 50.000,00</p>
-              </div>
-              <div>
-                <span className="font-medium text-gray-600">Vigência:</span>
-                <p className="text-gray-900">01/01/2024 a 31/12/2024</p>
-              </div>
-              <div>
-                <span className="font-medium text-gray-600">Entidade:</span>
-                <p className="text-gray-900">Associação Cultural da Cidade</p>
-              </div>
-              <div>
-                <span className="font-medium text-gray-600">Data de entrega:</span>
-                <p className="text-gray-900">{format(new Date(), "dd/MM/yyyy")}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
         <Accordion type="single" collapsible className="space-y-4">
           {/* 1. Dados do Projeto */}
@@ -240,34 +296,36 @@ export default function PrestacaoContasDetalhada() {
               </div>
             </AccordionTrigger>
             <AccordionContent className="px-6 pb-6">
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label>Nome do projeto</Label>
-                    <Input value="Projeto Musical da Cidade" disabled className="bg-gray-50" />
-                  </div>
-                  <div>
-                    <Label>Nome da Entidade Cultural</Label>
-                    <Input value="Associação Cultural da Cidade" disabled className="bg-gray-50" />
-                  </div>
-                  <div>
-                    <Label>Nº do Termo de Execução Cultural</Label>
-                    <Input value="TEC-2024-001" disabled className="bg-gray-50" />
-                  </div>
-                  <div>
-                    <Label>Vigência do projeto</Label>
-                    <Input value="01/01/2024 a 31/12/2024" disabled className="bg-gray-50" />
-                  </div>
-                  <div>
-                    <Label>Valor repassado para o projeto</Label>
-                    <Input value="R$ 50.000,00" disabled className="bg-gray-50" />
-                  </div>
-                  <div>
-                    <Label>Data de entrega desse relatório</Label>
-                    <Input value={format(new Date(), "dd/MM/yyyy")} disabled className="bg-gray-50" />
+              {projeto && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label>Nome do projeto</Label>
+                      <Input value={projeto.nome} disabled className="bg-gray-50" />
+                    </div>
+                    <div>
+                      <Label>Nome do agente cultural proponente</Label>
+                      <Input value={projeto.proponente} disabled className="bg-gray-50" />
+                    </div>
+                    <div>
+                      <Label>Nº do Termo de Execução Cultural</Label>
+                      <Input value={projeto.termoExecucao} disabled className="bg-gray-50" />
+                    </div>
+                    <div>
+                      <Label>Vigência do projeto</Label>
+                      <Input value={projeto.vigencia} disabled className="bg-gray-50" />
+                    </div>
+                    <div>
+                      <Label>Valor repassado para o projeto</Label>
+                      <Input value={projeto.valorRepassado} disabled className="bg-gray-50" />
+                    </div>
+                    <div>
+                      <Label>Data de entrega desse relatório</Label>
+                      <Input value={format(new Date(), "dd/MM/yyyy")} disabled className="bg-gray-50" />
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </AccordionContent>
           </AccordionItem>
 
@@ -980,8 +1038,8 @@ export default function PrestacaoContasDetalhada() {
             Salvar Rascunho
           </Button>
           <div className="flex gap-4">
-            <Button variant="outline" onClick={() => navigate('/prestacao-contas')}>
-              Voltar
+            <Button variant="outline" onClick={() => navigate('/meus-projetos')}>
+              Cancelar
             </Button>
             <Button onClick={enviarPrestacaoContas} className="bg-green-600 hover:bg-green-700">
               Enviar Prestação de Contas

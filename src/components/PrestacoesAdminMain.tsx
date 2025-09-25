@@ -93,10 +93,10 @@ export const PrestacoesAdminMain = () => {
   const prestacoes: Prestacao[] = [
     {
       id: "1",
-      projeto: "Festival de Música Popular",
-      categoria: "Música",
-      proponente: "João Silva",
-      tipo: "PF",
+      projeto: "Projeto PNAB - Teatro",
+      categoria: "Artes Cênicas",
+      proponente: "Ativar Produções LTDA",
+      tipo: "PJ",
       valor: 25000,
       dataEntrega: "15/11/2024",
       prazo: "5 dias",
@@ -105,9 +105,9 @@ export const PrestacoesAdminMain = () => {
     },
     {
       id: "2",
-      projeto: "Teatro na Praça",
-      categoria: "Teatro",
-      proponente: "Maria Santos",
+      projeto: "Projeto PNAB - Dança",
+      categoria: "Dança",
+      proponente: "Ativar Produções LTDA",
       tipo: "PJ",
       valor: 18000,
       dataEntrega: "10/11/2024",
@@ -117,11 +117,11 @@ export const PrestacoesAdminMain = () => {
     },
     {
       id: "3",
-      projeto: "Oficina de Dança",
-      categoria: "Dança",
-      proponente: "Pedro Costa",
+      projeto: "Festival de Música Popular",
+      categoria: "Música",
+      proponente: "João Silva",
       tipo: "PF",
-      valor: 12000,
+      valor: 30000,
       dataEntrega: "08/11/2024",
       prazo: "Aprovada",
       status: "Aprovada",
@@ -133,7 +133,7 @@ export const PrestacoesAdminMain = () => {
       categoria: "Artes Visuais",
       proponente: "Coletivo Arte",
       tipo: "PJ",
-      valor: 30000,
+      valor: 22000,
       dataEntrega: "20/11/2024",
       prazo: "15 dias",
       status: "Com Pendências",
@@ -608,28 +608,220 @@ export const PrestacoesAdminMain = () => {
             </TabsList>
             
             <TabsContent value="relatorio" className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="font-medium">Projeto</Label>
-                  <p>{selectedPrestacao?.projeto}</p>
+              {selectedPrestacao && (
+                <div className="space-y-6">
+                  {/* 1. Dados do Projeto */}
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <h3 className="font-medium text-lg mb-3 text-blue-600">1. Dados do Projeto</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="font-medium text-sm text-gray-600">Nome do projeto</Label>
+                        <p className="mt-1">{selectedPrestacao.projeto}</p>
+                      </div>
+                      <div>
+                        <Label className="font-medium text-sm text-gray-600">Nome do agente cultural proponente</Label>
+                        <p className="mt-1">{selectedPrestacao.proponente}</p>
+                      </div>
+                      <div>
+                        <Label className="font-medium text-sm text-gray-600">Nº do Termo de Execução Cultural</Label>
+                        <p className="mt-1">TEC-2025-{selectedPrestacao.id.padStart(3, '0')}</p>
+                      </div>
+                      <div>
+                        <Label className="font-medium text-sm text-gray-600">Vigência do projeto</Label>
+                        <p className="mt-1">01/01/2025 a 31/12/2025</p>
+                      </div>
+                      <div>
+                        <Label className="font-medium text-sm text-gray-600">Valor repassado</Label>
+                        <p className="mt-1 text-green-600 font-medium">{formatCurrency(selectedPrestacao.valor)}</p>
+                      </div>
+                      <div>
+                        <Label className="font-medium text-sm text-gray-600">Data de entrega do relatório</Label>
+                        <p className="mt-1">{selectedPrestacao.dataEntrega}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 2. Resultados do Projeto */}
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <h3 className="font-medium text-lg mb-3 text-green-600">2. Resultados do Projeto</h3>
+                    <div className="space-y-4">
+                      <div>
+                        <Label className="font-medium text-sm text-gray-600">Resumo</Label>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {selectedPrestacao.categoria === "Artes Cênicas" ?
+                            "O projeto teatral foi executado conforme cronograma estabelecido, promovendo a cultura local através de apresentações em espaços públicos. Foram realizadas 8 apresentações, com público total de 1.200 pessoas, superando as expectativas iniciais." :
+                          selectedPrestacao.categoria === "Dança" ?
+                            "O projeto de dança contemporânea integrou diferentes estilos e promoveu a expressão corporal como forma de arte. Realizamos 12 oficinas e 3 apresentações públicas, com participação de 150 pessoas nas atividades." :
+                            "O projeto foi desenvolvido de acordo com o planejamento inicial, alcançando todas as metas propostas e beneficiando diretamente a comunidade local através das ações culturais implementadas."
+                          }
+                        </p>
+                      </div>
+
+                      <div>
+                        <Label className="font-medium text-sm text-gray-600">As ações planejadas foram realizadas?</Label>
+                        <p className="text-sm mt-1">✅ Sim, todas as ações foram feitas conforme o planejado</p>
+                      </div>
+
+                      <div>
+                        <Label className="font-medium text-sm text-gray-600">Ações desenvolvidas</Label>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {selectedPrestacao.categoria === "Artes Cênicas" ?
+                            "Realizadas 8 apresentações teatrais nos seguintes locais: Teatro Municipal (2 apresentações), Praça Central (3 apresentações), Escola Municipal (2 apresentações), Casa da Cultura (1 apresentação). Cada apresentação teve duração média de 90 minutos, com público médio de 150 pessoas por sessão." :
+                          selectedPrestacao.categoria === "Dança" ?
+                            "Desenvolvidas 12 oficinas de dança contemporânea no período de março a novembro de 2025. As oficinas foram realizadas no Centro Cultural, com aulas semanais de 2 horas cada. Realizamos 3 apresentações públicas: Festival de Inverno, Semana da Cultura e Mostra de Fim de Ano." :
+                            "As ações foram desenvolvidas conforme cronograma estabelecido, incluindo todas as etapas previstas no projeto original."
+                          }
+                        </p>
+                      </div>
+
+                      <div>
+                        <Label className="font-medium text-sm text-gray-600">Cumprimento das Metas</Label>
+                        <div className="mt-2 space-y-2">
+                          <div className="p-3 border rounded-lg">
+                            <p className="font-medium text-sm">META 1 - Realizar apresentações culturais</p>
+                            <p className="text-xs text-green-600 mt-1">✅ Integralmente cumprida</p>
+                            <p className="text-xs text-gray-600 mt-1">
+                              Meta superada: planejadas 6 apresentações, realizadas 8 apresentações
+                            </p>
+                          </div>
+                          <div className="p-3 border rounded-lg">
+                            <p className="font-medium text-sm">META 2 - Capacitar participantes</p>
+                            <p className="text-xs text-green-600 mt-1">✅ Integralmente cumprida</p>
+                            <p className="text-xs text-gray-600 mt-1">
+                              Capacitados 45 participantes em técnicas artísticas
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 3. Produtos Gerados */}
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <h3 className="font-medium text-lg mb-3 text-purple-600">3. Produtos Gerados</h3>
+                    <div className="space-y-4">
+                      <div>
+                        <Label className="font-medium text-sm text-gray-600">A execução gerou produtos?</Label>
+                        <p className="text-sm mt-1">✅ Sim</p>
+                      </div>
+
+                      <div>
+                        <Label className="font-medium text-sm text-gray-600">Produtos culturais gerados</Label>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">Vídeo (3)</span>
+                          <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">Catálogo (1)</span>
+                          <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded text-xs">Espetáculo (8)</span>
+                          <span className="px-2 py-1 bg-orange-100 text-orange-800 rounded text-xs">Site (1)</span>
+                        </div>
+                      </div>
+
+                      <div>
+                        <Label className="font-medium text-sm text-gray-600">Como ficaram disponíveis</Label>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Os vídeos das apresentações estão disponibilizados no canal YouTube do projeto.
+                          O catálogo foi impresso em 500 exemplares e distribuído gratuitamente.
+                          O site do projeto (www.teatrojau.com.br) mantém todas as informações e galeria de fotos.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 4. Público Alcançado */}
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <h3 className="font-medium text-lg mb-3 text-orange-600">4. Público Alcançado</h3>
+                    <div className="space-y-4">
+                      <div>
+                        <Label className="font-medium text-sm text-gray-600">Quantidade de pessoas beneficiadas</Label>
+                        <p className="text-sm mt-1 font-medium">
+                          {selectedPrestacao.categoria === "Artes Cênicas" ? "1.200 pessoas" :
+                          selectedPrestacao.categoria === "Dança" ? "150 pessoas" :
+                          "800 pessoas"}
+                        </p>
+                      </div>
+
+                      <div>
+                        <Label className="font-medium text-sm text-gray-600">Mecanismos de mensuração</Label>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Foram utilizadas listas de presença em todas as atividades, contagem de público nas apresentações,
+                          registros fotográficos e controle de participantes nas oficinas. A mensuração foi realizada pela
+                          equipe de produção em cada evento.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 5. Equipe do Projeto */}
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <h3 className="font-medium text-lg mb-3 text-indigo-600">5. Equipe do Projeto</h3>
+                    <div className="space-y-4">
+                      <div>
+                        <Label className="font-medium text-sm text-gray-600">Quantidade de pessoas na equipe</Label>
+                        <p className="text-sm mt-1">12 pessoas</p>
+                      </div>
+
+                      <div>
+                        <Label className="font-medium text-sm text-gray-600">Houve mudanças na equipe?</Label>
+                        <p className="text-sm mt-1">Não</p>
+                      </div>
+
+                      <div>
+                        <Label className="font-medium text-sm text-gray-600">Profissionais do projeto</Label>
+                        <div className="mt-2 text-xs">
+                          <div className="grid grid-cols-4 gap-2 p-2 bg-white rounded border font-medium">
+                            <span>Nome</span>
+                            <span>Função</span>
+                            <span>Pessoa Negra/Indígena</span>
+                            <span>PcD</span>
+                          </div>
+                          <div className="grid grid-cols-4 gap-2 p-2 border-l border-r border-b text-xs">
+                            <span>Maria Silva</span>
+                            <span>Diretora</span>
+                            <span>Sim</span>
+                            <span>Não</span>
+                          </div>
+                          <div className="grid grid-cols-4 gap-2 p-2 border-l border-r border-b text-xs">
+                            <span>João Santos</span>
+                            <span>Ator</span>
+                            <span>Não</span>
+                            <span>Não</span>
+                          </div>
+                          <div className="grid grid-cols-4 gap-2 p-2 border-l border-r border-b text-xs rounded-b">
+                            <span>+ 10 profissionais</span>
+                            <span>Diversos</span>
+                            <span>40%</span>
+                            <span>8%</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 6-9. Seções Restantes Resumidas */}
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <h3 className="font-medium text-lg mb-3 text-gray-600">6-9. Outras Informações</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <Label className="font-medium text-gray-600">Locais de Realização</Label>
+                        <p className="text-muted-foreground">Jaú - SP (Presencial)</p>
+                      </div>
+                      <div>
+                        <Label className="font-medium text-gray-600">Divulgação</Label>
+                        <p className="text-muted-foreground">Instagram, Facebook, cartazes</p>
+                      </div>
+                      <div>
+                        <Label className="font-medium text-gray-600">Anexos</Label>
+                        <p className="text-muted-foreground">12 documentos anexados</p>
+                      </div>
+                      <div>
+                        <Label className="font-medium text-gray-600">Status</Label>
+                        <span className={`inline-block px-2 py-1 rounded text-xs ${getStatusColor(selectedPrestacao.status)}`}>
+                          {selectedPrestacao.status}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <Label className="font-medium">Valor</Label>
-                  <p>{selectedPrestacao && formatCurrency(selectedPrestacao.valor)}</p>
-                </div>
-              </div>
-              <div>
-                <Label className="font-medium">Resumo da Execução</Label>
-                <p className="text-sm text-muted-foreground mt-1">
-                  O projeto foi executado conforme cronograma estabelecido, atingindo todas as metas propostas...
-                </p>
-              </div>
-              <div>
-                <Label className="font-medium">Resultados Alcançados</Label>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Foram realizados 10 espetáculos, com público total de 2.500 pessoas...
-                </p>
-              </div>
+              )}
             </TabsContent>
             
             <TabsContent value="comprovantes" className="space-y-4">

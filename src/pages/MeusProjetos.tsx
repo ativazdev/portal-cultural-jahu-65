@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Search, ArrowLeft, ChevronDown, Eye, Edit, Save } from "lucide-react";
+import { Search, ArrowLeft, ChevronDown, Eye, Edit, Save, FileText } from "lucide-react";
 
 const projetos = [
   {
@@ -128,6 +128,14 @@ const MeusProjetos = () => {
 
   const handleVoltarPagina = () => {
     navigate("/dashboard");
+  };
+
+  const handlePrestacaoContas = (projeto: any) => {
+    navigate(`/prestacao-contas/${projeto.id}`);
+    toast({
+      title: "Prestação de Contas",
+      description: `Acessando prestação de contas do projeto "${projeto.nome}".`,
+    });
   };
 
   const handleLimparFiltros = () => {
@@ -297,8 +305,8 @@ const MeusProjetos = () => {
                       </div>
                       
                       <div className="flex flex-col items-end gap-3 ml-4">
-                        <Badge 
-                          variant="outline" 
+                        <Badge
+                          variant="outline"
                           className={`text-xs px-3 py-1 ${
                             projeto.statusColor === "green"
                               ? "bg-green-100 text-green-800 border-green-300"
@@ -309,24 +317,37 @@ const MeusProjetos = () => {
                         >
                           {projeto.status}
                         </Badge>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="text-blue-600 border-blue-300 hover:bg-blue-50"
-                          onClick={() => {
-                            if (projeto.buttonText === "Editar") {
-                              handleEditarProjeto(projeto);
-                            } else {
-                              handleVisualizarProjeto(projeto);
-                            }
-                          }}
-                        >
-                          {projeto.buttonText === "Editar" ? (
-                            <><Edit className="h-4 w-4 mr-1" /> {projeto.buttonText}</>
-                          ) : (
-                            <><Eye className="h-4 w-4 mr-1" /> {projeto.buttonText}</>
+                        <div className="flex flex-col gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-blue-600 border-blue-300 hover:bg-blue-50"
+                            onClick={() => {
+                              if (projeto.buttonText === "Editar") {
+                                handleEditarProjeto(projeto);
+                              } else {
+                                handleVisualizarProjeto(projeto);
+                              }
+                            }}
+                          >
+                            {projeto.buttonText === "Editar" ? (
+                              <><Edit className="h-4 w-4 mr-1" /> {projeto.buttonText}</>
+                            ) : (
+                              <><Eye className="h-4 w-4 mr-1" /> {projeto.buttonText}</>
+                            )}
+                          </Button>
+                          {projeto.status === "Aprovado" && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-green-600 border-green-300 hover:bg-green-50"
+                              onClick={() => handlePrestacaoContas(projeto)}
+                            >
+                              <FileText className="h-4 w-4 mr-1" />
+                              Prestação de Contas
+                            </Button>
                           )}
-                        </Button>
+                        </div>
                       </div>
                     </div>
                   </CardContent>
