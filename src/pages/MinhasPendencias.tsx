@@ -14,25 +14,49 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { ChevronLeft, Package, CheckCircle, FileText, Upload, AlertCircle, Send } from "lucide-react";
 
-const pendenciasAtivas = [
-  {
-    id: 1,
-    titulo: "Formulários obrigatórios - ETAPA DE HABILITAÇÃO",
-    detalhes: "Criada em: 14/04/2023 - 47:2024:1716:9957:3248 - Associação Educativa",
-    status: "Pendente de atendimento",
-    tipo: "pendente",
-    projeto: "Festival de Música Popular",
-    categoria: "Documentação",
-    prazo: "30/12/2024",
-    descricao: "É necessário enviar os formulários de habilitação devidamente preenchidos e assinados, conforme especificado no edital.",
-    documentosNecessarios: [
-      "Formulário de Inscrição",
-      "Declaração de Idoneidade",
-      "Comprovante de Endereço",
-      "Cópia do RG/CPF"
-    ]
-  }
-];
+// Função para expandir documentos em pendências individuais
+const expandirDocumentosEmPendencias = () => {
+  const pendenciasExpandidas = [];
+
+  // Pendência original de habilitação
+  
+
+  // Apenas documentos de Pessoa Jurídica para um projeto específico
+  const docsPessoaJuridica = [
+    "Inscrição no Cadastro Nacional de Pessoa Jurídica - CNPJ*",
+    "Atos constitutivos (contrato social para pessoas jurídicas com fins lucrativos ou estatuto para organizações da sociedade civil)",
+    "RG*",
+    "CPF*",
+    "Certidões (Falência/Recuperação Judicial, Débitos Tributários, Débitos Estaduais/Municipais, Débitos Trabalhistas - CNDT)",
+    "Certificado de regularidade do Fundo de Garantia do Tempo de Serviço - CRF/FGTS"
+  ];
+
+  docsPessoaJuridica.forEach((documento, index) => {
+    pendenciasExpandidas.push({
+      id: 100 + index,
+      titulo: documento,
+      detalhes: "Criada em: 25/09/2025 - Projeto PNAB - Teatro - Ativar Produções LTDA",
+      status: "Pendente de atendimento",
+      tipo: "documento",
+      projeto: "Projeto PNAB - Teatro",
+      categoria: "Confirmação de Dados",
+      prazo: "15/10/2025",
+      tipoProponente: "Pessoa Jurídica",
+      nomeDocumento: documento,
+      isObrigatorio: documento.includes("*"),
+      descricao: `É necessário enviar o documento: ${documento}`,
+      opcoesSituacaoEspecial: documento.includes("Comprovante de residência") ? [
+        "Pertencente indígena, quilombola, cigano ou circense",
+        "Pertencente a população nômade ou itinerante",
+        "Que se encontre em situação de rua"
+      ] : null
+    });
+  });
+
+  return pendenciasExpandidas;
+};
+
+const pendenciasAtivas = expandirDocumentosEmPendencias();
 
 const pendenciasConcluidas = [
   {
@@ -59,16 +83,16 @@ const MinhasPendencias = () => {
   // Estados
   const [isModalAtendimentoAberto, setIsModalAtendimentoAberto] = useState(false);
   const [pendenciaSelecionada, setPendenciaSelecionada] = useState<any>(null);
-  const [documentosEnviados, setDocumentosEnviados] = useState<string[]>([]);
+  const [documentosEnviados, setDocumentosEnviados] = useState<{[key: string]: File | null}>({});
   const [observacoes, setObservacoes] = useState("");
-  const [arquivosAnexados, setArquivosAnexados] = useState<File[]>([]);
+  const [precisaComprovanteResidencia, setPrecisaComprovanteResidencia] = useState<boolean | null>(null);
 
   // Funções
   const handleAtenderPendencia = (pendencia: any) => {
     setPendenciaSelecionada(pendencia);
-    setDocumentosEnviados([]);
+    setDocumentosEnviados({});
     setObservacoes("");
-    setArquivosAnexados([]);
+    setPrecisaComprovanteResidencia(null);
     setIsModalAtendimentoAberto(true);
     toast({
       title: "Atendendo pendência",
@@ -76,19 +100,35 @@ const MinhasPendencias = () => {
     });
   };
 
-  const handleDocumentoCheck = (documento: string, checked: boolean) => {
-    if (checked) {
-      setDocumentosEnviados([...documentosEnviados, documento]);
-    } else {
-      setDocumentosEnviados(documentosEnviados.filter(doc => doc !== documento));
-    }
+  const handleUploadDocumento = (documento: string, file: File) => {
+    setDocumentosEnviados(prev => ({
+      ...prev,
+      [documento]: file
+    }));
+    toast({
+      title: "Documento enviado",
+      description: `${file.name} foi anexado para "${documento}".`,
+    });
+  };
+
+  const handleRemoverDocumento = (documento: string) => {
+    setDocumentosEnviados(prev => {
+      const newDocs = { ...prev };
+      delete newDocs[documento];
+      return newDocs;
+    });
+    toast({
+      title: "Documento removido",
+      description: `Arquivo de "${documento}" foi removido.`,
+    });
   };
 
   const handleEnviarResposta = () => {
-    if (documentosEnviados.length === 0) {
+    const documentosEnviadosCount = Object.keys(documentosEnviados).length;
+    if (documentosEnviadosCount === 0) {
       toast({
         title: "Documentos obrigatórios",
-        description: "Selecione pelo menos um documento para enviar.",
+        description: "Envie pelo menos um documento para continuar.",
         variant: "destructive",
       });
       return;
@@ -125,21 +165,66 @@ const MinhasPendencias = () => {
             {pendenciasAtivas.length > 0 ? (
               <div className="space-y-4">
                 {pendenciasAtivas.map((pendencia) => (
-                  <Card key={pendencia.id} className="border-l-4 border-l-orange-400 hover:shadow-md transition-shadow">
+                  <Card
+                    key={pendencia.id}
+                    className={`border-l-4 hover:shadow-md transition-shadow ${
+                      pendencia.tipo === "documento"
+                        ? pendencia.isObrigatorio
+                          ? "border-l-red-400"
+                          : "border-l-blue-400"
+                        : "border-l-orange-400"
+                    }`}
+                  >
                     <CardContent className="p-6">
                       <div className="flex justify-between items-start gap-4">
                         <div className="flex-1 space-y-3">
-                          <h3 className="font-semibold text-gray-900 text-lg">
-                            {pendencia.titulo}
-                          </h3>
-                          <p className="text-sm text-gray-600">
-                            {pendencia.detalhes}
-                          </p>
-                          <Badge variant="secondary" className="bg-orange-100 text-orange-800 border-orange-200">
-                            {pendencia.status}
-                          </Badge>
+                          <div className="flex items-start gap-3">
+                            <div className="flex-1">
+                              <h3 className="font-semibold text-gray-900 text-lg">
+                                {pendencia.titulo}
+                              </h3>
+                              {pendencia.tipo === "documento" && (
+                                <div className="mt-2 space-y-1">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm text-gray-600">Projeto:</span>
+                                    <span className="text-sm font-medium">{pendencia.projeto}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm text-gray-600">Tipo:</span>
+                                    <span className="text-sm font-medium">{pendencia.tipoProponente}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm text-gray-600">Prazo:</span>
+                                    <span className="text-sm font-medium text-red-600">{pendencia.prazo}</span>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                            {pendencia.tipo === "documento" && (
+                              <div className="flex flex-col gap-1">
+                                {pendencia.isObrigatorio && (
+                                  <Badge className="bg-red-100 text-red-800 border-red-300 text-xs">
+                                    Obrigatório
+                                  </Badge>
+                                )}
+                                <Badge className="bg-blue-100 text-blue-800 border-blue-300 text-xs">
+                                  {pendencia.categoria}
+                                </Badge>
+                              </div>
+                            )}
+                          </div>
+                          {pendencia.tipo !== "documento" && (
+                            <>
+                              <p className="text-sm text-gray-600">
+                                {pendencia.detalhes}
+                              </p>
+                              <Badge variant="secondary" className="bg-orange-100 text-orange-800 border-orange-200">
+                                {pendencia.status}
+                              </Badge>
+                            </>
+                          )}
                         </div>
-                        <Button 
+                        <Button
                           className="bg-blue-600 hover:bg-blue-700 text-white"
                           onClick={() => handleAtenderPendencia(pendencia)}
                         >
@@ -210,9 +295,9 @@ const MinhasPendencias = () => {
               )}
             </div>
 
-            {/* Modal de Atendimento de Pendência */}
+            {/* Modal de Atendimento Simplificado */}
             <Dialog open={isModalAtendimentoAberto} onOpenChange={setIsModalAtendimentoAberto}>
-              <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+              <DialogContent className="max-w-lg">
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2">
                     <FileText className="h-5 w-5" />
@@ -221,92 +306,49 @@ const MinhasPendencias = () => {
                 </DialogHeader>
                 
                 {pendenciaSelecionada && (
-                  <div className="space-y-6">
-                    {/* Informações da Pendência */}
-                    <div className="bg-orange-50 p-4 rounded-lg border-l-4 border-orange-400">
-                      <h3 className="font-semibold text-orange-800 mb-2">
+                  <div className="space-y-4">
+                    {/* Nome do Documento */}
+                    <div>
+                      <h3 className="font-medium text-gray-900 mb-4">
                         {pendenciaSelecionada.titulo}
                       </h3>
-                      <p className="text-sm text-orange-700 mb-2">
-                        {pendenciaSelecionada.detalhes}
-                      </p>
-                      <div className="flex items-center gap-4 text-sm">
-                        <span><strong>Projeto:</strong> {pendenciaSelecionada.projeto}</span>
-                        <span><strong>Prazo:</strong> {pendenciaSelecionada.prazo}</span>
-                      </div>
                     </div>
 
-                    {/* Descrição da Pendência */}
-                    <div className="space-y-3">
-                      <Label className="text-base font-medium">Descrição da Pendência</Label>
-                      <div className="p-4 bg-gray-50 rounded-lg">
-                        <p className="text-sm text-gray-700">
-                          {pendenciaSelecionada.descricao}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Documentos Necessários */}
-                    <div className="space-y-3">
-                      <Label className="text-base font-medium">Documentos Necessários</Label>
-                      <div className="space-y-2">
-                        {pendenciaSelecionada.documentosNecessarios?.map((documento: string, index: number) => (
-                          <div key={index} className="flex items-center space-x-3 p-3 border rounded-lg">
-                            <Checkbox
-                              checked={documentosEnviados.includes(documento)}
-                              onCheckedChange={(checked) => handleDocumentoCheck(documento, checked as boolean)}
-                            />
-                            <Label className="flex-1 cursor-pointer">{documento}</Label>
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={handleSimularUpload}
-                            >
-                              <Upload className="h-4 w-4 mr-1" />
-                              Upload
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Observações */}
-                    <div className="space-y-3">
-                      <Label htmlFor="observacoes">Observações (Opcional)</Label>
-                      <Textarea
-                        id="observacoes"
-                        value={observacoes}
-                        onChange={(e) => setObservacoes(e.target.value)}
-                        placeholder="Adicione observações sobre o envio dos documentos..."
-                        rows={4}
+                    {/* Campo de Upload Simples */}
+                    <div className="space-y-2">
+                      <Label htmlFor="arquivo">Selecionar arquivo</Label>
+                      <Input
+                        type="file"
+                        id="arquivo"
+                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            handleUploadDocumento(pendenciaSelecionada.titulo, file);
+                          }
+                        }}
                       />
-                    </div>
-
-                    {/* Resumo do Envio */}
-                    <div className="bg-blue-50 p-4 rounded-lg">
-                      <h4 className="font-medium text-blue-800 mb-2">Resumo do Atendimento</h4>
-                      <div className="space-y-1 text-sm text-blue-700">
-                        <p><strong>Documentos selecionados:</strong> {documentosEnviados.length} de {pendenciaSelecionada.documentosNecessarios?.length || 0}</p>
-                        <p><strong>Status:</strong> {documentosEnviados.length > 0 ? "Pronto para envio" : "Aguardando seleção de documentos"}</p>
-                      </div>
+                      <p className="text-xs text-gray-500">
+                        Formatos aceitos: PDF, DOC, DOCX, JPG, PNG (máx. 10MB)
+                      </p>
                     </div>
                   </div>
                 )}
 
                 <DialogFooter>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     onClick={() => setIsModalAtendimentoAberto(false)}
                   >
                     Cancelar
                   </Button>
-                  <Button 
+                  <Button
                     onClick={handleEnviarResposta}
                     className="bg-green-600 hover:bg-green-700"
-                    disabled={documentosEnviados.length === 0}
+                    disabled={!documentosEnviados[pendenciaSelecionada?.titulo]}
                   >
                     <Send className="h-4 w-4 mr-2" />
-                    Enviar Resposta
+                    Enviar Documento
                   </Button>
                 </DialogFooter>
               </DialogContent>

@@ -116,36 +116,8 @@ export const DashboardMain = () => {
                     </div>
                   </div>
 
-                  {/* Arquivos do Edital */}
-                  <div>
-                    <label className="text-sm font-medium text-gray-500 mb-2 block">Documentos</label>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                      <div className="flex items-center justify-between p-2 bg-gray-50 rounded-md">
-                        <div className="flex items-center gap-2">
-                          <FileText className="h-4 w-4 text-blue-600" />
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">edital-pnab-2025-001.pdf</p>
-                            <p className="text-xs text-gray-500">2.5 MB</p>
-                          </div>
-                        </div>
-                        <Button variant="ghost" size="sm" onClick={() => window.open('#', '_blank')}>
-                          <ExternalLink className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      <div className="flex items-center justify-between p-2 bg-gray-50 rounded-md">
-                        <div className="flex items-center gap-2">
-                          <FileText className="h-4 w-4 text-blue-600" />
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">anexo-formularios.pdf</p>
-                            <p className="text-xs text-gray-500">1.2 MB</p>
-                          </div>
-                        </div>
-                        <Button variant="ghost" size="sm" onClick={() => window.open('#', '_blank')}>
-                          <ExternalLink className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
+                  
+                  
 
                   <div className="pt-2">
                     <Button
