@@ -30,7 +30,7 @@ export interface Projeto {
   tipoProponente: "PF" | "PJ" | "Grupo";
   valorSolicitado: number;
   dataSubmissao: string;
-  status: "Recebido" | "Em Avaliação" | "Avaliado" | "Aprovado" | "Rejeitado";
+  status: "Recebido" | "Em Avaliação" | "Avaliado" | "Aprovado" | "Rejeitado" | "Em execução";
   parecerista?: string;
   edital: string;
   documentosHabilitacao?: DocumentoHabilitacao[];
@@ -92,6 +92,104 @@ const projetosExemplo: Projeto[] = [
     status: "Aprovado",
     parecerista: "Ana Costa",
     edital: "PNAB-2025-001"
+  },
+  {
+    id: "6",
+    nome: "Exposição de Arte Contemporânea",
+    categoria: "Artes Visuais",
+    proponente: "Galeria Cultural Jahu",
+    tipoProponente: "PJ",
+    valorSolicitado: 25000,
+    dataSubmissao: "2024-10-15",
+    status: "Em execução",
+    parecerista: "Lucia Mendes",
+    edital: "PNAB-2025-004",
+    documentosHabilitacao: [
+      {
+        id: "1",
+        nome: "CNPJ",
+        descricao: "Cartão de CNPJ atualizado",
+        obrigatorio: true,
+        dataSolicitacao: "2024-10-20",
+        status: "aprovado",
+        tipo: "cnpj",
+        arquivo: {
+          nome: "cnpj_galeria_cultural.pdf",
+          url: "/documentos/cnpj_galeria_cultural.pdf",
+          dataUpload: "2024-10-22"
+        }
+      },
+      {
+        id: "2",
+        nome: "Atos Constitutivos",
+        descricao: "Estatuto social ou contrato social da empresa",
+        obrigatorio: true,
+        dataSolicitacao: "2024-10-20",
+        status: "aprovado",
+        tipo: "atos_constitutivos",
+        arquivo: {
+          nome: "contrato_social.pdf",
+          url: "/documentos/contrato_social.pdf",
+          dataUpload: "2024-10-23"
+        }
+      },
+      {
+        id: "3",
+        nome: "Certidão Negativa de Falência",
+        descricao: "Certidão negativa de falência e concordata",
+        obrigatorio: true,
+        dataSolicitacao: "2024-10-20",
+        status: "aprovado",
+        tipo: "certidao_falencia",
+        arquivo: {
+          nome: "certidao_negativa_falencia.pdf",
+          url: "/documentos/certidao_negativa_falencia.pdf",
+          dataUpload: "2024-10-25"
+        }
+      },
+      {
+        id: "4",
+        nome: "Certificado de Regularidade do FGTS",
+        descricao: "CRF - Certificado de Regularidade do FGTS",
+        obrigatorio: true,
+        dataSolicitacao: "2024-10-20",
+        status: "aprovado",
+        tipo: "crf_fgts",
+        arquivo: {
+          nome: "crf_fgts.pdf",
+          url: "/documentos/crf_fgts.pdf",
+          dataUpload: "2024-10-26"
+        }
+      },
+      {
+        id: "5",
+        nome: "Certidão Negativa Trabalhista",
+        descricao: "Certidão negativa de débitos trabalhistas",
+        obrigatorio: true,
+        dataSolicitacao: "2024-10-20",
+        status: "aprovado",
+        tipo: "certidao_trabalhista",
+        arquivo: {
+          nome: "certidao_trabalhista.pdf",
+          url: "/documentos/certidao_trabalhista.pdf",
+          dataUpload: "2024-10-27"
+        }
+      },
+      {
+        id: "6",
+        nome: "Declaração de Representação",
+        descricao: "Declaração de que o representante tem poderes para assinar em nome da instituição",
+        obrigatorio: true,
+        dataSolicitacao: "2024-10-20",
+        status: "aprovado",
+        tipo: "declaracao_representacao",
+        arquivo: {
+          nome: "declaracao_representacao.pdf",
+          url: "/documentos/declaracao_representacao.pdf",
+          dataUpload: "2024-10-28"
+        }
+      }
+    ]
   }
 ];
 

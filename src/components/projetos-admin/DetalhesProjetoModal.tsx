@@ -443,7 +443,7 @@ export const DetalhesProjetoModal = ({ aberto, projeto, onFechar, onAtualizarPro
               )}
             </div>
 
-            {projeto.status !== "Aprovado" && (
+            {projeto.status !== "Aprovado" && projeto.status !== "Em execução" && (
               <div className="text-center py-8 text-muted-foreground">
                 <AlertCircle className="h-12 w-12 mx-auto mb-4 text-gray-400" />
                 <p>A documentação de habilitação fica disponível apenas após a aprovação do projeto.</p>
