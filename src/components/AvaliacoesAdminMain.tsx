@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileCheck2, Clock, ThumbsUp, Star, Search, X, Eye, Check, AlertTriangle, List, FileText, Download, BarChart3 } from "lucide-react";
+import { FileCheck2, Clock, ThumbsUp, Star, Search, X, Eye, Check, AlertTriangle, List, FileText, Download, BarChart3, Edit } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 // Tipos
@@ -36,6 +36,9 @@ export interface Avaliacao {
   };
   parecerTecnico: string;
   recomendacao: "Aprovação" | "Rejeição";
+  numeroInscricao?: string;
+  ano?: string;
+  edital?: string;
 }
 
 // Dados de exemplo
@@ -50,7 +53,10 @@ const avaliacoesExemplo: Avaliacao[] = [
     status: "Avaliado",
     criterios: { relevancia: 8.5, viabilidade: 7.0, impacto: 9.0, orcamento: 6.5, inovacao: 4.0, sustentabilidade: 3.5 },
     parecerTecnico: "Projeto com excelente potencial de impacto cultural na comunidade local.",
-    recomendacao: "Aprovação"
+    recomendacao: "Aprovação",
+    numeroInscricao: "2025001001",
+    ano: "2025",
+    edital: "PNAB 2025 - Edital de Fomento Cultural"
   },
   {
     id: "2",
@@ -62,7 +68,10 @@ const avaliacoesExemplo: Avaliacao[] = [
     status: "Aprovado",
     criterios: { relevancia: 7.5, viabilidade: 8.0, impacto: 7.0, orcamento: 7.5, inovacao: 3.0, sustentabilidade: 2.5 },
     parecerTecnico: "Proposta bem estruturada com cronograma realista.",
-    recomendacao: "Aprovação"
+    recomendacao: "Aprovação",
+    numeroInscricao: "2025002001",
+    ano: "2025",
+    edital: "Edital de Apoio às Artes Cênicas"
   },
   {
     id: "3",
@@ -74,7 +83,10 @@ const avaliacoesExemplo: Avaliacao[] = [
     status: "Avaliado",
     criterios: { relevancia: 7.0, viabilidade: 6.0, impacto: 7.5, orcamento: 6.0, inovacao: 3.5, sustentabilidade: 4.0 },
     parecerTecnico: "Projeto adequado mas com algumas questões orçamentárias a serem revisadas.",
-    recomendacao: "Aprovação"
+    recomendacao: "Aprovação",
+    numeroInscricao: "2025003001",
+    ano: "2025",
+    edital: "Fomento à Música Popular Brasileira"
   },
   {
     id: "4",
@@ -86,7 +98,10 @@ const avaliacoesExemplo: Avaliacao[] = [
     status: "Aprovado",
     criterios: { relevancia: 9.0, viabilidade: 8.5, impacto: 9.5, orcamento: 8.0, inovacao: 5.0, sustentabilidade: 4.5 },
     parecerTecnico: "Excelente projeto com alto potencial de transformação social.",
-    recomendacao: "Aprovação"
+    recomendacao: "Aprovação",
+    numeroInscricao: "2025004001",
+    ano: "2025",
+    edital: "PNAB 2025 - Edital de Fomento Cultural"
   }
 ];
 
@@ -97,13 +112,44 @@ const pareceristas = [
   { nome: "Roberto Silva", especialidade: "Dança" }
 ];
 
+// Dados de exemplo dos editais
+const editais = [
+  {
+    id: "1",
+    codigo: "PNAB-2025-001",
+    nome: "PNAB 2025 - Edital de Fomento Cultural",
+    dataAbertura: "01/07/2025",
+    dataFechamento: "31/08/2025",
+    horarioFechamento: "23:59"
+  },
+  {
+    id: "2",
+    codigo: "PNAB-2025-002",
+    nome: "Edital de Apoio às Artes Cênicas",
+    dataAbertura: "15/08/2025",
+    dataFechamento: "15/10/2025",
+    horarioFechamento: "18:00"
+  },
+  {
+    id: "3",
+    codigo: "PNAB-2025-003",
+    nome: "Fomento à Música Popular Brasileira",
+    dataAbertura: "10/09/2025",
+    dataFechamento: "10/11/2025",
+    horarioFechamento: "23:59"
+  }
+];
+
+const categorias = ["Música", "Teatro", "Dança", "Artes Visuais", "Literatura"];
+
 export const AvaliacoesAdminMain = () => {
   const { toast } = useToast();
   const [avaliacoes, setAvaliacoes] = useState<Avaliacao[]>(avaliacoesExemplo);
   const [filtros, setFiltros] = useState({
     busca: "",
     parecerista: "Todos",
-    status: "Todos"
+    status: "Todos",
+    edital: "Todos"
   });
 
   // Estados dos modais
@@ -138,17 +184,25 @@ export const AvaliacoesAdminMain = () => {
     formato: "PDF"
   });
 
+  // Estados para ranking por edital-categoria
+  const [editalSelecionado, setEditalSelecionado] = useState("");
+  const [categoriaSelecionada, setCategoriaSelecionada] = useState("");
+
   // Filtrar avaliações
   const avaliacoesFiltradas = avaliacoes.filter(avaliacao => {
-    const matchBusca = 
+    const matchBusca =
       avaliacao.projeto.nome.toLowerCase().includes(filtros.busca.toLowerCase()) ||
       avaliacao.proponente.nome.toLowerCase().includes(filtros.busca.toLowerCase()) ||
       avaliacao.parecerista.toLowerCase().includes(filtros.busca.toLowerCase());
-    
+
     const matchParecerista = filtros.parecerista === "Todos" || avaliacao.parecerista === filtros.parecerista;
     const matchStatus = filtros.status === "Todos" || avaliacao.status === filtros.status;
-    
-    return matchBusca && matchParecerista && matchStatus;
+
+    // Filtro por edital - verifica se a avaliação pertence ao edital selecionado
+    const matchEdital = filtros.edital === "Todos" ||
+      (avaliacao.edital && editais.find(e => e.id === filtros.edital)?.nome === avaliacao.edital);
+
+    return matchBusca && matchParecerista && matchStatus && matchEdital;
   });
 
   // Calcular métricas
@@ -192,7 +246,7 @@ export const AvaliacoesAdminMain = () => {
   };
 
   const handleLimparFiltros = () => {
-    setFiltros({ busca: "", parecerista: "Todos", status: "Todos" });
+    setFiltros({ busca: "", parecerista: "Todos", status: "Todos", edital: "Todos" });
   };
 
   const confirmarDecisao = () => {
@@ -246,6 +300,13 @@ export const AvaliacoesAdminMain = () => {
     setModalRelatorioCategoria(false);
   };
 
+  const handleBaixarDocumentos = (avaliacao: Avaliacao) => {
+    toast({
+      title: "Download iniciado",
+      description: `Baixando documentos do projeto "${avaliacao.projeto.nome}"`,
+    });
+  };
+
   return (
     <main className="flex-1 p-6 bg-prefeitura-accent">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -258,7 +319,7 @@ export const AvaliacoesAdminMain = () => {
         <Tabs defaultValue="avaliacoes" className="w-full">
           <TabsList>
             <TabsTrigger value="avaliacoes">Todas as Avaliações</TabsTrigger>
-            <TabsTrigger value="ranking">Ranking por Categoria</TabsTrigger>
+            <TabsTrigger value="ranking">Ranking por edital - Categoria</TabsTrigger>
           </TabsList>
 
           <TabsContent value="avaliacoes" className="space-y-6">
@@ -315,7 +376,7 @@ export const AvaliacoesAdminMain = () => {
                 <CardTitle>Filtros e Busca</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-10 gap-4">
+                <div className="grid grid-cols-12 gap-4">
                   <div className="col-span-4 relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                     <Input
@@ -324,6 +385,22 @@ export const AvaliacoesAdminMain = () => {
                       onChange={(e) => setFiltros({ ...filtros, busca: e.target.value })}
                       className="pl-10"
                     />
+                  </div>
+
+                  <div className="col-span-2">
+                    <Select value={filtros.edital} onValueChange={(value) => setFiltros({ ...filtros, edital: value })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Edital" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Todos">Todos os editais</SelectItem>
+                        {editais.map((edital) => (
+                          <SelectItem key={edital.id} value={edital.id}>
+                            {edital.codigo}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div className="col-span-2">
@@ -496,53 +573,214 @@ export const AvaliacoesAdminMain = () => {
           </TabsContent>
 
           <TabsContent value="ranking" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {["Música", "Teatro", "Dança", "Artes Visuais", "Literatura"].map((categoria) => {
-                const projetosCategoria = avaliacoes
-                  .filter(a => a.projeto.categoria === categoria)
-                  .sort((a, b) => b.notaFinal - a.notaFinal)
-                  .slice(0, 5);
-
-                return (
-                  <Card key={categoria}>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Badge className={getCategoriaColor(categoria)}>
-                          {categoria}
-                        </Badge>
-                        <span className="text-sm font-normal">Top 5</span>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      {projetosCategoria.map((avaliacao, index) => (
-                        <div key={avaliacao.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                          <div className="flex items-center gap-3">
-                            <span className="font-bold text-lg text-gray-500">#{index + 1}</span>
-                            <div>
-                              <div className="font-medium text-sm">{avaliacao.projeto.nome}</div>
-                              <div className="text-xs text-muted-foreground">{avaliacao.proponente.nome}</div>
-                            </div>
+            {/* Seleção de Edital */}
+            <Card>
+              <CardHeader>
+                <CardTitle>1. Selecione o Edital</CardTitle>
+                <CardDescription>Escolha o edital para visualizar o ranking</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Select value={editalSelecionado} onValueChange={setEditalSelecionado}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Selecione um edital..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {editais.map((edital) => (
+                      <SelectItem key={edital.id} value={edital.id} className="py-4">
+                        <div className="flex flex-col space-y-1 w-full">
+                          <div className="font-semibold text-sm">
+                            {edital.nome}
                           </div>
-                          <div className="text-right">
-                            <div className={`font-bold ${getNotaColor(avaliacao.notaFinal).split(' ')[0]}`}>
-                              {avaliacao.notaFinal.toFixed(1)}
-                            </div>
-                            <Badge className={`text-xs ${getStatusBadge(avaliacao.status)}`}>
-                              {avaliacao.status}
-                            </Badge>
+                          <div className="text-xs text-muted-foreground">
+                            <strong>Código:</strong> {edital.codigo}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            <strong>Data de abertura:</strong> {edital.dataAbertura}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            <strong>Data final do fechamento:</strong> {edital.dataFechamento}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            <strong>Horário final do fechamento:</strong> {edital.horarioFechamento}
                           </div>
                         </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </CardContent>
+            </Card>
+
+            {/* Seleção de Categoria - só aparece após edital selecionado */}
+            {editalSelecionado && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>2. Selecione a Categoria</CardTitle>
+                  <CardDescription>Escolha a categoria cultural para o ranking</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Select value={categoriaSelecionada} onValueChange={setCategoriaSelecionada}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Selecione uma categoria..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categorias.map((categoria) => (
+                        <SelectItem key={categoria} value={categoria}>
+                          {categoria}
+                        </SelectItem>
                       ))}
-                      {projetosCategoria.length === 0 && (
-                        <p className="text-center text-muted-foreground py-4">
-                          Nenhum projeto avaliado nesta categoria
-                        </p>
-                      )}
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
+                    </SelectContent>
+                  </Select>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Ranking de Projetos - só aparece após edital e categoria selecionados */}
+            {editalSelecionado && categoriaSelecionada && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-3">
+                    3. Ranking de Projetos
+                    <Badge className={getCategoriaColor(categoriaSelecionada)}>
+                      {categoriaSelecionada}
+                    </Badge>
+                  </CardTitle>
+                  <CardDescription>
+                    Projetos da categoria {categoriaSelecionada} ordenados por nota final
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {(() => {
+                      const projetosRanking = avaliacoes
+                        .filter(a => a.projeto.categoria === categoriaSelecionada)
+                        .sort((a, b) => b.notaFinal - a.notaFinal);
+
+                      if (projetosRanking.length === 0) {
+                        return (
+                          <div className="text-center py-8">
+                            <p className="text-muted-foreground">
+                              Nenhum projeto encontrado para a categoria {categoriaSelecionada}
+                            </p>
+                          </div>
+                        );
+                      }
+
+                      return projetosRanking.map((avaliacao, index) => {
+                        const getStatusColor = (status: string) => {
+                          if (status === "Aprovado") return "green";
+                          if (status === "Rejeitado") return "red";
+                          return "gray";
+                        };
+
+                        const statusColor = getStatusColor(avaliacao.status);
+
+                        return (
+                          <Card
+                            key={avaliacao.id}
+                            className={`border-l-4 ${
+                              statusColor === "green"
+                                ? "border-l-green-500 bg-green-50"
+                                : statusColor === "red"
+                                ? "border-l-red-500 bg-red-50"
+                                : "border-l-gray-400 bg-gray-50"
+                            }`}
+                          >
+                            <CardContent className="p-4">
+                              <div className="flex justify-between items-start">
+                                <div className="grid grid-cols-2 gap-6 flex-1">
+                                  <div className="space-y-3">
+                                    <div>
+                                      <span className="text-xs text-gray-500 block">Posição no ranking</span>
+                                      <span className="font-mono text-sm font-medium">#{index + 1}</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-xs text-gray-500 block">Nº da inscrição</span>
+                                      <span className="font-mono text-sm font-medium">{avaliacao.numeroInscricao || "N/A"}</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-xs text-gray-500 block">Ano</span>
+                                      <span className="text-sm">{avaliacao.ano || "2025"}</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-xs text-gray-500 block">Proponente</span>
+                                      <span className="text-sm">{avaliacao.proponente.nome}</span>
+                                    </div>
+                                  </div>
+
+                                  <div className="space-y-3">
+                                    <div>
+                                      <span className="text-xs text-gray-500 block">Nome do projeto</span>
+                                      <span className="font-medium text-sm">{avaliacao.projeto.nome}</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-xs text-gray-500 block">Título do edital</span>
+                                      <span className="text-sm">{avaliacao.edital || editais.find(e => e.id === editalSelecionado)?.nome || "N/A"}</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-xs text-gray-500 block">Modalidade</span>
+                                      <span className="text-sm">{avaliacao.projeto.categoria}</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-xs text-gray-500 block">Nota final</span>
+                                      <span className={`font-bold text-sm px-2 py-1 rounded ${getNotaColor(avaliacao.notaFinal)}`}>
+                                        {avaliacao.notaFinal.toFixed(1)}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="flex flex-col items-end gap-3 ml-4">
+                                  <Badge
+                                    variant="outline"
+                                    className={`text-xs px-3 py-1 ${
+                                      statusColor === "green"
+                                        ? "bg-green-100 text-green-800 border-green-300"
+                                        : statusColor === "red"
+                                        ? "bg-red-100 text-red-800 border-red-300"
+                                        : "bg-gray-100 text-gray-800 border-gray-300"
+                                    }`}
+                                  >
+                                    {avaliacao.status}
+                                  </Badge>
+                                  <div className="flex flex-col gap-2">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="text-blue-600 border-blue-300 hover:bg-blue-50"
+                                      onClick={() => handleBaixarDocumentos(avaliacao)}
+                                    >
+                                      <Download className="h-4 w-4 mr-1" />
+                                      Baixar documentos
+                                    </Button>
+                                  </div>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      });
+                    })()}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Instruções quando nada foi selecionado */}
+            {!editalSelecionado && (
+              <Card className="border-dashed">
+                <CardContent className="text-center py-12">
+                  <div className="text-muted-foreground">
+                    <List className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                    <h3 className="text-lg font-medium mb-2">Visualizar Ranking por Edital e Categoria</h3>
+                    <p className="text-sm">
+                      Para visualizar o ranking, primeiro selecione um edital, depois uma categoria.
+                      Os projetos serão exibidos em ordem decrescente de nota final.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
         </Tabs>
 
