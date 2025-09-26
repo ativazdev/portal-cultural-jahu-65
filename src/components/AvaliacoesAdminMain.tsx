@@ -584,24 +584,15 @@ export const AvaliacoesAdminMain = () => {
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Selecione um edital..." />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="w-[600px] max-h-[60vh] overflow-y-auto">
                     {editais.map((edital) => (
-                      <SelectItem key={edital.id} value={edital.id} className="py-4">
+                      <SelectItem key={edital.id} value={edital.nome} className="py-3">
                         <div className="flex flex-col space-y-1 w-full">
-                          <div className="font-semibold text-sm">
+                          <div className="font-semibold text-sm truncate">
                             {edital.nome}
                           </div>
                           <div className="text-xs text-muted-foreground">
-                            <strong>Código:</strong> {edital.codigo}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            <strong>Data de abertura:</strong> {edital.dataAbertura}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            <strong>Data final do fechamento:</strong> {edital.dataFechamento}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            <strong>Horário final do fechamento:</strong> {edital.horarioFechamento}
+                            <strong>Código:</strong> {edital.codigo} | <strong>Fechamento:</strong> {edital.dataFechamento} às {edital.horarioFechamento}
                           </div>
                         </div>
                       </SelectItem>
@@ -715,7 +706,7 @@ export const AvaliacoesAdminMain = () => {
                                     </div>
                                     <div>
                                       <span className="text-xs text-gray-500 block">Título do edital</span>
-                                      <span className="text-sm">{avaliacao.edital || editais.find(e => e.id === editalSelecionado)?.nome || "N/A"}</span>
+                                      <span className="text-sm">{avaliacao.edital || editalSelecionado || "N/A"}</span>
                                     </div>
                                     <div>
                                       <span className="text-xs text-gray-500 block">Modalidade</span>
