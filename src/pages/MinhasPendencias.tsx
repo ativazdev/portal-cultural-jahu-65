@@ -39,6 +39,8 @@ const expandirDocumentosEmPendencias = () => {
       status: "Pendente de atendimento",
       tipo: "documento",
       projeto: "Projeto PNAB - Teatro",
+      edital: "EDITAL PNAB - CULTURA JAÚ",
+      codigoEdital: "001/2025-PNAB",
       categoria: "Confirmação de Dados",
       prazo: "15/10/2025",
       tipoProponente: "Pessoa Jurídica",
@@ -185,6 +187,14 @@ const MinhasPendencias = () => {
                               </h3>
                               {pendencia.tipo === "documento" && (
                                 <div className="mt-2 space-y-1">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm text-gray-600">Edital:</span>
+                                    <span className="text-sm font-medium">{pendencia.edital}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm text-gray-600">Código:</span>
+                                    <span className="text-sm font-medium font-mono">{pendencia.codigoEdital}</span>
+                                  </div>
                                   <div className="flex items-center gap-2">
                                     <span className="text-sm text-gray-600">Projeto:</span>
                                     <span className="text-sm font-medium">{pendencia.projeto}</span>
