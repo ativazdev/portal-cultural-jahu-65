@@ -3,6 +3,8 @@ import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useSearchParams, useNavigate } from "react-router-dom";
+import { usePrefeituraUrl } from "@/contexts/PrefeituraContext";
+import { useRascunhoProjeto, DadosProjetoRascunho } from "@/hooks/useRascunhoProjeto";
 import { Plus, Save, ArrowLeft, ArrowRight, Trash2, Upload, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -70,6 +72,32 @@ const modalidades = [
   "Outros"
 ];
 
+// Mapeamento de modalidades em português para inglês (formato do banco)
+const mapeamentoModalidades: { [key: string]: string } = {
+  "Artes visuais": "artes_visuais",
+  "Música": "musica",
+  "Teatro": "teatro",
+  "Dança": "danca",
+  "Literatura": "literatura",
+  "Cinema e audiovisual": "cinema",
+  "Cultura popular": "cultura_popular",
+  "Patrimônio cultural": "outros",
+  "Cultura digital": "outros",
+  "Outros": "outros"
+};
+
+// Mapeamento reverso (inglês para português)
+const mapeamentoModalidadesReverso: { [key: string]: string } = {
+  "artes_visuais": "Artes visuais",
+  "musica": "Música",
+  "teatro": "Teatro",
+  "danca": "Dança",
+  "literatura": "Literatura",
+  "cinema": "Cinema e audiovisual",
+  "cultura_popular": "Cultura popular",
+  "outros": "Outros"
+};
+
 const publicoPrioritarioOptions = [
   "Pessoas vítimas de violência",
   "Pessoas em situação de pobreza",
@@ -131,11 +159,72 @@ export default function NovaPropostaProjeto() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { getUrl } = usePrefeituraUrl();
   const [files, setFiles] = useState<File[]>([]);
   
-  const form = useForm<FormData>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
+  const editalId = searchParams.get('edital');
+  const proponenteId = searchParams.get('proponente');
+  
+  console.log('Parâmetros da URL:', { editalId, proponenteId });
+
+  // Hook para gerenciar rascunhos
+  const { 
+    rascunho, 
+    loading: loadingRascunho, 
+    error: errorRascunho, 
+    salvarRascunho 
+  } = useRascunhoProjeto(proponenteId || undefined, editalId || undefined);
+
+  // Verificar se o proponente foi selecionado
+  useEffect(() => {
+    if (!proponenteId) {
+      // Redirecionar para seleção de proponente se não foi selecionado
+      navigate(getUrl(`selecionar-proponente?edital=${editalId}`));
+    }
+  }, [proponenteId, editalId, navigate, getUrl]);
+  
+  // Converter dados do rascunho para formato do formulário
+  console.log('Dados do rascunho:', rascunho?.dados);
+  console.log('Equipe do rascunho:', rascunho?.dados?.equipe);
+  
+  const dadosIniciais = rascunho?.dados ? {
+    nomeProjeto: rascunho.dados.nome || "",
+    modalidade: mapeamentoModalidadesReverso[rascunho.dados.modalidade || ""] || "",
+    descricao: rascunho.dados.descricao || "",
+    objetivos: rascunho.dados.objetivos || "",
+    metas: rascunho.dados.metas && rascunho.dados.metas.length > 0 ? rascunho.dados.metas.map(m => ({ descricao: m.descricao })) : [{ descricao: "" }],
+    perfilPublico: rascunho.dados.perfil_publico || "",
+    publicoPrioritario: rascunho.dados.publico_prioritario || [],
+    outroPublicoPrioritario: rascunho.dados.outro_publico_prioritario || "",
+    acessibilidadeArquitetonica: rascunho.dados.acessibilidade_arquitetonica || [],
+    outraAcessibilidadeArquitetonica: rascunho.dados.outra_acessibilidade_arquitetonica || "",
+    acessibilidadeComunicacional: rascunho.dados.acessibilidade_comunicacional || [],
+    outraAcessibilidadeComunicacional: rascunho.dados.outra_acessibilidade_comunicacional || "",
+    acessibilidadeAtitudinal: rascunho.dados.acessibilidade_atitudinal || [],
+    implementacaoAcessibilidade: rascunho.dados.implementacao_acessibilidade || "",
+    localExecucao: rascunho.dados.local_execucao || "",
+    dataInicio: rascunho.dados.data_inicio || "",
+    dataFinal: rascunho.dados.data_final || "",
+    estrategiaDivulgacao: rascunho.dados.estrategia_divulgacao || "",
+      outrasFontes: (rascunho.dados.outras_fontes === 'sim' || rascunho.dados.outras_fontes === true) ? "sim" as "sim" : "nao" as "nao",
+    tiposOutrasFontes: [],
+    detalhesOutrasFontes: rascunho.dados.detalhes_outras_fontes || "",
+    vendaProdutos: rascunho.dados.venda_produtos ? "sim" as "sim" : "nao" as "nao",
+    detalhesVendaProdutos: rascunho.dados.detalhes_venda_produtos || "",
+    equipe: rascunho.dados.equipe && rascunho.dados.equipe.length > 0 ? rascunho.dados.equipe.map(e => {
+      console.log('Mapeando membro da equipe:', e);
+      return {
+        nome: e.nome, 
+        funcao: e.funcao, 
+        cpfCnpj: e.cpfCnpj || "", 
+        indigena: e.indigena || false, 
+        lgbtqiapn: e.lgbtqiapn || false, 
+        pretoPardo: e.pretoPardo || false, 
+        deficiencia: e.deficiencia || false, 
+        miniCurriculo: e.miniCurriculo || e.experiencia || "" 
+      };
+    }) : [{ nome: "", funcao: "", cpfCnpj: "", indigena: false, lgbtqiapn: false, pretoPardo: false, deficiencia: false, miniCurriculo: "" }]
+  } : {
       nomeProjeto: "",
       modalidade: "",
       descricao: "",
@@ -160,8 +249,19 @@ export default function NovaPropostaProjeto() {
       vendaProdutos: "nao",
       detalhesVendaProdutos: "",
       equipe: [{ nome: "", funcao: "", cpfCnpj: "", indigena: false, lgbtqiapn: false, pretoPardo: false, deficiencia: false, miniCurriculo: "" }]
-    }
+  };
+
+  const form = useForm<FormData>({
+    resolver: zodResolver(formSchema),
+    defaultValues: dadosIniciais as any
   });
+
+  // Atualizar formulário quando rascunho carregar
+  useEffect(() => {
+    if (rascunho?.dados && !loadingRascunho) {
+      form.reset(dadosIniciais as any);
+    }
+  }, [rascunho, loadingRascunho]);
 
   // Pré-preencher dados do proponente se vier da URL
   useEffect(() => {
@@ -209,8 +309,54 @@ export default function NovaPropostaProjeto() {
     return (completed / totalFields) * 100;
   };
 
-  const onSubmit = (data: FormData) => {
+  const onSubmit = async (data: FormData) => {
     console.log("Dados do formulário:", data);
+    
+    // Converter dados do formulário para formato do rascunho
+    const dadosRascunho: DadosProjetoRascunho = {
+      nome: data.nomeProjeto,
+      modalidade: mapeamentoModalidades[data.modalidade] || "outros",
+      categoria: "",
+      descricao: data.descricao,
+      objetivos: data.objetivos,
+      perfil_publico: data.perfilPublico,
+      publico_prioritario: data.publicoPrioritario,
+      outro_publico_prioritario: data.outroPublicoPrioritario,
+      acessibilidade_arquitetonica: data.acessibilidadeArquitetonica,
+      outra_acessibilidade_arquitetonica: data.outraAcessibilidadeArquitetonica,
+      acessibilidade_comunicacional: data.acessibilidadeComunicacional,
+      outra_acessibilidade_comunicacional: data.outraAcessibilidadeComunicacional,
+      acessibilidade_atitudinal: data.acessibilidadeAtitudinal,
+      implementacao_acessibilidade: data.implementacaoAcessibilidade,
+      local_execucao: data.localExecucao,
+      data_inicio: data.dataInicio,
+      data_final: data.dataFinal,
+      estrategia_divulgacao: data.estrategiaDivulgacao,
+      valor_solicitado: (data as any).valorSolicitado || 0,
+      outras_fontes: data.outrasFontes,
+      detalhes_outras_fontes: data.detalhesOutrasFontes,
+      venda_produtos: data.vendaProdutos === "sim",
+      detalhes_venda_produtos: data.detalhesVendaProdutos,
+      metas: data.metas.map(meta => ({
+        descricao: meta.descricao
+      })),
+      equipe: data.equipe.map(membro => ({
+        nome: membro.nome,
+        funcao: membro.funcao,
+        cpfCnpj: membro.cpfCnpj,
+        indigena: membro.indigena,
+        lgbtqiapn: membro.lgbtqiapn,
+        pretoPardo: membro.pretoPardo,
+        deficiencia: membro.deficiencia,
+        miniCurriculo: membro.miniCurriculo,
+        experiencia: membro.miniCurriculo
+      }))
+    };
+
+    // Salvar rascunho
+    const projetoId = await salvarRascunho(dadosRascunho, 'cronograma');
+    
+    if (projetoId) {
     toast({
       title: "Proposta salva!",
       description: "Sua proposta foi salva com sucesso. Prossiga para a próxima etapa.",
@@ -219,52 +365,76 @@ export default function NovaPropostaProjeto() {
     // Navegar para cronograma
     const nomeProjeto = data.nomeProjeto || "Projeto Cultural";
     const proponenteNome = searchParams.get('nome') || "Proponente";
-    navigate(`/cronograma-execucao?projeto=${encodeURIComponent(nomeProjeto)}&nome=${encodeURIComponent(proponenteNome)}`);
+      const proponenteId = searchParams.get('proponente');
+      const editalId = searchParams.get('edital');
+      
+      // Construir URL com parâmetros
+      const cronogramaUrl = getUrl(`cronograma-execucao?projeto_id=${projetoId}&projeto=${encodeURIComponent(nomeProjeto)}&nome=${encodeURIComponent(proponenteNome)}&proponente=${proponenteId}&edital=${editalId}`);
+      console.log('Navegando para:', cronogramaUrl);
+      navigate(cronogramaUrl);
+    }
   };
 
-  const salvarRascunho = () => {
-    const values = form.getValues();
-    const proponenteId = searchParams.get('proponente') || 'sem-id';
-    const proponenteNome = searchParams.get('nome') || 'Proponente';
-    const now = new Date();
-    const ano = String(now.getFullYear());
-    const rascunho = {
-      id: `rasc-${now.getTime()}`,
-      numeroInscricao: `RASC-${now.getTime()}`,
-      nome: values.nomeProjeto || 'Projeto Cultural',
-      edital: 'EDITAL PNAB - CULTURA JAÚ',
-      modalidade: values.modalidade || 'Outros',
-      proponente: proponenteNome,
-      status: 'Projetos em Edição',
-      ano,
-      statusColor: 'gray',
-      buttonText: 'Editar',
-      proponenteId,
-      salvoEm: now.toISOString(),
+  const salvarRascunhoManual = async () => {
+    const data = form.getValues();
+    
+    // Converter dados do formulário para formato do rascunho
+    const dadosRascunho: DadosProjetoRascunho = {
+      nome: data.nomeProjeto,
+      modalidade: mapeamentoModalidades[data.modalidade] || "outros",
+      categoria: "",
+      descricao: data.descricao,
+      objetivos: data.objetivos,
+      perfil_publico: data.perfilPublico,
+      publico_prioritario: data.publicoPrioritario,
+      outro_publico_prioritario: data.outroPublicoPrioritario,
+      acessibilidade_arquitetonica: data.acessibilidadeArquitetonica,
+      outra_acessibilidade_arquitetonica: data.outraAcessibilidadeArquitetonica,
+      acessibilidade_comunicacional: data.acessibilidadeComunicacional,
+      outra_acessibilidade_comunicacional: data.outraAcessibilidadeComunicacional,
+      acessibilidade_atitudinal: data.acessibilidadeAtitudinal,
+      implementacao_acessibilidade: data.implementacaoAcessibilidade,
+      local_execucao: data.localExecucao,
+      data_inicio: data.dataInicio,
+      data_final: data.dataFinal,
+      estrategia_divulgacao: data.estrategiaDivulgacao,
+      valor_solicitado: (data as any).valorSolicitado || 0,
+      outras_fontes: data.outrasFontes,
+      detalhes_outras_fontes: data.detalhesOutrasFontes,
+      venda_produtos: data.vendaProdutos === "sim",
+      detalhes_venda_produtos: data.detalhesVendaProdutos,
+      metas: data.metas.map(meta => ({
+        descricao: meta.descricao
+      })),
+      equipe: data.equipe.map(membro => ({
+        nome: membro.nome,
+        funcao: membro.funcao,
+        cpfCnpj: membro.cpfCnpj,
+        indigena: membro.indigena,
+        lgbtqiapn: membro.lgbtqiapn,
+        pretoPardo: membro.pretoPardo,
+        deficiencia: membro.deficiencia,
+        miniCurriculo: membro.miniCurriculo,
+        experiencia: membro.miniCurriculo
+      }))
     };
 
-    const existentes = JSON.parse(localStorage.getItem('rascunhosProjetos') || '[]');
-    // Se já existir um rascunho com o mesmo numeroInscricao, substitui
-    const atualizados = [rascunho, ...existentes.filter((p: any) => p.numeroInscricao !== rascunho.numeroInscricao)];
-    localStorage.setItem('rascunhosProjetos', JSON.stringify(atualizados));
-
-    // Marca proponente como inscrito neste programa
-    const inscritos: string[] = JSON.parse(localStorage.getItem('inscritosPNAB') || '[]');
-    if (!inscritos.includes(proponenteId)) {
-      localStorage.setItem('inscritosPNAB', JSON.stringify([...inscritos, proponenteId]));
-    }
-
+    // Salvar rascunho
+    const projetoId = await salvarRascunho(dadosRascunho, 'formulario');
+    
+    if (projetoId) {
     toast({
-      title: 'Rascunho salvo!',
-      description: 'Sua proposta foi salva localmente e você já está inscrito no programa.',
+        title: "Rascunho salvo!",
+        description: "Seu progresso foi salvo automaticamente.",
     });
 
-    // Retorna para tela anterior para refletir inscrição
-    navigate('/detalhes-edital');
+      // Retorna para tela anterior
+      navigate(getUrl('dashboard'));
+    }
   };
 
   const voltarDetalhesEdital = () => {
-    navigate('/detalhes-edital');
+    navigate(getUrl('dashboard'));
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -1222,7 +1392,7 @@ export default function NovaPropostaProjeto() {
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   Voltar
                 </Button>
-                <Button type="button" variant="outline" onClick={salvarRascunho}>
+                <Button type="button" variant="outline" onClick={salvarRascunhoManual}>
                   <Save className="h-4 w-4 mr-2" />
                   Salvar Rascunho
                 </Button>

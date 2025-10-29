@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Home,
@@ -12,6 +12,7 @@ import {
   FolderOpen,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+// import { usePrefeituraUrl } from "@/contexts/PrefeituraContext";
 import {
   Sidebar,
   SidebarContent,
@@ -31,20 +32,25 @@ const editaisDisponiveis = [
   { id: 4, codigo: "PNAB-2025-004", nome: "Artes Visuais e Exposições" },
 ];
 
-const menuItems = [
-  { title: "Início", icon: Home, url: "/dashboard-parecerista" },
-  { title: "Meus Projetos para Avaliar", icon: FileText, url: "/projetos-avaliar" },
-  { title: "Projetos Avaliados", icon: CheckSquare, url: "/projetos-avaliados" },
-  { title: "Meu Perfil", icon: User, url: "/meu-perfil-parecerista" },
-  { title: "Ajuda", icon: HelpCircle, url: "/ajuda" },
+const menuItemsBase = [
+  { title: "Início", icon: Home, path: "parecerista/dashboard" },
+  { title: "Meus Projetos para Avaliar", icon: FileText, path: "parecerista/projetos-avaliar" },
+  { title: "Projetos Avaliados", icon: CheckSquare, path: "parecerista/projetos-avaliados" },
+  { title: "Meu Perfil", icon: User, path: "parecerista/meu-perfil" },
+  { title: "Ajuda", icon: HelpCircle, path: "ajuda" },
 ];
 
 export const PareceristaSidebar = () => {
   const { signOut } = useAuth();
   const { open } = useSidebar();
   const navigate = useNavigate();
+  // const { getUrl } = usePrefeituraUrl();
+  const getUrl = (path: string) => path; // Mock function
   const [editaisOpen, setEditaisOpen] = useState(false);
   const [editalSelecionado, setEditalSelecionado] = useState<number | null>(null);
+  
+  // Gerar menu com URLs da prefeitura
+  const menuItems = useMemo(() => menuItemsBase.map(item => ({ ...item, url: getUrl(item.path) })), [getUrl]);
 
   // Carregar edital selecionado do localStorage
   useEffect(() => {
@@ -72,8 +78,8 @@ export const PareceristaSidebar = () => {
   }, []);
 
   const handleLogout = async () => {
-    await signOut();
-    navigate("/");
+    const logoutUrl = await signOut();
+    navigate(logoutUrl);
   };
 
   const handleSelecionarEdital = (editalId: number) => {
@@ -87,7 +93,7 @@ export const PareceristaSidebar = () => {
   };
 
   const handleTrocarEdital = () => {
-    navigate("/selecionar-edital");
+    navigate(getUrl("selecionar-edital"));
   };
 
   const editalAtual = editalSelecionado

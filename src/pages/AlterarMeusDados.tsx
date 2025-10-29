@@ -1,5 +1,5 @@
 import { SidebarProvider } from "@/components/ui/sidebar";
-import { DashboardHeader } from "@/components/DashboardHeader";
+import { ProponenteHeader } from "@/components/ProponenteHeader";
 import { DashboardSidebar } from "@/components/DashboardSidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,7 @@ const AlterarMeusDados = () => {
       <div className="min-h-screen flex w-full bg-gray-50">
         <DashboardSidebar />
         <div className="flex-1 flex flex-col">
-          <DashboardHeader />
+          <ProponenteHeader />
           <main className="flex-1 p-6">
             
 

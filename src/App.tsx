@@ -3,37 +3,28 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
+import "./App.css";
+import LoginParecerista from "./pages/LoginParecerista";
+import LoginProponente from "./pages/LoginProponente";
 import Dashboard from "./pages/Dashboard";
 import DashboardParecerista from "./pages/DashboardParecerista";
-import DashboardPrefeitura from "./pages/DashboardPrefeitura";
-import ProjetosAdmin from "./pages/ProjetosAdmin";
-import AvaliacoesAdmin from "./pages/AvaliacoesAdmin";
-import RankingAvaliacoes from "./pages/RankingAvaliacoes";
-import PrestacoesAdmin from "./pages/PrestacoesAdmin";
-import OpenBankingAdmin from "./pages/OpenBankingAdmin";
-import ProjetosAvaliar from "./pages/ProjetosAvaliar";
-import ProjetosAvaliados from "./pages/ProjetosAvaliados";
-import AvaliarProjeto from "./pages/AvaliarProjeto";
-import MeusProponentes from "./pages/MeusProponentes";
-import MinhasPendencias from "./pages/MinhasPendencias";
-import Comunicacao from "./pages/Comunicacao";
-import MeusProjetos from "./pages/MeusProjetos";
-import AlterarMeusDados from "./pages/AlterarMeusDados";
-import PrestacaoContas from "./pages/PrestacaoContas";
-import PrestacaoContasDetalhada from "./pages/PrestacaoContasDetalhada";
-import DetalhesEdital from "./pages/DetalhesEdital";
-import MeuPerfilParecerista from "./pages/MeuPerfilParecerista";
-import Ajuda from "./pages/Ajuda";
-import NovaPropostaProjeto from "./pages/NovaPropostaProjeto";
-import CronogramaExecucao from "./pages/CronogramaExecucao";
-import PlanilhaOrcamentaria from "./pages/PlanilhaOrcamentaria";
+import { PrefeituraLogin } from "./pages/PrefeituraLogin";
+import { PrefeituraDashboard } from "./pages/PrefeituraDashboard";
+import { PrefeituraPareceristas } from "./pages/PrefeituraPareceristas";
+import { PrefeituraEditais } from "./pages/PrefeituraEditais";
+import { PrefeituraProjetos } from "./pages/PrefeituraProjetos";
+import { PrefeituraProjetoDetalhes } from "./pages/PrefeituraProjetoDetalhes";
+import { PrefeituraDuvidas } from "./pages/PrefeituraDuvidas";
+import { ProponenteLogin } from "./pages/ProponenteLogin";
+import { ProponenteCadastro } from "./pages/ProponenteCadastro";
+import { ProponenteSolicitarRedefinicaoSenha } from "./pages/ProponenteSolicitarRedefinicaoSenha";
+import { ProponenteRedefinicaoSenha } from "./pages/ProponenteRedefinicaoSenha";
+import { ProponenteEditais } from "./pages/ProponenteEditais";
+import { ProponenteProjetos } from "./pages/ProponenteProjetos";
+import { ProponenteProjetoDetalhes } from "./pages/ProponenteProjetoDetalhes";
+import { ProponenteSuporte } from "./pages/ProponenteSuporte";
+import { AuthGuard } from "./components/auth/AuthGuard";
 import NotFound from "./pages/NotFound";
-import RelatoriosAdmin from "./pages/RelatoriosAdmin";
-import ComunicacoesAdmin from "./pages/ComunicacoesAdmin";
-import CadastroPareceristas from "./pages/CadastroPareceristas";
-import SelecionarEdital from "./pages/SelecionarEdital";
-import EditaisAdmin from "./pages/EditaisAdmin";
 
 const queryClient = new QueryClient();
 
@@ -44,38 +35,72 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Index />} />
+          {/* Rotas da Prefeitura */}
+          <Route path="/:nomePrefeitura/login" element={<PrefeituraLogin />} />
+          <Route path="/:nomePrefeitura/dashboard" element={
+            <AuthGuard>
+              <PrefeituraDashboard />
+            </AuthGuard>
+          } />
+          <Route path="/:nomePrefeitura/pareceristas" element={
+            <AuthGuard>
+              <PrefeituraPareceristas />
+            </AuthGuard>
+          } />
+          <Route path="/:nomePrefeitura/editais" element={
+            <AuthGuard>
+              <PrefeituraEditais />
+            </AuthGuard>
+          } />
+          <Route path="/:nomePrefeitura/editais/:editalId/projetos" element={
+            <AuthGuard>
+              <PrefeituraProjetos />
+            </AuthGuard>
+          } />
+          <Route path="/:nomePrefeitura/editais/:editalId/projetos/:projetoId" element={
+            <AuthGuard>
+              <PrefeituraProjetoDetalhes />
+            </AuthGuard>
+          } />
+          <Route path="/:nomePrefeitura/duvidas" element={
+            <AuthGuard>
+              <PrefeituraDuvidas />
+            </AuthGuard>
+          } />
+          
+          {/* Rotas do Proponente */}
+          <Route path="/:nomePrefeitura/proponente/login" element={<ProponenteLogin />} />
+          <Route path="/:nomePrefeitura/proponente/cadastro" element={<ProponenteCadastro />} />
+          <Route path="/:nomePrefeitura/proponente/solicitar-redefinicao-senha" element={<ProponenteSolicitarRedefinicaoSenha />} />
+          <Route path="/:nomePrefeitura/proponente/redefinicao-senha" element={<ProponenteRedefinicaoSenha />} />
+          <Route path="/:nomePrefeitura/proponente/editais" element={
+            <AuthGuard>
+              <ProponenteEditais />
+            </AuthGuard>
+          } />
+          <Route path="/:nomePrefeitura/proponente/projetos" element={
+            <AuthGuard>
+              <ProponenteProjetos />
+            </AuthGuard>
+          } />
+          <Route path="/:nomePrefeitura/proponente/projetos/:projetoId" element={
+            <AuthGuard>
+              <ProponenteProjetoDetalhes />
+            </AuthGuard>
+          } />
+          <Route path="/:nomePrefeitura/proponente/suporte" element={
+            <AuthGuard>
+              <ProponenteSuporte />
+            </AuthGuard>
+          } />
+          
+          {/* Rotas existentes mantidas */}
+          <Route path="/login-parecerista" element={<LoginParecerista />} />
+          <Route path="/login-proponente" element={<LoginProponente />} />
           <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/dashboard-parecerista" element={<DashboardParecerista />} />
-        <Route path="/selecionar-edital" element={<SelecionarEdital />} />
-          <Route path="/dashboard-prefeitura" element={<DashboardPrefeitura />} />
-          <Route path="/editais-admin" element={<EditaisAdmin />} />
-          <Route path="/projetos-admin" element={<ProjetosAdmin />} />
-          <Route path="/avaliacoes-admin" element={<AvaliacoesAdmin />} />
-          <Route path="/ranking-avaliacoes" element={<RankingAvaliacoes />} />
-          <Route path="/prestacoes-admin" element={<PrestacoesAdmin />} />
-          <Route path="/openbanking-admin" element={<OpenBankingAdmin />} />
-          <Route path="/relatorios-admin" element={<RelatoriosAdmin />} />
-          <Route path="/comunicacoes-admin" element={<ComunicacoesAdmin />} />
-          <Route path="/cadastro-pareceristas" element={<CadastroPareceristas />} />
-        <Route path="/projetos-avaliar" element={<ProjetosAvaliar />} />
-        <Route path="/projetos-avaliados" element={<ProjetosAvaliados />} />
-        <Route path="/avaliar-projeto/:id" element={<AvaliarProjeto />} />
-        <Route path="/meu-perfil-parecerista" element={<MeuPerfilParecerista />} />
-        <Route path="/ajuda" element={<Ajuda />} />
-        <Route path="/nova-proposta" element={<NovaPropostaProjeto />} />
-        <Route path="/cronograma-execucao" element={<CronogramaExecucao />} />
-        <Route path="/planilha-orcamentaria" element={<PlanilhaOrcamentaria />} />
-          <Route path="/meus-proponentes" element={<MeusProponentes />} />
-          <Route path="/pendencias" element={<MinhasPendencias />} />
-          <Route path="/comunicacao" element={<Comunicacao />} />
-          <Route path="/meus-projetos" element={<MeusProjetos />} />
-          <Route path="/alterar-dados" element={<AlterarMeusDados />} />
-          <Route path="/prestacao-contas" element={<PrestacaoContas />} />
-          <Route path="/prestacao-contas/:id" element={<PrestacaoContasDetalhada />} />
-          <Route path="/prestacao-contas-detalhada" element={<PrestacaoContasDetalhada />} />
-          <Route path="/detalhes-edital" element={<DetalhesEdital />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          <Route path="/parecerista/dashboard" element={<DashboardParecerista />} />
+          
+          {/* Rota 404 */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

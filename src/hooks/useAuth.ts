@@ -65,10 +65,15 @@ export const useAuth = () => {
 
   const signOut = async () => {
     // Simula logout
+    const slug = getPrefeituraSlugFromStorage();
+    
     toast({
       title: "Logout realizado!",
       description: "Voltando à tela inicial...",
     });
+    
+    // Retornar URL de login da prefeitura
+    return slug ? `/${slug}/login` : '/';
   };
 
   // Define um perfil padrão baseado no tipo de usuário selecionado
@@ -84,19 +89,38 @@ export const useAuth = () => {
     setProfile(mockProfile);
   };
 
-  const getDashboardRoute = (userType: UserType) => {
+  const getDashboardRoute = (userType: UserType, prefeituraSlug?: string) => {
+    const slug = prefeituraSlug || getPrefeituraSlugFromStorage();
+    
+    if (!slug) {
+      return "/"; // Redirecionar para seleção de prefeitura
+    }
+    
     switch (userType) {
       case "prefeitura":
-        return "/dashboard-prefeitura";
+        return `/${slug}/prefeitura/dashboard`;
       case "proponente":
-        return "/dashboard";
+        return `/${slug}/dashboard`;
       case "parecerista":
         // Verificar se já tem um edital selecionado
         const editalSelecionado = localStorage.getItem("editalSelecionado");
-        return editalSelecionado ? "/dashboard-parecerista" : "/selecionar-edital";
+        return editalSelecionado ? `/${slug}/parecerista/dashboard` : `/${slug}/selecionar-edital`;
       default:
-        return "/";
+        return `/${slug}/login`;
     }
+  };
+  
+  const getPrefeituraSlugFromStorage = (): string | null => {
+    try {
+      const prefeituraData = localStorage.getItem('prefeitura_atual');
+      if (prefeituraData) {
+        const data = JSON.parse(prefeituraData);
+        return data.slug;
+      }
+    } catch (err) {
+      console.error('Erro ao obter slug da prefeitura:', err);
+    }
+    return null;
   };
 
   return {

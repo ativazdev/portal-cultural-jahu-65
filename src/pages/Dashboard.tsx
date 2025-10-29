@@ -1,5 +1,5 @@
 import { SidebarProvider } from "@/components/ui/sidebar";
-import { DashboardHeader } from "@/components/DashboardHeader";
+import { ProponenteHeader } from "@/components/ProponenteHeader";
 import { DashboardSidebar } from "@/components/DashboardSidebar";
 import { DashboardMain } from "@/components/DashboardMain";
 
@@ -10,7 +10,7 @@ const Dashboard = () => {
       <div className="min-h-screen flex w-full bg-gray-50">
         <DashboardSidebar />
         <div className="flex-1 flex flex-col">
-          <DashboardHeader />
+          <ProponenteHeader />
           <DashboardMain />
         </div>
       </div>

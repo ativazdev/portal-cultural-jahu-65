@@ -8,8 +8,17 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileCheck2, Clock, ThumbsUp, Star, Search, X, Eye, Check, AlertTriangle, List, FileText, Download, BarChart3, Edit } from "lucide-react";
+import { FileCheck2, Clock, ThumbsUp, Star, Search, X, Eye, Check, AlertTriangle, List, FileText, Download, BarChart3, Edit, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAvaliacoes, AvaliacaoCompleta, AvaliacaoFiltros, AvaliacaoMetricas } from "@/hooks/useAvaliacoes";
+import { 
+  ListTemplate, 
+  DetailsModal,
+  type ListColumn,
+  type ListFilter,
+  type ListAction,
+  type StatusCard
+} from "@/components/templates";
 
 // Tipos
 export interface Avaliacao {
@@ -41,111 +50,70 @@ export interface Avaliacao {
   edital?: string;
 }
 
-// Dados de exemplo
-const avaliacoesExemplo: Avaliacao[] = [
-  {
-    id: "1",
-    projeto: { nome: "Festival de Música Popular", categoria: "Música" },
-    proponente: { nome: "João Silva", tipo: "PF" },
-    parecerista: "Ana Costa",
-    notaFinal: 59.5,
-    dataAvaliacao: "2024-11-15",
-    status: "Avaliado",
-    criterios: { relevancia: 8.5, viabilidade: 7.0, impacto: 9.0, orcamento: 6.5, inovacao: 4.0, sustentabilidade: 3.5 },
-    parecerTecnico: "Projeto com excelente potencial de impacto cultural na comunidade local.",
-    recomendacao: "Aprovação",
-    numeroInscricao: "2025001001",
+// Função para converter AvaliacaoCompleta para Avaliacao (compatibilidade)
+const converterAvaliacao = (avaliacaoCompleta: AvaliacaoCompleta): Avaliacao => {
+  return {
+    id: avaliacaoCompleta.id,
+    projeto: { 
+      nome: avaliacaoCompleta.projeto.nome,
+      categoria: avaliacaoCompleta.projeto.categoria || avaliacaoCompleta.projeto.modalidade || 'N/A'
+    },
+    proponente: { 
+      nome: avaliacaoCompleta.projeto.proponente?.nome || 'Proponente não encontrado',
+      tipo: (avaliacaoCompleta.projeto.proponente?.tipo as "PF" | "PJ") || "PF"
+    },
+    parecerista: avaliacaoCompleta.parecerista?.nome || 'Parecerista não encontrado',
+    notaFinal: Number(avaliacaoCompleta.nota_final || 0),
+    dataAvaliacao: avaliacaoCompleta.data_avaliacao || avaliacaoCompleta.created_at,
+    status: mapearStatus(avaliacaoCompleta.status),
+    criterios: {
+      relevancia: Number(avaliacaoCompleta.nota_relevancia || 0),
+      viabilidade: Number(avaliacaoCompleta.nota_viabilidade || 0),
+      impacto: Number(avaliacaoCompleta.nota_impacto || 0),
+      orcamento: Number(avaliacaoCompleta.nota_orcamento || 0),
+      inovacao: Number(avaliacaoCompleta.nota_inovacao || 0),
+      sustentabilidade: Number(avaliacaoCompleta.nota_sustentabilidade || 0)
+    },
+    parecerTecnico: avaliacaoCompleta.parecer_tecnico || 'Parecer não disponível',
+    recomendacao: mapearRecomendacao(avaliacaoCompleta.recomendacao),
+    numeroInscricao: avaliacaoCompleta.projeto.numero_inscricao,
     ano: "2025",
-    edital: "PNAB 2025 - Edital de Fomento Cultural"
-  },
-  {
-    id: "2",
-    projeto: { nome: "Teatro na Praça", categoria: "Teatro" },
-    proponente: { nome: "Maria Santos", tipo: "PF" },
-    parecerista: "Carlos Lima",
-    notaFinal: 50.4,
-    dataAvaliacao: "2024-11-14",
-    status: "Aprovado",
-    criterios: { relevancia: 7.5, viabilidade: 8.0, impacto: 7.0, orcamento: 7.5, inovacao: 3.0, sustentabilidade: 2.5 },
-    parecerTecnico: "Proposta bem estruturada com cronograma realista.",
-    recomendacao: "Aprovação",
-    numeroInscricao: "2025002001",
-    ano: "2025",
-    edital: "Edital de Apoio às Artes Cênicas"
-  },
-  {
-    id: "3",
-    projeto: { nome: "Oficina de Dança", categoria: "Dança" },
-    proponente: { nome: "Pedro Costa", tipo: "PJ" },
-    parecerista: "Lúcia Mendes",
-    notaFinal: 47.6,
-    dataAvaliacao: "2024-11-13",
-    status: "Avaliado",
-    criterios: { relevancia: 7.0, viabilidade: 6.0, impacto: 7.5, orcamento: 6.0, inovacao: 3.5, sustentabilidade: 4.0 },
-    parecerTecnico: "Projeto adequado mas com algumas questões orçamentárias a serem revisadas.",
-    recomendacao: "Aprovação",
-    numeroInscricao: "2025003001",
-    ano: "2025",
-    edital: "Fomento à Música Popular Brasileira"
-  },
-  {
-    id: "4",
-    projeto: { nome: "Arte Urbana", categoria: "Artes Visuais" },
-    proponente: { nome: "Coletivo Arte", tipo: "PJ" },
-    parecerista: "Roberto Silva",
-    notaFinal: 63.7,
-    dataAvaliacao: "2024-11-12",
-    status: "Aprovado",
-    criterios: { relevancia: 9.0, viabilidade: 8.5, impacto: 9.5, orcamento: 8.0, inovacao: 5.0, sustentabilidade: 4.5 },
-    parecerTecnico: "Excelente projeto com alto potencial de transformação social.",
-    recomendacao: "Aprovação",
-    numeroInscricao: "2025004001",
-    ano: "2025",
-    edital: "PNAB 2025 - Edital de Fomento Cultural"
-  }
-];
+    edital: avaliacaoCompleta.projeto.edital?.nome || 'Edital não encontrado'
+  };
+};
 
-const pareceristas = [
-  { nome: "Ana Costa", especialidade: "Música" },
-  { nome: "Carlos Lima", especialidade: "Teatro" },
-  { nome: "Lúcia Mendes", especialidade: "Artes Visuais" },
-  { nome: "Roberto Silva", especialidade: "Dança" }
-];
+// Mapear status do banco para interface
+const mapearStatus = (status: string): "Avaliado" | "Aprovado" | "Rejeitado" => {
+  const statusMap: Record<string, "Avaliado" | "Aprovado" | "Rejeitado"> = {
+    'em_analise': 'Avaliado',
+    'aprovado': 'Aprovado',
+    'rejeitado': 'Rejeitado'
+  };
+  return statusMap[status] || 'Avaliado';
+};
 
-// Dados de exemplo dos editais
-const editais = [
-  {
-    id: "1",
-    codigo: "PNAB-2025-001",
-    nome: "PNAB 2025 - Edital de Fomento Cultural",
-    dataAbertura: "01/07/2025",
-    dataFechamento: "31/08/2025",
-    horarioFechamento: "23:59"
-  },
-  {
-    id: "2",
-    codigo: "PNAB-2025-002",
-    nome: "Edital de Apoio às Artes Cênicas",
-    dataAbertura: "15/08/2025",
-    dataFechamento: "15/10/2025",
-    horarioFechamento: "18:00"
-  },
-  {
-    id: "3",
-    codigo: "PNAB-2025-003",
-    nome: "Fomento à Música Popular Brasileira",
-    dataAbertura: "10/09/2025",
-    dataFechamento: "10/11/2025",
-    horarioFechamento: "23:59"
-  }
-];
+// Mapear recomendação do banco para interface
+const mapearRecomendacao = (recomendacao: string): "Aprovação" | "Rejeição" => {
+  return recomendacao === 'aprovacao' ? 'Aprovação' : 'Rejeição';
+};
 
 const categorias = ["Música", "Teatro", "Dança", "Artes Visuais", "Literatura"];
 
 export const AvaliacoesAdminMain = () => {
   const { toast } = useToast();
-  const [avaliacoes, setAvaliacoes] = useState<Avaliacao[]>(avaliacoesExemplo);
-  const [filtros, setFiltros] = useState({
+  const { 
+    avaliacoes: avaliacoesCompletas, 
+    pareceristas, 
+    editais, 
+    loading, 
+    error,
+    aprovarProjeto,
+    rejeitarProjeto,
+    filtrarAvaliacoes,
+    calcularMetricas
+  } = useAvaliacoes();
+
+  const [filtros, setFiltros] = useState<AvaliacaoFiltros>({
     busca: "",
     parecerista: "Todos",
     status: "Todos",
@@ -188,30 +156,189 @@ export const AvaliacoesAdminMain = () => {
   const [editalSelecionado, setEditalSelecionado] = useState("");
   const [categoriaSelecionada, setCategoriaSelecionada] = useState("");
 
-  // Filtrar avaliações
-  const avaliacoesFiltradas = avaliacoes.filter(avaliacao => {
-    const matchBusca =
-      avaliacao.projeto.nome.toLowerCase().includes(filtros.busca.toLowerCase()) ||
-      avaliacao.proponente.nome.toLowerCase().includes(filtros.busca.toLowerCase()) ||
-      avaliacao.parecerista.toLowerCase().includes(filtros.busca.toLowerCase());
+  // Converter avaliações completas para formato da interface
+  const avaliacoes = avaliacoesCompletas.map(converterAvaliacao);
 
-    const matchParecerista = filtros.parecerista === "Todos" || avaliacao.parecerista === filtros.parecerista;
-    const matchStatus = filtros.status === "Todos" || avaliacao.status === filtros.status;
+  // Filtrar avaliações usando o hook
+  const avaliacoesFiltradas = filtrarAvaliacoes(filtros).map(converterAvaliacao);
 
-    // Filtro por edital - verifica se a avaliação pertence ao edital selecionado
-    const matchEdital = filtros.edital === "Todos" ||
-      (avaliacao.edital && editais.find(e => e.id === filtros.edital)?.nome === avaliacao.edital);
-
-    return matchBusca && matchParecerista && matchStatus && matchEdital;
-  });
-
-  // Calcular métricas
+  // Calcular métricas usando o hook
+  const metricasCompletas = calcularMetricas();
   const metricas = {
-    avaliacoesRecebidas: avaliacoes.filter(a => a.status === "Avaliado").length,
-    pendenteDecisao: avaliacoes.filter(a => a.status === "Avaliado").length,
-    projetosAprovados: avaliacoes.filter(a => a.status === "Aprovado").length,
-    notaMediaGeral: (avaliacoes.reduce((acc, curr) => acc + curr.notaFinal, 0) / avaliacoes.length).toFixed(1)
+    avaliacoesRecebidas: metricasCompletas.avaliacoesRecebidas,
+    pendenteDecisao: metricasCompletas.pendenteDecisao,
+    projetosAprovados: metricasCompletas.projetosAprovados,
+    notaMediaGeral: metricasCompletas.notaMediaGeral.toFixed(1)
   };
+
+  // Configuração das colunas para o ListTemplate
+  const columns: ListColumn[] = [
+    {
+      key: 'projeto',
+      label: 'Projeto',
+      sortable: true,
+      render: (item) => (
+        <div className="space-y-1">
+          <div className="font-medium">{item.projeto.nome}</div>
+          <Badge className={`${getCategoriaColor(item.projeto.categoria)}`}>
+            {item.projeto.categoria}
+          </Badge>
+        </div>
+      )
+    },
+    {
+      key: 'proponente',
+      label: 'Proponente',
+      render: (item) => (
+        <div className="space-y-1">
+          <div className="font-medium">{item.proponente.nome}</div>
+          <div className="text-sm text-gray-500">{item.proponente.tipo}</div>
+        </div>
+      )
+    },
+    {
+      key: 'parecerista',
+      label: 'Parecerista',
+      render: (item) => item.parecerista
+    },
+    {
+      key: 'notaFinal',
+      label: 'Nota Final',
+      sortable: true,
+      render: (item) => (
+        <span className={`px-2 py-1 rounded-md font-bold ${getNotaColor(item.notaFinal)}`}>
+          {item.notaFinal.toFixed(1)}
+        </span>
+      )
+    },
+    {
+      key: 'dataAvaliacao',
+      label: 'Data da Avaliação',
+      render: (item) => formatarData(item.dataAvaliacao)
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      render: (item) => (
+        <Badge className={getStatusBadge(item.status)}>
+          {item.status}
+        </Badge>
+      )
+    }
+  ];
+
+  // Configuração dos filtros
+  const filters: ListFilter[] = [
+    {
+      key: 'status',
+      label: 'Status',
+      type: 'select',
+      options: [
+        { value: 'Avaliado', label: 'Avaliado' },
+        { value: 'Aprovado', label: 'Aprovado' },
+        { value: 'Rejeitado', label: 'Rejeitado' }
+      ]
+    },
+    {
+      key: 'parecerista',
+      label: 'Parecerista',
+      type: 'select',
+      options: [
+        { value: 'Todos', label: 'Todos' },
+        ...pareceristas.map(p => ({ value: p.nome, label: p.nome }))
+      ]
+    },
+    {
+      key: 'edital',
+      label: 'Edital',
+      type: 'select',
+      options: [
+        { value: 'Todos', label: 'Todos' },
+        ...editais.map(e => ({ value: e.codigo, label: e.codigo }))
+      ]
+    }
+  ];
+
+  // Configuração das ações
+  const actions: ListAction[] = [
+    {
+      key: 'view',
+      label: 'Visualizar',
+      icon: <Eye className="h-4 w-4" />,
+      variant: 'ghost',
+      onClick: (item) => setModalDetalhes({ aberto: true, avaliacao: item })
+    },
+    {
+      key: 'approve',
+      label: 'Aprovar',
+      icon: <Check className="h-4 w-4" />,
+      variant: 'ghost',
+      onClick: (item) => setModalDecisao({ aberto: true, avaliacao: item, tipo: "aprovar" }),
+      show: (item) => item.status === "Avaliado"
+    },
+    {
+      key: 'reject',
+      label: 'Rejeitar',
+      icon: <X className="h-4 w-4" />,
+      variant: 'ghost',
+      onClick: (item) => setModalDecisao({ aberto: true, avaliacao: item, tipo: "rejeitar" }),
+      show: (item) => item.status === "Avaliado"
+    }
+  ];
+
+  // Ações em lote
+  const bulkActions: ListAction[] = [
+    {
+      key: 'export',
+      label: 'Exportar Selecionados',
+      icon: <Download className="h-4 w-4" />,
+      variant: 'outline',
+      onClick: (items) => {
+        exportarAvaliacoes();
+      }
+    },
+    {
+      key: 'approve',
+      label: 'Aprovar Selecionados',
+      icon: <Check className="h-4 w-4" />,
+      variant: 'outline',
+      onClick: (items) => {
+        console.log('Aprovando avaliações:', items);
+      }
+    }
+  ];
+
+  // Cards de status
+  const statusCards: StatusCard[] = [
+    {
+      title: 'Avaliações Recebidas',
+      value: metricas.avaliacoesRecebidas,
+      subtitle: 'prontas para análise',
+      color: 'blue',
+      icon: <FileCheck2 className="h-6 w-6" />
+    },
+    {
+      title: 'Pendentes de Decisão',
+      value: metricas.pendenteDecisao,
+      subtitle: 'aguardando aprovação',
+      color: 'orange',
+      icon: <Clock className="h-6 w-6" />
+    },
+    {
+      title: 'Projetos Aprovados',
+      value: metricas.projetosAprovados,
+      subtitle: 'baseado nas avaliações',
+      color: 'green',
+      icon: <ThumbsUp className="h-6 w-6" />
+    },
+    {
+      title: 'Nota Média Geral',
+      value: metricas.notaMediaGeral,
+      subtitle: 'qualidade dos projetos',
+      color: 'purple',
+      icon: <Star className="h-6 w-6" />
+    }
+  ];
 
   // Funções
   const getNotaColor = (nota: number) => {
@@ -249,24 +376,21 @@ export const AvaliacoesAdminMain = () => {
     setFiltros({ busca: "", parecerista: "Todos", status: "Todos", edital: "Todos" });
   };
 
-  const confirmarDecisao = () => {
+  const confirmarDecisao = async () => {
     if (!modalDecisao.avaliacao) return;
 
-    const novoStatus = modalDecisao.tipo === "aprovar" ? "Aprovado" : "Rejeitado";
-    
-    setAvaliacoes(prev => prev.map(a => 
-      a.id === modalDecisao.avaliacao!.id 
-        ? { ...a, status: novoStatus as "Aprovado" | "Rejeitado" }
-        : a
-    ));
+    try {
+      if (modalDecisao.tipo === "aprovar") {
+        await aprovarProjeto(modalDecisao.avaliacao.id, justificativa);
+      } else {
+        await rejeitarProjeto(modalDecisao.avaliacao.id, justificativa);
+      }
 
-    toast({
-      title: `Projeto ${novoStatus.toLowerCase()}`,
-      description: `O projeto "${modalDecisao.avaliacao.projeto.nome}" foi ${novoStatus.toLowerCase()} com sucesso.`,
-    });
-
-    setModalDecisao({ aberto: false });
-    setJustificativa("");
+      setModalDecisao({ aberto: false });
+      setJustificativa("");
+    } catch (error) {
+      console.error('Erro ao confirmar decisão:', error);
+    }
   };
 
   const gerarRankingAutomatico = () => {
@@ -307,15 +431,9 @@ export const AvaliacoesAdminMain = () => {
     });
   };
 
-  return (
-    <main className="flex-1 p-6 bg-prefeitura-accent">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Cabeçalho */}
-        <div>
-          <h1 className="text-3xl font-bold text-prefeitura-primary">Avaliações</h1>
-          <p className="text-prefeitura-muted mt-2">Gerencie as avaliações dos pareceristas</p>
-        </div>
-
+    return (
+      <main className="flex-1 p-6 bg-prefeitura-accent">
+        <div className="max-w-7xl mx-auto space-y-6">
         <Tabs defaultValue="avaliacoes" className="w-full">
           <TabsList>
             <TabsTrigger value="avaliacoes">Todas as Avaliações</TabsTrigger>
@@ -323,139 +441,34 @@ export const AvaliacoesAdminMain = () => {
           </TabsList>
 
           <TabsContent value="avaliacoes" className="space-y-6">
-            {/* Cards de Status */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Avaliações Recebidas</CardTitle>
-                  <FileCheck2 className="h-4 w-4 text-prefeitura-primary" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-prefeitura-primary">{metricas.avaliacoesRecebidas}</div>
-                  <p className="text-xs text-prefeitura-muted">Prontas para análise</p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Pendentes de Decisão</CardTitle>
-                  <Clock className="h-4 w-4 text-orange-500" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-orange-500">{metricas.pendenteDecisao}</div>
-                  <p className="text-xs text-prefeitura-muted">Aguardando aprovação</p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Projetos Aprovados</CardTitle>
-                  <ThumbsUp className="h-4 w-4 text-green-500" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-green-500">{metricas.projetosAprovados}</div>
-                  <p className="text-xs text-prefeitura-muted">Baseado nas avaliações</p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Nota Média Geral</CardTitle>
-                  <Star className="h-4 w-4 text-purple-500" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-purple-500">{metricas.notaMediaGeral}</div>
-                  <p className="text-xs text-prefeitura-muted">Qualidade dos projetos</p>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Filtros */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Filtros e Busca</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-12 gap-4">
-                  <div className="col-span-4 relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                    <Input
-                      placeholder="Buscar por projeto, proponente ou parecerista..."
-                      value={filtros.busca}
-                      onChange={(e) => setFiltros({ ...filtros, busca: e.target.value })}
-                      className="pl-10"
-                    />
-                  </div>
-
-                  <div className="col-span-2">
-                    <Select value={filtros.edital} onValueChange={(value) => setFiltros({ ...filtros, edital: value })}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Edital" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Todos">Todos os editais</SelectItem>
-                        {editais.map((edital) => (
-                          <SelectItem key={edital.id} value={edital.id}>
-                            {edital.codigo}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="col-span-2">
-                    <Select value={filtros.parecerista} onValueChange={(value) => setFiltros({ ...filtros, parecerista: value })}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Parecerista" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Todos">Todos</SelectItem>
-                        {pareceristas.map((p) => (
-                          <SelectItem key={p.nome} value={p.nome}>{p.nome}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="col-span-2">
-                    <Select value={filtros.status} onValueChange={(value) => setFiltros({ ...filtros, status: value })}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Todos">Todos</SelectItem>
-                        <SelectItem value="Avaliado">Avaliado</SelectItem>
-                        <SelectItem value="Aprovado">Aprovado</SelectItem>
-                        <SelectItem value="Rejeitado">Rejeitado</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="col-span-2">
-                    <Button variant="outline" onClick={handleLimparFiltros} className="w-full">
-                      <X className="h-4 w-4 mr-2" />
-                      Limpar Filtros
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Seção de Ações e Relatórios */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Ações e Relatórios</CardTitle>
-              </CardHeader>
-              <CardContent>
+            <ListTemplate
+              data={avaliacoesFiltradas}
+              title="Avaliações"
+              subtitle="Gerencie as avaliações dos pareceristas"
+              columns={columns}
+              filters={filters}
+              actions={actions}
+              bulkActions={bulkActions}
+              statusCards={statusCards}
+              searchable={true}
+              selectable={true}
+              sortable={true}
+              loading={loading}
+              error={error}
+              onSearch={(term) => setFiltros(prev => ({ ...prev, busca: term }))}
+              onFilterChange={(newFilters) => {
+                setFiltros(prev => ({
+                  ...prev,
+                  status: newFilters.status || 'Todos',
+                  parecerista: newFilters.parecerista || 'Todos',
+                  edital: newFilters.edital || 'Todos'
+                }));
+              }}
+              onSort={(column, direction) => console.log('Ordenação:', column, direction)}
+              onSelect={(items) => console.log('Selecionados:', items)}
+              onRefresh={() => window.location.reload()}
+              headerActions={
                 <div className="flex flex-wrap gap-4">
-                  {/* <Button 
-                    onClick={() => setModalRankingAuto(true)}
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
-                  >
-                    <List className="h-4 w-4 mr-2" />
-                    Gerar Ranking Automático
-                  </Button>*/}
-                  
                   <Button 
                     onClick={() => setModalRelatorioClass(true)}
                     className="bg-green-600 hover:bg-green-700 text-white"
@@ -480,96 +493,8 @@ export const AvaliacoesAdminMain = () => {
                     Relatório por Categoria
                   </Button>
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* Tabela de Avaliações */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Avaliações ({avaliacoesFiltradas.length})</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Projeto</TableHead>
-                        <TableHead>Proponente</TableHead>
-                        <TableHead>Parecerista</TableHead>
-                        <TableHead>Nota Final</TableHead>
-                        <TableHead>Data da Avaliação</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Ações</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {avaliacoesFiltradas.map((avaliacao) => (
-                        <TableRow key={avaliacao.id}>
-                          <TableCell>
-                            <div>
-                              <div className="font-medium">{avaliacao.projeto.nome}</div>
-                              <Badge className={`mt-1 ${getCategoriaColor(avaliacao.projeto.categoria)}`}>
-                                {avaliacao.projeto.categoria}
-                              </Badge>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div>
-                              <div className="font-medium">{avaliacao.proponente.nome}</div>
-                              <div className="text-sm text-muted-foreground">{avaliacao.proponente.tipo}</div>
-                            </div>
-                          </TableCell>
-                          <TableCell className="font-medium">{avaliacao.parecerista}</TableCell>
-                          <TableCell>
-                            <span className={`px-2 py-1 rounded-md font-bold ${getNotaColor(avaliacao.notaFinal)}`}>
-                              {avaliacao.notaFinal.toFixed(1)}
-                            </span>
-                          </TableCell>
-                          <TableCell>{formatarData(avaliacao.dataAvaliacao)}</TableCell>
-                          <TableCell>
-                            <Badge className={getStatusBadge(avaliacao.status)}>
-                              {avaliacao.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setModalDetalhes({ aberto: true, avaliacao })}
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              
-                              {avaliacao.status === "Avaliado" && (
-                                <>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => setModalDecisao({ aberto: true, avaliacao, tipo: "aprovar" })}
-                                    className="text-green-600 hover:text-green-700"
-                                  >
-                                    <Check className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => setModalDecisao({ aberto: true, avaliacao, tipo: "rejeitar" })}
-                                    className="text-red-600 hover:text-red-700"
-                                  >
-                                    <X className="h-4 w-4" />
-                                  </Button>
-                                </>
-                              )}
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
+              }
+            />
           </TabsContent>
 
           <TabsContent value="ranking" className="space-y-6">
@@ -776,141 +701,79 @@ export const AvaliacoesAdminMain = () => {
         </Tabs>
 
         {/* Modal de Detalhes da Avaliação */}
-        <Dialog open={modalDetalhes.aberto} onOpenChange={() => setModalDetalhes({ aberto: false })}>
-          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Detalhes da Avaliação</DialogTitle>
-              <DialogDescription>
-                Avaliação completa do projeto pelo parecerista
-              </DialogDescription>
-            </DialogHeader>
-            
-            {modalDetalhes.avaliacao && (
-              <div className="space-y-6">
-                {/* Cabeçalho */}
-                <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
-                  <div>
-                    <h3 className="font-semibold">Projeto</h3>
-                    <p>{modalDetalhes.avaliacao.projeto.nome}</p>
-                    <Badge className={`mt-1 ${getCategoriaColor(modalDetalhes.avaliacao.projeto.categoria)}`}>
-                      {modalDetalhes.avaliacao.projeto.categoria}
-                    </Badge>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold">Proponente</h3>
-                    <p>{modalDetalhes.avaliacao.proponente.nome} ({modalDetalhes.avaliacao.proponente.tipo})</p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Avaliado por: {modalDetalhes.avaliacao.parecerista}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Notas */}
-                <div>
-                  <h3 className="font-semibold mb-4">Critérios de Avaliação</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-3">
-                      <h4 className="font-medium">Critérios Principais (0-10)</h4>
-                      <div className="space-y-2">
-                        <div className="flex justify-between">
-                          <span>Relevância Cultural:</span>
-                          <span className={`font-bold ${getNotaColor(modalDetalhes.avaliacao.criterios.relevancia).split(' ')[0]}`}>
-                            {modalDetalhes.avaliacao.criterios.relevancia.toFixed(1)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Viabilidade Técnica:</span>
-                          <span className={`font-bold ${getNotaColor(modalDetalhes.avaliacao.criterios.viabilidade).split(' ')[0]}`}>
-                            {modalDetalhes.avaliacao.criterios.viabilidade.toFixed(1)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Impacto Social:</span>
-                          <span className={`font-bold ${getNotaColor(modalDetalhes.avaliacao.criterios.impacto).split(' ')[0]}`}>
-                            {modalDetalhes.avaliacao.criterios.impacto.toFixed(1)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Orçamento:</span>
-                          <span className={`font-bold ${getNotaColor(modalDetalhes.avaliacao.criterios.orcamento).split(' ')[0]}`}>
-                            {modalDetalhes.avaliacao.criterios.orcamento.toFixed(1)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-3">
-                      <h4 className="font-medium">Critérios Bônus (0-5)</h4>
-                      <div className="space-y-2">
-                        <div className="flex justify-between">
-                          <span>Inovação:</span>
-                          <span className="font-bold">{modalDetalhes.avaliacao.criterios.inovacao.toFixed(1)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Sustentabilidade:</span>
-                          <span className="font-bold">{modalDetalhes.avaliacao.criterios.sustentabilidade.toFixed(1)}</span>
-                        </div>
-                      </div>
-                      
-                      <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                        <div className="flex justify-between items-center">
-                          <span className="font-semibold">Nota Final:</span>
-                          <span className={`text-xl font-bold ${getNotaColor(modalDetalhes.avaliacao.notaFinal).split(' ')[0]}`}>
-                            {modalDetalhes.avaliacao.notaFinal.toFixed(1)}/70
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Parecer Técnico */}
-                <div>
-                  <h3 className="font-semibold mb-2">Parecer Técnico</h3>
-                  <div className="p-4 bg-gray-50 rounded-lg">
-                    <p className="text-sm leading-relaxed">{modalDetalhes.avaliacao.parecerTecnico}</p>
-                  </div>
-                  <div className="mt-3">
-                    <span className="font-medium">Recomendação: </span>
-                    <Badge className={modalDetalhes.avaliacao.recomendacao === "Aprovação" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
-                      {modalDetalhes.avaliacao.recomendacao}
-                    </Badge>
-                  </div>
-                </div>
-
-                {/* Ações */}
-                {modalDetalhes.avaliacao.status === "Avaliado" && (
-                  <div className="flex gap-3 pt-4 border-t">
-                    <Button
-                      onClick={() => {
+        <DetailsModal
+          open={modalDetalhes.aberto}
+          onClose={() => setModalDetalhes({ aberto: false })}
+          title="Detalhes da Avaliação"
+          data={modalDetalhes.avaliacao || {}}
+          sections={modalDetalhes.avaliacao ? [
+            {
+              title: 'Informações do Projeto',
+              fields: [
+                { key: 'projeto.nome', label: 'Nome do Projeto', value: modalDetalhes.avaliacao.projeto.nome, type: 'text' },
+                { key: 'projeto.categoria', label: 'Categoria', value: modalDetalhes.avaliacao.projeto.categoria, type: 'badge', color: 'info' },
+                { key: 'proponente.nome', label: 'Proponente', value: modalDetalhes.avaliacao.proponente.nome, type: 'text' },
+                { key: 'proponente.tipo', label: 'Tipo do Proponente', value: modalDetalhes.avaliacao.proponente.tipo, type: 'badge', color: 'default' }
+              ]
+            },
+            {
+              title: 'Informações da Avaliação',
+              fields: [
+                { key: 'parecerista', label: 'Parecerista', value: modalDetalhes.avaliacao.parecerista, type: 'text' },
+                { key: 'dataAvaliacao', label: 'Data da Avaliação', value: modalDetalhes.avaliacao.dataAvaliacao, type: 'date' },
+                { key: 'notaFinal', label: 'Nota Final', value: `${modalDetalhes.avaliacao.notaFinal.toFixed(1)}/70`, type: 'text' },
+                { key: 'status', label: 'Status', value: modalDetalhes.avaliacao.status, type: 'badge', color: 'success' }
+              ]
+            },
+            {
+              title: 'Critérios de Avaliação',
+              fields: [
+                { key: 'criterios.relevancia', label: 'Relevância Cultural', value: modalDetalhes.avaliacao.criterios.relevancia, type: 'number' },
+                { key: 'criterios.viabilidade', label: 'Viabilidade Técnica', value: modalDetalhes.avaliacao.criterios.viabilidade, type: 'number' },
+                { key: 'criterios.impacto', label: 'Impacto Social', value: modalDetalhes.avaliacao.criterios.impacto, type: 'number' },
+                { key: 'criterios.orcamento', label: 'Orçamento', value: modalDetalhes.avaliacao.criterios.orcamento, type: 'number' },
+                { key: 'criterios.inovacao', label: 'Inovação', value: modalDetalhes.avaliacao.criterios.inovacao, type: 'number' },
+                { key: 'criterios.sustentabilidade', label: 'Sustentabilidade', value: modalDetalhes.avaliacao.criterios.sustentabilidade, type: 'number' }
+              ]
+            },
+            {
+              title: 'Parecer Técnico',
+              fields: [
+                { key: 'parecerTecnico', label: 'Parecer', value: modalDetalhes.avaliacao.parecerTecnico, type: 'textarea' },
+                { key: 'recomendacao', label: 'Recomendação', value: modalDetalhes.avaliacao.recomendacao, type: 'badge', color: modalDetalhes.avaliacao.recomendacao === "Aprovação" ? 'success' : 'destructive' }
+              ]
+            }
+          ] : []}
+          actions={[
+            {
+              key: 'approve',
+              label: 'Aprovar Projeto',
+              icon: <Check className="h-4 w-4" />,
+              onClick: () => {
                         setModalDetalhes({ aberto: false });
                         setModalDecisao({ aberto: true, avaliacao: modalDetalhes.avaliacao, tipo: "aprovar" });
-                      }}
-                      className="bg-green-600 hover:bg-green-700"
-                    >
-                      <Check className="h-4 w-4 mr-2" />
-                      Aprovar Projeto
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      onClick={() => {
+              },
+              show: () => modalDetalhes.avaliacao?.status === "Avaliado"
+            },
+            {
+              key: 'reject',
+              label: 'Rejeitar Projeto',
+              icon: <X className="h-4 w-4" />,
+              onClick: () => {
                         setModalDetalhes({ aberto: false });
                         setModalDecisao({ aberto: true, avaliacao: modalDetalhes.avaliacao, tipo: "rejeitar" });
-                      }}
-                    >
-                      <X className="h-4 w-4 mr-2" />
-                      Rejeitar Projeto
-                    </Button>
-                    <Button variant="outline">
-                      <AlertTriangle className="h-4 w-4 mr-2" />
-                      Solicitar Reavaliação
-                    </Button>
-                  </div>
-                )}
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
+              },
+              show: () => modalDetalhes.avaliacao?.status === "Avaliado"
+            },
+            {
+              key: 'reassess',
+              label: 'Solicitar Reavaliação',
+              icon: <AlertTriangle className="h-4 w-4" />,
+              onClick: () => console.log('Solicitando reavaliação'),
+              show: () => modalDetalhes.avaliacao?.status === "Avaliado"
+            }
+          ]}
+        />
 
         {/* Modal de Decisão */}
         <Dialog open={modalDecisao.aberto} onOpenChange={() => setModalDecisao({ aberto: false })}>

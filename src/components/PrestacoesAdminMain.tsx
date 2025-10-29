@@ -25,6 +25,14 @@ import {
   Download,
   Filter
 } from "lucide-react";
+import { 
+  ListTemplate, 
+  DetailsModal,
+  type ListColumn,
+  type ListFilter,
+  type ListAction,
+  type StatusCard
+} from "@/components/templates";
 
 interface Prestacao {
   id: string;
@@ -314,99 +322,257 @@ export const PrestacoesAdminMain = () => {
     return matchesSearch && matchesStatus && matchesPrazo;
   });
 
+  // Configuração das colunas para o ListTemplate
+  const columns: ListColumn[] = [
+    {
+      key: 'projeto',
+      label: 'Projeto',
+      sortable: true,
+      render: (item) => (
+        <div className="space-y-1">
+          <div className="font-medium">{item.projeto}</div>
+          <Badge className="bg-blue-100 text-blue-800">
+            {item.categoria}
+          </Badge>
+        </div>
+      )
+    },
+    {
+      key: 'proponente',
+      label: 'Proponente',
+      render: (item) => (
+        <div className="space-y-1">
+          <div className="font-medium">{item.proponente}</div>
+          <div className="text-sm text-gray-500">{item.tipo}</div>
+      </div>
+      )
+    },
+    {
+      key: 'valor',
+      label: 'Valor',
+      sortable: true,
+      render: (item) => new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL'
+      }).format(item.valor)
+    },
+    {
+      key: 'dataEntrega',
+      label: 'Data de Entrega',
+      render: (item) => new Date(item.dataEntrega).toLocaleDateString('pt-BR')
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      render: (item) => {
+        const statusConfig = {
+          'Pendente': { color: 'bg-yellow-100 text-yellow-800', icon: <Clock className="h-3 w-3" /> },
+          'Em Análise': { color: 'bg-blue-100 text-blue-800', icon: <Eye className="h-3 w-3" /> },
+          'Aprovada': { color: 'bg-green-100 text-green-800', icon: <CheckCircle className="h-3 w-3" /> },
+          'Rejeitada': { color: 'bg-red-100 text-red-800', icon: <X className="h-3 w-3" /> },
+          'Correção Solicitada': { color: 'bg-orange-100 text-orange-800', icon: <AlertTriangle className="h-3 w-3" /> }
+        };
+        const config = statusConfig[item.status as keyof typeof statusConfig] || statusConfig['Pendente'];
+        
+        return (
+          <div className="flex items-center gap-2">
+            {config.icon}
+            <span className={`px-2 py-1 rounded-full text-xs font-medium ${config.color}`}>
+              {item.status}
+            </span>
+                </div>
+        );
+      }
+    },
+    {
+      key: 'openBanking',
+      label: 'Open Banking',
+      render: (item) => {
+        const openBankingConfig = {
+          'conforme': { color: 'bg-green-100 text-green-800', label: 'Conforme' },
+          'alerta': { color: 'bg-yellow-100 text-yellow-800', label: 'Alerta' },
+          'irregularidade': { color: 'bg-red-100 text-red-800', label: 'Irregularidade' },
+          'nao-monitorado': { color: 'bg-gray-100 text-gray-800', label: 'Não Monitorado' }
+        };
+        const config = openBankingConfig[item.openBanking] || openBankingConfig['nao-monitorado'];
+        
+        return (
+          <span className={`px-2 py-1 rounded-full text-xs font-medium ${config.color}`}>
+            {config.label}
+          </span>
+        );
+      }
+    }
+  ];
+
+  // Configuração dos filtros
+  const filters: ListFilter[] = [
+    {
+      key: 'status',
+      label: 'Status',
+      type: 'select',
+      options: [
+        { value: 'Pendente', label: 'Pendente' },
+        { value: 'Em Análise', label: 'Em Análise' },
+        { value: 'Aprovada', label: 'Aprovada' },
+        { value: 'Rejeitada', label: 'Rejeitada' },
+        { value: 'Correção Solicitada', label: 'Correção Solicitada' }
+      ]
+    },
+    {
+      key: 'openBanking',
+      label: 'Open Banking',
+      type: 'select',
+      options: [
+        { value: 'conforme', label: 'Conforme' },
+        { value: 'alerta', label: 'Alerta' },
+        { value: 'irregularidade', label: 'Irregularidade' },
+        { value: 'nao-monitorado', label: 'Não Monitorado' }
+      ]
+    }
+  ];
+
+  // Configuração das ações
+  const actions: ListAction[] = [
+    {
+      key: 'view',
+      label: 'Visualizar',
+      icon: <Eye className="h-4 w-4" />,
+      variant: 'ghost',
+      onClick: (item) => setModalDetalhes({ aberto: true, prestacao: item })
+    },
+    {
+      key: 'edit',
+      label: 'Editar',
+      icon: <Edit className="h-4 w-4" />,
+      variant: 'ghost',
+      onClick: (item) => setModalEdicao({ aberto: true, prestacao: item })
+    },
+    {
+      key: 'approve',
+      label: 'Aprovar',
+      icon: <CheckCircle className="h-4 w-4" />,
+      variant: 'ghost',
+      onClick: (item) => setModalAprovacao({ aberto: true, prestacao: item }),
+      show: (item) => item.status === 'Em Análise'
+    },
+    {
+      key: 'reject',
+      label: 'Rejeitar',
+      icon: <X className="h-4 w-4" />,
+      variant: 'ghost',
+      onClick: (item) => setModalRejeicao({ aberto: true, prestacao: item }),
+      show: (item) => item.status === 'Em Análise'
+    }
+  ];
+
+  // Ações em lote
+  const bulkActions: ListAction[] = [
+    {
+      key: 'export',
+      label: 'Exportar Selecionados',
+      icon: <Download className="h-4 w-4" />,
+      variant: 'outline',
+      onClick: (items) => {
+        console.log('Exportando prestações:', items);
+      }
+    },
+    {
+      key: 'approve',
+      label: 'Aprovar Selecionadas',
+      icon: <CheckCircle className="h-4 w-4" />,
+      variant: 'outline',
+      onClick: (items) => {
+        console.log('Aprovando prestações:', items);
+      }
+    }
+  ];
+
+  // Cards de status para o ListTemplate
+  const listStatusCards: StatusCard[] = [
+    {
+      title: 'Total de Prestações',
+      value: prestacoes.length.toString(),
+      subtitle: 'entregues',
+      color: 'blue',
+      icon: <FileText className="h-6 w-6" />
+    },
+    {
+      title: 'Pendentes',
+      value: prestacoes.filter(p => p.status === 'Pendente').length.toString(),
+      subtitle: 'aguardando análise',
+      color: 'yellow',
+      icon: <Clock className="h-6 w-6" />
+    },
+    {
+      title: 'Aprovadas',
+      value: prestacoes.filter(p => p.status === 'Aprovada').length.toString(),
+      subtitle: 'prestações aprovadas',
+      color: 'green',
+      icon: <CheckCircle className="h-6 w-6" />
+    },
+    {
+      title: 'Valor Total',
+      value: new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL'
+      }).format(prestacoes.reduce((sum, p) => sum + p.valor, 0)),
+      subtitle: 'em prestações',
+      color: 'purple',
+      icon: <Building2 className="h-6 w-6" />
+    }
+  ];
+
   return (
     <div className="space-y-6 p-6">
-      {/* Cabeçalho */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight text-prefeitura-primary">
-            Prestações de Contas
-          </h1>
-          <p className="text-prefeitura-muted">
-            Analise e valide as prestações de contas dos projetos
-          </p>
-        </div>
-      </div>
-
-      {/* Cards de Status */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {statusCards.map((card, index) => (
-          <Card key={index} className={getCardColor(card.color)}>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-muted-foreground">
-                    {card.title}
-                  </p>
-                  <p className="text-2xl font-bold">{card.value}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {card.subtitle}
-                  </p>
-                </div>
-                <div className={getIconColor(card.color)}>
-                  {card.icon}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Filtros */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Filter className="h-5 w-5" />
-            Filtros
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
-              <Input
-                placeholder="Buscar por projeto ou proponente..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full"
-              />
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-48">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos</SelectItem>
-                <SelectItem value="Recebida">Recebidas</SelectItem>
-                <SelectItem value="Em Análise">Em Análise</SelectItem>
-                <SelectItem value="Aprovada">Aprovadas</SelectItem>
-                <SelectItem value="Com Pendências">Com Pendências</SelectItem>
-                <SelectItem value="Atrasada">Atrasadas</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={prazoFilter} onValueChange={setPrazoFilter}>
-              <SelectTrigger className="w-full sm:w-48">
-                <SelectValue placeholder="Prazo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos</SelectItem>
-                <SelectItem value="no-prazo">No prazo</SelectItem>
-                <SelectItem value="vencendo">Vencendo (7 dias)</SelectItem>
-                <SelectItem value="atrasadas">Atrasadas</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                setSearchTerm("");
-                setStatusFilter("todos");
-                setPrazoFilter("todos");
-              }}
+      <ListTemplate
+        data={filteredPrestacoes}
+        title="Prestações de Contas"
+        subtitle="Analise e valide as prestações de contas dos projetos"
+        columns={columns}
+        filters={filters}
+        actions={actions}
+        bulkActions={bulkActions}
+        statusCards={listStatusCards}
+        searchable={true}
+        selectable={true}
+        sortable={true}
+        onSearch={(term) => setSearchTerm(term)}
+        onFilterChange={(newFilters) => {
+          if (newFilters.status) setStatusFilter(newFilters.status);
+          if (newFilters.openBanking) setOpenBankingFilter(newFilters.openBanking);
+        }}
+        onSort={(column, direction) => console.log('Ordenação:', column, direction)}
+        onSelect={(items) => {
+          const ids = items.map(item => item.id);
+          setSelectedPrestacoes(ids);
+        }}
+        onRefresh={() => window.location.reload()}
+        headerActions={
+          <div className="flex gap-2">
+            <Button
+              onClick={() => setModalAprovacao({ aberto: true, prestacao: null })}
+              className="bg-green-600 hover:bg-green-700"
+              disabled={selectedPrestacoes.length === 0}
             >
-              Limpar Filtros
+              <CheckCircle className="h-4 w-4 mr-2" />
+              Aprovar Selecionadas
+            </Button>
+            <Button
+              onClick={() => setModalRejeicao({ aberto: true, prestacao: null })}
+              variant="destructive"
+              disabled={selectedPrestacoes.length === 0}
+            >
+              <X className="h-4 w-4 mr-2" />
+              Rejeitar Selecionadas
+            </Button>
+            <Button variant="outline" disabled={selectedPrestacoes.length === 0}>
+              <Download className="h-4 w-4 mr-2" />
+              Exportar Selecionadas
             </Button>
           </div>
-        </CardContent>
-      </Card>
+        }
+      />
 
       {/* Ações em Lote */}
       {selectedPrestacoes.length > 0 && (

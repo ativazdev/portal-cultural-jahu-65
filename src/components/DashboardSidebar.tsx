@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Home,
@@ -16,6 +16,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+// import { usePrefeituraUrl } from "@/contexts/PrefeituraContext";
 import {
   Sidebar,
   SidebarContent,
@@ -27,31 +28,38 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 
-const menuItems = [
-  { title: "Início", icon: Home, url: "/dashboard" },
+const menuItemsBase = [
+  { title: "Início", icon: Home, path: "dashboard" },
 ];
 
-const minhaContaItems = [
-  { title: "Meus projetos", icon: FileText, url: "/meus-projetos" },
-  { title: "Meus proponentes", icon: Users, url: "/meus-proponentes" },
-  { title: "Alterar meus dados", icon: Settings, url: "/alterar-dados" },
+const minhaContaItemsBase = [
+  { title: "Meus projetos", icon: FileText, path: "meus-projetos" },
+  { title: "Meus proponentes", icon: Users, path: "meus-proponentes" },
+  { title: "Alterar meus dados", icon: Settings, path: "alterar-dados" },
 ];
 
-const otherItems = [
-  { title: "Comunicação", icon: MessageSquare, url: "/comunicacao" },
-  { title: "Minhas Pendências", icon: AlertCircle, url: "/pendencias" },
+const otherItemsBase = [
+  { title: "Comunicação", icon: MessageSquare, path: "comunicacao" },
+  { title: "Minhas Pendências", icon: AlertCircle, path: "pendencias" },
 ];
 
 export const DashboardSidebar = () => {
   const { signOut } = useAuth();
   const { open } = useSidebar();
   const navigate = useNavigate();
+  // const { getUrl } = usePrefeituraUrl();
+  const getUrl = (path: string) => path; // Mock function
   const [minhaContaOpen, setMinhaContaOpen] = useState(true);
   const [ajudaOpen, setAjudaOpen] = useState(false);
+  
+  // Gerar menus com URLs da prefeitura
+  const menuItems = useMemo(() => menuItemsBase.map(item => ({ ...item, url: getUrl(item.path) })), [getUrl]);
+  const minhaContaItems = useMemo(() => minhaContaItemsBase.map(item => ({ ...item, url: getUrl(item.path) })), [getUrl]);
+  const otherItems = useMemo(() => otherItemsBase.map(item => ({ ...item, url: getUrl(item.path) })), [getUrl]);
 
   const handleLogout = async () => {
-    await signOut();
-    navigate("/");
+    const logoutUrl = await signOut();
+    navigate(logoutUrl);
   };
 
   return (

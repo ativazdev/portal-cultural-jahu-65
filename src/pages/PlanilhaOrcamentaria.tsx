@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -15,6 +15,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { usePrefeituraUrl } from "@/contexts/PrefeituraContext";
+import { usePlanilhaOrcamentaria, ItemOrcamento } from "@/hooks/usePlanilhaOrcamentaria";
+import { supabase } from "@/integrations/supabase/client";
 
 const formSchema = z.object({
   itens: z.array(z.object({
@@ -24,8 +27,8 @@ const formSchema = z.object({
     valorUnitario: z.number().min(0.01, "Valor unitário deve ser maior que zero"),
     quantidade: z.number().min(1, "Quantidade deve ser pelo menos 1"),
     referenciaPreco: z.string().optional()
-  })).min(3, "Pelo menos 3 itens são obrigatórios"),
-  recursosOutrasFontes: z.string().min(1, "Campo obrigatório"),
+  })).min(1, "Pelo menos 1 item é obrigatório"),
+  recursosOutrasFontes: z.string().optional(),
   detalhamentoRecursos: z.string().optional()
 }).refine((data) => {
   // Se outras fontes foram selecionadas (exceto "nao"), detalhamento é obrigatório
@@ -55,40 +58,46 @@ export default function PlanilhaOrcamentaria() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
+  const { getUrl } = usePrefeituraUrl();
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   
-  // Dados que viriam das etapas anteriores (simulados)
-  const nomeProjeto = searchParams.get('projeto') || "Projeto Cultural - Teatro Comunitário";
-  const proponenteNome = searchParams.get('nome') || "Maria Silva Santos";
-  const valorMaximoModalidade = 30000; // R$ 30.000,00 para exemplo
+  // Dados do projeto
+  const projetoId = searchParams.get('projeto_id');
+  const nomeProjeto = searchParams.get('projeto') || "Nome do Projeto";
+  const proponenteNome = searchParams.get('nome') || "Responsável";
   
+  // Hook para gerenciar dados da planilha
+  const {
+    itens: itensBanco,
+    projetoData,
+    loading: loadingDados,
+    salvarItens,
+    calcularValorTotal,
+    calcularValorMaximo,
+    calcularSaldoDisponivel
+  } = usePlanilhaOrcamentaria(projetoId || undefined);
+  
+  // Converter itens do banco para formato do formulário
+  const itensFormato = itensBanco.map(item => ({
+    descricao: item.descricao,
+    justificativa: item.justificativa,
+    unidadeMedida: item.unidade_medida,
+    valorUnitario: item.valor_unitario,
+    quantidade: item.quantidade,
+    referenciaPreco: item.referencia_preco || ""
+  }));
+
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      itens: [
+      itens: itensFormato.length > 0 ? itensFormato : [
         {
-          descricao: "Profissional Fotógrafo",
-          justificativa: "Serviço necessário para registro da oficina",
-          unidadeMedida: "Serviço",
-          valorUnitario: 1100,
+          descricao: "",
+          justificativa: "",
+          unidadeMedida: "",
+          valorUnitario: 0,
           quantidade: 1,
-          referenciaPreco: "SALICNET"
-        },
-        {
-          descricao: "Material de divulgação",
-          justificativa: "Impressão de cartazes e folders",
-          unidadeMedida: "Unidade",
-          valorUnitario: 250,
-          quantidade: 100,
-          referenciaPreco: "3 orçamentos"
-        },
-        {
-          descricao: "Aluguel de equipamento",
-          justificativa: "Som para as apresentações",
-          unidadeMedida: "Diária",
-          valorUnitario: 300,
-          quantidade: 5,
-          referenciaPreco: "Cotação local"
+          referenciaPreco: ""
         }
       ],
       recursosOutrasFontes: "",
@@ -100,6 +109,44 @@ export default function PlanilhaOrcamentaria() {
     control: form.control,
     name: "itens"
   });
+
+  // Atualizar formulário quando dados do banco mudarem
+  useEffect(() => {
+    if (!loadingDados && itensFormato.length > 0) {
+      form.reset({
+        itens: itensFormato,
+        recursosOutrasFontes: "",
+        detalhamentoRecursos: ""
+      });
+    }
+  }, [itensBanco, loadingDados, form]);
+
+  // Carregar dados de recursos financeiros do projeto APENAS na primeira carga
+  useEffect(() => {
+    if (projetoData && !loadingDados) {
+      console.log('Carregando dados de recursos financeiros:', {
+        outras_fontes: projetoData.outras_fontes,
+        detalhes_outras_fontes: projetoData.detalhes_outras_fontes,
+        tipos_outras_fontes: projetoData.tipos_outras_fontes
+      });
+      
+      // Carregar dados de recursos financeiros
+      if (projetoData.outras_fontes !== null) {
+        if (projetoData.outras_fontes === false) {
+          form.setValue('recursosOutrasFontes', 'nao');
+          console.log('Definindo recursosOutrasFontes como "nao"');
+        } else if (projetoData.tipos_outras_fontes && projetoData.tipos_outras_fontes.length > 0) {
+          form.setValue('recursosOutrasFontes', projetoData.tipos_outras_fontes[0]);
+          console.log('Definindo recursosOutrasFontes como:', projetoData.tipos_outras_fontes[0]);
+        }
+      }
+      
+      if (projetoData.detalhes_outras_fontes) {
+        form.setValue('detalhamentoRecursos', projetoData.detalhes_outras_fontes);
+        console.log('Definindo detalhamentoRecursos como:', projetoData.detalhes_outras_fontes);
+      }
+    }
+  }, [projetoData, loadingDados, form]);
 
   const watchItens = form.watch("itens");
 
@@ -115,19 +162,14 @@ export default function PlanilhaOrcamentaria() {
     }, 0);
   };
 
-  // Calcular saldo disponível
-  const calcularSaldoDisponivel = () => {
-    return valorMaximoModalidade - calcularValorTotalGeral();
-  };
-
-  // Calcular progresso do orçamento
-  const calcularProgressoOrcamento = () => {
-    return (calcularValorTotalGeral() / valorMaximoModalidade) * 100;
-  };
+  // Usar valores do banco de dados
+  const valorMaximoModalidade = calcularValorMaximo();
+  const saldoDisponivel = calcularSaldoDisponivel();
+  const percentualUtilizado = valorMaximoModalidade > 0 ? (calcularValorTotalGeral() / valorMaximoModalidade) * 100 : 0;
 
   // Verificar se está próximo do limite (90%)
   const isProximoLimite = () => {
-    return calcularProgressoOrcamento() >= 90 && calcularProgressoOrcamento() < 100;
+    return percentualUtilizado >= 90 && percentualUtilizado < 100;
   };
 
   // Verificar se o orçamento está exato
@@ -171,18 +213,18 @@ export default function PlanilhaOrcamentaria() {
   // Filtrar apenas itens válidos (completos)
   const itensValidos = watchItens.filter(item => isItemValido(item)).length;
   
-  // Condição simples: pelo menos 3 itens válidos E valor exato
-  const podeHabilitar = itensValidos >= 3 && isOrcamentoExato();
+  // Condição: pelo menos 1 item válido E não ultrapassar o limite
+  const podeHabilitar = itensValidos >= 1 && !ultrapassouLimite();
   
   console.log("Debug botão:", {
     itensValidos: itensValidos,
     valorTotal: calcularValorTotalGeral(),
     valorOrcamento: valorMaximoModalidade,
-    isOrcamentoExato: isOrcamentoExato(),
+    ultrapassouLimite: ultrapassouLimite(),
     podeHabilitar: podeHabilitar
   });
 
-  const onSubmit = (data: FormData) => {
+  const onSubmit = async (data: FormData) => {
     if (ultrapassouLimite()) {
       toast({
         title: "Erro de validação",
@@ -192,46 +234,217 @@ export default function PlanilhaOrcamentaria() {
       return;
     }
     
-    if (isAbaixoOrcamento()) {
+    // Removido: validação que forçava valor exato
+    // Agora permite valores menores que o limite máximo
+    
+    // Salvar itens no banco de dados
+    const itensParaSalvar: ItemOrcamento[] = data.itens
+      .filter(item => isItemValido(item))
+      .map((item, index) => ({
+        descricao: item.descricao,
+        justificativa: item.justificativa,
+        unidade_medida: item.unidadeMedida,
+        valor_unitario: item.valorUnitario,
+        quantidade: item.quantidade,
+        referencia_preco: item.referenciaPreco || undefined,
+        ordem: index
+      }));
+
+    // Salvar dados de recursos financeiros no projeto PRIMEIRO
+    if (projetoId) {
+      try {
+        // Forçar valores padrão se estiverem vazios
+        const recursosOutrasFontes = data.recursosOutrasFontes || "nao";
+        const detalhamentoRecursos = data.detalhamentoRecursos || null;
+        
+        console.log('Salvando recursos financeiros (onSubmit):', {
+          projetoId,
+          recursosOutrasFontes,
+          detalhamentoRecursos
+        });
+
+        const { error } = await supabase
+          .from('projetos')
+          .update({
+            outras_fontes: recursosOutrasFontes !== "nao",
+            detalhes_outras_fontes: detalhamentoRecursos,
+            tipos_outras_fontes: recursosOutrasFontes !== "nao" ? [recursosOutrasFontes] : null
+          })
+          .eq('id', projetoId);
+
+        if (error) {
+          console.error('Erro ao salvar recursos financeiros:', error);
+          toast({
+            title: "Erro",
+            description: "Erro ao salvar dados de recursos financeiros.",
+            variant: "destructive",
+          });
+          return; // Não continuar se houve erro
+        } else {
+          console.log('Recursos financeiros salvos com sucesso (onSubmit)!');
+        }
+      } catch (err) {
+        console.error('Erro ao salvar recursos financeiros:', err);
+        toast({
+          title: "Erro",
+          description: "Erro ao salvar dados de recursos financeiros.",
+          variant: "destructive",
+        });
+        return; // Não continuar se houve erro
+      }
+    }
+    
+    // Salvar itens de orçamento DEPOIS
+    const salvou = await salvarItens(itensParaSalvar);
+    
+    if (salvou) {
+      setShowConfirmDialog(true);
+    }
+  };
+
+
+
+  const voltarEtapaAnterior = () => {
+    const projetoId = searchParams.get('projeto_id');
+    const proponenteId = searchParams.get('proponente');
+    const editalId = searchParams.get('edital');
+    const cronogramaUrl = getUrl(`cronograma-execucao?projeto_id=${projetoId}&projeto=${encodeURIComponent(nomeProjeto)}&nome=${encodeURIComponent(proponenteNome)}&proponente=${proponenteId}&edital=${editalId}`);
+    navigate(cronogramaUrl);
+  };
+
+  const salvarRascunho = async () => {
+    const data = form.getValues();
+    
+    console.log('Dados do formulário:', {
+      recursosOutrasFontes: data.recursosOutrasFontes,
+      detalhamentoRecursos: data.detalhamentoRecursos
+    });
+    
+    // Salvar itens no banco de dados
+    const itensParaSalvar: ItemOrcamento[] = data.itens
+      .filter(item => item.descricao && item.descricao.trim() !== "")
+      .map((item, index) => ({
+        descricao: item.descricao,
+        justificativa: item.justificativa,
+        unidade_medida: item.unidadeMedida,
+        valor_unitario: item.valorUnitario || 0,
+        quantidade: item.quantidade || 1,
+        referencia_preco: item.referenciaPreco || undefined,
+        ordem: index
+      }));
+
+    // Salvar dados de recursos financeiros no projeto PRIMEIRO
+    if (projetoId) {
+      try {
+        // Forçar valores padrão se estiverem vazios
+        const recursosOutrasFontes = data.recursosOutrasFontes || "nao";
+        const detalhamentoRecursos = data.detalhamentoRecursos || null;
+        
+        console.log('Salvando recursos financeiros:', {
+          projetoId,
+          recursosOutrasFontes,
+          detalhamentoRecursos,
+          outras_fontes: recursosOutrasFontes !== "nao",
+          detalhes_outras_fontes: detalhamentoRecursos,
+          tipos_outras_fontes: recursosOutrasFontes !== "nao" ? [recursosOutrasFontes] : null
+        });
+
+        const { error } = await supabase
+          .from('projetos')
+          .update({
+            outras_fontes: recursosOutrasFontes !== "nao",
+            detalhes_outras_fontes: detalhamentoRecursos,
+            tipos_outras_fontes: recursosOutrasFontes !== "nao" ? [recursosOutrasFontes] : null
+          })
+          .eq('id', projetoId);
+
+        if (error) {
+          console.error('Erro ao salvar recursos financeiros:', error);
+          toast({
+            title: "Aviso",
+            description: "Itens salvos, mas houve erro ao salvar dados de recursos financeiros.",
+            variant: "destructive",
+          });
+          return; // Não continuar se houve erro
+        } else {
+          console.log('Recursos financeiros salvos com sucesso!');
+        }
+      } catch (err) {
+        console.error('Erro ao salvar recursos financeiros:', err);
+        toast({
+          title: "Aviso",
+          description: "Itens salvos, mas houve erro ao salvar dados de recursos financeiros.",
+          variant: "destructive",
+        });
+        return; // Não continuar se houve erro
+      }
+    }
+
+    // Salvar itens de orçamento DEPOIS
+    await salvarItens(itensParaSalvar);
+
+    // Mostrar toast de sucesso apenas se tudo foi salvo
+    toast({
+      title: "Sucesso",
+      description: "Dados salvos com sucesso!",
+    });
+  };
+
+
+  const finalizarProposta = async () => {
+    console.log('Iniciando finalização da proposta...', { projetoId });
+    setShowConfirmDialog(false);
+    
+    if (!projetoId) {
       toast({
-        title: "Erro de validação", 
-        description: `Você deve utilizar exatamente o valor do orçamento (${formatarValor(valorMaximoModalidade)}). Valor atual: ${formatarValor(calcularValorTotalGeral())}.`,
-        variant: "destructive"
+        title: "Erro",
+        description: "ID do projeto não encontrado.",
+        variant: "destructive",
       });
       return;
     }
-    
-    setShowConfirmDialog(true);
-  };
 
-  const finalizarProposta = () => {
-    console.log("Finalizando proposta...");
-    
-    // Fechar o modal primeiro
-    setShowConfirmDialog(false);
-    
-    // Mostrar mensagem de sucesso
-    toast({
-      title: "🎉 Projeto inscrito com sucesso!",
-      description: "Sua proposta foi enviada para análise da prefeitura. Acompanhe o status em 'Meus Projetos'.",
-    });
-    
-    // Redirecionar para Meus Projetos
-    setTimeout(() => {
-      console.log("Redirecionando para /meus-projetos");
-      navigate('/meus-projetos');
-    }, 1500);
-  };
+    try {
+      console.log('Atualizando projeto no banco...', {
+        projetoId,
+        status: 'em_avaliacao',
+        valor_solicitado: calcularValorTotalGeral()
+      });
 
-  const salvarRascunho = () => {
-    toast({
-      title: "Rascunho salvo!",
-      description: "Seu progresso foi salvo automaticamente.",
-    });
-  };
+      const { data, error } = await supabase
+        .from('projetos')
+        .update({ 
+          status: 'em_avaliacao',
+          valor_solicitado: calcularValorTotalGeral(),
+          data_submissao: new Date().toISOString()
+        })
+        .eq('id', projetoId)
+        .select();
 
-  const voltarEtapaAnterior = () => {
-    navigate('/cronograma-execucao');
+      if (error) {
+        console.error('Erro do Supabase:', error);
+        throw error;
+      }
+
+      console.log('Projeto atualizado com sucesso:', data);
+
+      toast({
+        title: "Proposta finalizada!",
+        description: "Sua proposta foi enviada com sucesso. Aguarde a análise.",
+      });
+      
+      // Navegar para dashboard do proponente
+      setTimeout(() => {
+        navigate(getUrl('dashboard'));
+      }, 2000);
+    } catch (err: any) {
+      console.error('Erro ao finalizar proposta:', err);
+      toast({
+        title: "Erro ao finalizar",
+        description: err.message || "Não foi possível finalizar a proposta. Tente novamente.",
+        variant: "destructive",
+      });
+    }
   };
 
   const adicionarItem = () => {
@@ -244,6 +457,22 @@ export default function PlanilhaOrcamentaria() {
       referenciaPreco: ""
     });
   };
+
+  // Estado de loading
+  if (loadingDados) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto py-8 px-4 max-w-7xl">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Carregando dados da planilha...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -278,11 +507,11 @@ export default function PlanilhaOrcamentaria() {
             <div className="grid md:grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Nome do Projeto</label>
-                <p className="text-lg font-medium">{nomeProjeto}</p>
+                <p className="text-lg font-medium">{projetoData?.nome || nomeProjeto}</p>
               </div>
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Responsável</label>
-                <p className="text-lg font-medium">{proponenteNome}</p>
+                <p className="text-lg font-medium">{projetoData?.proponente_nome || proponenteNome}</p>
               </div>
             </div>
           </CardContent>
@@ -614,9 +843,9 @@ export default function PlanilhaOrcamentaria() {
                     Adicionar Item
                   </Button>
 
-                  {itensFields.length < 3 && (
+                  {itensValidos === 0 && (
                     <p className="text-sm text-amber-600">
-                      Adicione pelo menos {3 - itensFields.length} item(s) para continuar
+                      Adicione pelo menos 1 item com valor maior que R$ 0,00 para continuar
                     </p>
                   )}
                 </div>
@@ -661,10 +890,10 @@ export default function PlanilhaOrcamentaria() {
                 <div className="space-y-2 mb-4">
                   <div className="flex justify-between text-sm text-muted-foreground">
                     <span>Orçamento utilizado</span>
-                    <span>{Math.round(calcularProgressoOrcamento())}%</span>
+                    <span>{Math.round(percentualUtilizado)}%</span>
                   </div>
                   <Progress 
-                    value={calcularProgressoOrcamento()} 
+                    value={percentualUtilizado} 
                     className={`h-3 ${ultrapassouLimite() ? 'bg-destructive' : isProximoLimite() ? 'bg-amber-500' : ''}`}
                   />
                 </div>
@@ -676,15 +905,10 @@ export default function PlanilhaOrcamentaria() {
                       <AlertTriangle className="h-4 w-4 text-destructive" />
                       <span className="text-sm font-medium text-destructive">Limite ultrapassado</span>
                     </>
-                  ) : isOrcamentoExato() ? (
-                    <>
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                      <span className="text-sm font-medium text-green-600">✅ Perfeito! Valor exato do orçamento</span>
-                    </>
                   ) : (
                     <>
-                      <AlertTriangle className="h-4 w-4 text-amber-600" />
-                      <span className="text-sm font-medium text-amber-600">Utilize o valor exato do orçamento</span>
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                      <span className="text-sm font-medium text-green-600">✅ Orçamento dentro do limite</span>
                     </>
                   )}
                 </div>
@@ -701,26 +925,14 @@ export default function PlanilhaOrcamentaria() {
                   </div>
                 )}
 
-                {isAbaixoOrcamento() && (
-                  <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-md">
-                    <div className="flex items-center gap-2 text-amber-600">
-                      <AlertTriangle className="h-4 w-4" />
-                      <span className="text-sm font-medium">Utilize todo o orçamento disponível</span>
-                    </div>
-                    <p className="text-xs text-amber-600/80 mt-1">
-                      Você deve usar exatamente {formatarValor(valorMaximoModalidade)}. Faltam {formatarValor(calcularSaldoDisponivel())} para completar.
-                    </p>
-                  </div>
-                )}
-
-                {isOrcamentoExato() && (
-                  <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-md">
-                    <div className="flex items-center gap-2 text-green-600">
+                {isAbaixoOrcamento() && !ultrapassouLimite() && (
+                  <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                    <div className="flex items-center gap-2 text-blue-600">
                       <CheckCircle className="h-4 w-4" />
-                      <span className="text-sm font-medium">Excelente! Orçamento utilizado corretamente</span>
+                      <span className="text-sm font-medium">Orçamento dentro do limite</span>
                     </div>
-                    <p className="text-xs text-green-600/80 mt-1">
-                      Você utilizou exatamente o valor disponível do orçamento.
+                    <p className="text-xs text-blue-600/80 mt-1">
+                      Você pode usar até {formatarValor(valorMaximoModalidade)}. Valor atual: {formatarValor(calcularValorTotalGeral())}.
                     </p>
                   </div>
                 )}
@@ -741,9 +953,29 @@ export default function PlanilhaOrcamentaria() {
               </div>
               
               <Button 
-                type="submit" 
+                type="button" 
                 className="md:w-auto"
                 disabled={!podeHabilitar}
+                onClick={async () => {
+                  // Primeiro salvar os itens
+                  const data = form.getValues();
+                  const itensParaSalvar: ItemOrcamento[] = data.itens
+                    .filter(item => isItemValido(item))
+                    .map((item, index) => ({
+                      descricao: item.descricao,
+                      justificativa: item.justificativa,
+                      unidade_medida: item.unidadeMedida,
+                      valor_unitario: item.valorUnitario,
+                      quantidade: item.quantidade,
+                      referencia_preco: item.referenciaPreco || undefined,
+                      ordem: index
+                    }));
+
+                  const salvou = await salvarItens(itensParaSalvar);
+                  if (salvou) {
+                    setShowConfirmDialog(true);
+                  }
+                }}
               >
                 <CheckCircle className="h-4 w-4 mr-2" />
                 Finalizar Proposta

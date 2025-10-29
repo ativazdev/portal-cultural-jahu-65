@@ -1,1 +1,26 @@
 project_id = "ymkytnhdslvkigzilbvy"
+
+[functions]
+# Configurações das Edge Functions
+
+# Funções de cadastro e login (sem verificação JWT)
+[functions.cadastrar-usuario-proponente]
+verify_jwt = false
+
+[functions.auth-usuario-proponente]
+verify_jwt = false
+
+[functions.cadastrar-parecerista]
+verify_jwt = false
+
+[functions.auth-parecerista]
+verify_jwt = false
+
+[functions.cadastrar-proponente]
+verify_jwt = false
+
+[functions.auth-proponente]
+verify_jwt = false
+
+[functions.enviar-email-parecerista]
+verify_jwt = false

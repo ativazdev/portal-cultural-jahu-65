@@ -11,6 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
+import { useCronograma, AtividadeCronograma } from "@/hooks/useCronograma";
+import { usePrefeituraUrl } from "@/contexts/PrefeituraContext";
 
 const formSchema = z.object({
   atividades: z.array(z.object({
@@ -36,39 +38,62 @@ export default function CronogramaExecucao() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
+  const { getUrl } = usePrefeituraUrl();
   
-  // Dados que viriam da etapa anterior (simulados)
-  const nomeProjeto = searchParams.get('projeto') || "Projeto Cultural - Teatro Comunitário";
-  const proponenteNome = searchParams.get('nome') || "Maria Silva Santos";
+  console.log('CronogramaExecucao carregado com parâmetros:', Object.fromEntries(searchParams.entries()));
   
+  // Obter ID do projeto dos parâmetros
+  const projetoId = searchParams.get('projeto_id');
+  
+  console.log('Projeto ID recebido:', projetoId);
+  
+  // Usar hook para gerenciar cronograma
+  const { 
+    atividades, 
+    projetoData, 
+    loading, 
+    error, 
+    salvarAtividades 
+  } = useCronograma(projetoId || undefined);
+  
+  // Dados do projeto (do banco ou fallback)
+  const nomeProjeto = projetoData?.nome || searchParams.get('projeto') || "Nome do Projeto";
+  const proponenteNome = projetoData?.proponente_nome || searchParams.get('nome') || "Responsável";
+  
+  // Converter atividades do banco para formato do formulário
+  const atividadesFormato = atividades.map(atividade => ({
+    atividade: atividade.nome_atividade,
+    etapa: atividade.etapa,
+    descricao: atividade.descricao,
+    dataInicio: atividade.data_inicio,
+    dataFim: atividade.data_fim
+  }));
+
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      atividades: [
+      atividades: atividades.length > 0 ? atividadesFormato : [
         {
-          atividade: "Divulgação do projeto",
-          etapa: "Pré-produção",
-          descricao: "Divulgação nos veículos de imprensa",
-          dataInicio: "2024-10-11",
-          dataFim: "2024-11-11"
-        },
-        {
-          atividade: "Oficinas de teatro",
-          etapa: "Produção",
-          descricao: "Realização das oficinas teatrais",
-          dataInicio: "2024-11-12",
-          dataFim: "2024-12-20"
-        },
-        {
-          atividade: "Relatório final",
-          etapa: "Pós-produção", 
-          descricao: "Elaboração do relatório final",
-          dataInicio: "2024-12-21",
-          dataFim: "2024-12-31"
+          atividade: "",
+          etapa: "",
+          descricao: "",
+          dataInicio: "",
+          dataFim: ""
         }
       ]
     }
   });
+
+  // Atualizar formulário quando atividades mudarem
+  useEffect(() => {
+    if (atividades.length > 0) {
+      form.reset({
+        atividades: atividadesFormato
+      });
+    }
+  }, [atividades]);
+  
+  console.log('Formulário inicializado:', form.formState);
 
   const { fields: atividadesFields, append: appendAtividade, remove: removeAtividade } = useFieldArray({
     control: form.control,
@@ -149,7 +174,7 @@ export default function CronogramaExecucao() {
     return (watchAtividades.length / 3) * 100;
   };
 
-  const onSubmit = (data: FormData) => {
+  const onSubmit = async (data: FormData) => {
     // Validar se todas as datas são válidas
     const datasInvalidas = data.atividades.some(a => isDataInvalida(a.dataInicio, a.dataFim));
     if (datasInvalidas) {
@@ -162,23 +187,61 @@ export default function CronogramaExecucao() {
     }
     
     console.log("Cronograma:", data);
-    toast({
-      title: "Cronograma salvo!",
-      description: "Cronograma de execução salvo com sucesso. Prossiga para a planilha orçamentária.",
-    });
     
-    navigate(`/planilha-orcamentaria?projeto=${encodeURIComponent(nomeProjeto)}&nome=${encodeURIComponent(proponenteNome)}`);
+    // Converter dados do formulário para formato do banco
+    const atividadesParaSalvar: AtividadeCronograma[] = data.atividades.map(atividade => ({
+      nome_atividade: atividade.atividade,
+      etapa: atividade.etapa,
+      descricao: atividade.descricao,
+      data_inicio: atividade.dataInicio,
+      data_fim: atividade.dataFim,
+      ordem: 0 // Será definido pela ordem do array
+    }));
+    
+    // Salvar no banco de dados
+    const sucesso = await salvarAtividades(atividadesParaSalvar);
+    
+    if (sucesso) {
+      // Navegar para próxima etapa
+      const proponenteId = searchParams.get('proponente');
+      const editalId = searchParams.get('edital');
+      const planilhaUrl = getUrl(`planilha-orcamentaria?projeto_id=${projetoId}&projeto=${encodeURIComponent(nomeProjeto)}&nome=${encodeURIComponent(proponenteNome)}&proponente=${proponenteId}&edital=${editalId}`);
+      
+      setTimeout(() => {
+        navigate(planilhaUrl);
+      }, 1000);
+    }
   };
 
-  const salvarRascunho = () => {
-    toast({
-      title: "Rascunho salvo!",
-      description: "Seu progresso foi salvo automaticamente.",
-    });
+  const salvarRascunho = async () => {
+    const data = form.getValues();
+    
+    // Converter dados do formulário para formato do banco
+    const atividadesParaSalvar: AtividadeCronograma[] = data.atividades.map(atividade => ({
+      nome_atividade: atividade.atividade,
+      etapa: atividade.etapa,
+      descricao: atividade.descricao,
+      data_inicio: atividade.dataInicio,
+      data_fim: atividade.dataFim,
+      ordem: 0
+    }));
+    
+    // Salvar como rascunho (mesmo processo, mas sem validação rigorosa)
+    const sucesso = await salvarAtividades(atividadesParaSalvar);
+    
+    if (sucesso) {
+      toast({
+        title: "Rascunho salvo!",
+        description: "Seu progresso foi salvo automaticamente.",
+      });
+    }
   };
 
   const voltarEtapaAnterior = () => {
-    navigate('/nova-proposta');
+    const proponenteId = searchParams.get('proponente');
+    const editalId = searchParams.get('edital');
+    const novaPropostaUrl = getUrl(`nova-proposta?edital=${editalId}&proponente=${proponenteId}`);
+    navigate(novaPropostaUrl);
   };
 
   const adicionarAtividade = () => {

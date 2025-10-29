@@ -3,42 +3,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Eye, EyeOff, User, UserPlus } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
-import { useNavigate } from "react-router-dom";
+import { Eye, EyeOff, User } from "lucide-react";
+// import { useAuthProponente } from "@/hooks/useAuthCustom";
 
 const ProponenteLoginForm = () => {
   const [showPassword, setShowPassword] = useState(false);  
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [fullName, setFullName] = useState("");
-  const [isRegistering, setIsRegistering] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [senha, setSenha] = useState("");
   
-  const { signIn, signUp, setMockProfile, getDashboardRoute } = useAuth();
-  const navigate = useNavigate();
+  // const { login, loading } = useAuthProponente();
+  const loading = false;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-
-    try {
-      // Define o perfil mock para proponente
-      setMockProfile("proponente");
-      
-      if (isRegistering) {
-        await signUp(email, password, "proponente", fullName);
-      } else {
-        await signIn(email, password);
-      }
-      
-      // Redireciona diretamente para o dashboard do proponente
-      setTimeout(() => {
-        navigate(getDashboardRoute("proponente"));
-      }, 1000);
-    } finally {
-      setIsLoading(false);
-    }
+    // await login({ email, senha });
+    console.log('Login proponente:', { email, senha });
   };
 
   return (
@@ -49,32 +28,15 @@ const ProponenteLoginForm = () => {
         </div>
         <div>
           <h2 className="text-2xl font-bold text-cultural-primary">
-            {isRegistering ? "Cadastro Proponente" : "Área do Proponente"}
+            Área do Proponente
           </h2>
           <p className="text-cultural-muted">
-            {isRegistering ? "Crie sua conta criativa" : "Acesse sua área criativa"}
+            Acesse sua área criativa
           </p>
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
         <form onSubmit={handleSubmit} className="space-y-4">
-          {isRegistering && (
-            <div className="space-y-2">
-              <Label htmlFor="fullname-proponente" className="text-foreground">
-                Nome completo
-              </Label>
-              <Input
-                id="fullname-proponente"
-                type="text"
-                placeholder="Seu nome completo"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                className="border-cultural-secondary focus:ring-cultural-primary"
-                required
-              />
-            </div>
-          )}
-          
           <div className="space-y-2">
             <Label htmlFor="email-proponente" className="text-foreground">
               E-mail
@@ -99,8 +61,8 @@ const ProponenteLoginForm = () => {
                 id="password-proponente"
                 type={showPassword ? "text" : "password"}
                 placeholder="Digite sua senha"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                value={senha}
+                onChange={(e) => setSenha(e.target.value)}
                 className="border-cultural-secondary focus:ring-cultural-primary pr-10"
                 required
                 minLength={6}
@@ -119,45 +81,19 @@ const ProponenteLoginForm = () => {
             type="submit"
             className="w-full bg-cultural-primary hover:bg-cultural-primary/90 text-cultural-primary-foreground"
             size="lg"
-            disabled={isLoading}
+            disabled={loading}
           >
-            {isLoading ? "Processando..." : (isRegistering ? "Criar Conta" : "Entrar na Área")}
+            {loading ? "Entrando..." : "Entrar na Área"}
           </Button>
         </form>
 
         <div className="space-y-4 text-center">
-          {!isRegistering && (
-            <a
-              href="#"
-              className="text-sm text-cultural-primary hover:text-cultural-primary/80 block"
-            >
-              Esqueceu sua senha?
-            </a>
-          )}
-          
-          <div className="border-t border-muted pt-4">
-            <p className="text-sm text-muted-foreground mb-3">
-              {isRegistering ? "Já tem uma conta?" : "Ainda não tem cadastro?"}
-            </p>
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full border-cultural-secondary text-cultural-primary hover:bg-cultural-primary hover:text-cultural-primary-foreground"
-              onClick={() => setIsRegistering(!isRegistering)}
-            >
-              {isRegistering ? (
-                <>
-                  <User className="w-4 h-4 mr-2" />
-                  Fazer Login
-                </>
-              ) : (
-                <>
-                  <UserPlus className="w-4 h-4 mr-2" />
-                  Criar Conta de Proponente
-                </>
-              )}
-            </Button>
-          </div>
+          <a
+            href="#"
+            className="text-sm text-cultural-primary hover:text-cultural-primary/80 block"
+          >
+            Esqueceu sua senha?
+          </a>
         </div>
       </CardContent>
     </Card>

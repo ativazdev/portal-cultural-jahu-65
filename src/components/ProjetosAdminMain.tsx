@@ -1,12 +1,16 @@
 import { useState } from "react";
-import { StatusCards } from "@/components/projetos-admin/StatusCards";
-import { FiltrosEBusca } from "@/components/projetos-admin/FiltrosEBusca";
-import { TabelaProjetos } from "@/components/projetos-admin/TabelaProjetos";
-import { DetalhesProjetoModal } from "@/components/projetos-admin/DetalhesProjetoModal";
-import { AtribuirPareceristaModal } from "@/components/projetos-admin/AtribuirPareceristaModal";
-import { DecisaoFinalModal } from "@/components/projetos-admin/DecisaoFinalModal";
+import { Eye, Edit, CheckCircle, XCircle, User, BarChart3, Clock, FileText, DollarSign, Users } from "lucide-react";
+import { useProjetos, type ProjetoCompleto, type ProjetoFiltros, type ProjetoMetricas } from "@/hooks/useProjetos";
+import { 
+  ListTemplate, 
+  DetailsModal,
+  type ListColumn,
+  type ListFilter,
+  type ListAction,
+  type StatusCard
+} from "@/components/templates";
 
-// Tipos
+// Tipos (mantidos para compatibilidade com componentes filhos)
 export interface DocumentoHabilitacao {
   id: string;
   nome: string;
@@ -30,7 +34,7 @@ export interface Projeto {
   tipoProponente: "PF" | "PJ" | "Grupo";
   valorSolicitado: number;
   dataSubmissao: string;
-  status: "Recebido" | "Em Avaliação" | "Avaliado" | "Aprovado" | "Rejeitado" | "Em execução";
+  status: "Recebido" | "Aguardando Avaliação" | "Em Avaliação" | "Avaliado" | "Aprovado" | "Rejeitado" | "Em execução";
   parecerista?: string;
   edital: string;
   documentosHabilitacao?: DocumentoHabilitacao[];
@@ -44,176 +48,79 @@ export interface Parecerista {
   projetosEmAnalise: number;
 }
 
-// Dados de exemplo
-const projetosExemplo: Projeto[] = [
-  {
-    id: "1",
-    nome: "Festival de Música Popular",
-    categoria: "Música",
-    proponente: "João Silva",
-    tipoProponente: "PF",
-    valorSolicitado: 15000,
-    dataSubmissao: "2024-11-15",
-    status: "Recebido",
-    edital: "PNAB-2025-001"
-  },
-  {
-    id: "2",
-    nome: "Teatro na Praça",
-    categoria: "Teatro",
-    proponente: "Maria Santos",
-    tipoProponente: "PF",
-    valorSolicitado: 8500,
-    dataSubmissao: "2024-11-14",
-    status: "Em Avaliação",
-    parecerista: "Ana Costa",
-    edital: "PNAB-2025-002"
-  },
-  {
-    id: "3",
-    nome: "Oficina de Dança",
-    categoria: "Dança",
-    proponente: "Pedro Costa",
-    tipoProponente: "PJ",
-    valorSolicitado: 12000,
-    dataSubmissao: "2024-11-13",
-    status: "Aprovado",
-    parecerista: "Carlos Lima",
-    edital: "PNAB-2025-001"
-  },
-  {
-    id: "5",
-    nome: "Manifestação Cultural Indígena",
-    categoria: "Cultura Popular",
-    proponente: "Grupo Raízes da Terra",
-    tipoProponente: "Grupo",
-    valorSolicitado: 18000,
-    dataSubmissao: "2024-11-11",
-    status: "Aprovado",
-    parecerista: "Ana Costa",
-    edital: "PNAB-2025-001"
-  },
-  {
-    id: "6",
-    nome: "Exposição de Arte Contemporânea",
-    categoria: "Artes Visuais",
-    proponente: "Galeria Cultural Jahu",
-    tipoProponente: "PJ",
-    valorSolicitado: 25000,
-    dataSubmissao: "2024-10-15",
-    status: "Em execução",
-    parecerista: "Lucia Mendes",
-    edital: "PNAB-2025-004",
-    documentosHabilitacao: [
-      {
-        id: "1",
-        nome: "CNPJ",
-        descricao: "Cartão de CNPJ atualizado",
-        obrigatorio: true,
-        dataSolicitacao: "2024-10-20",
-        status: "aprovado",
-        tipo: "cnpj",
-        arquivo: {
-          nome: "cnpj_galeria_cultural.pdf",
-          url: "/documentos/cnpj_galeria_cultural.pdf",
-          dataUpload: "2024-10-22"
-        }
-      },
-      {
-        id: "2",
-        nome: "Atos Constitutivos",
-        descricao: "Estatuto social ou contrato social da empresa",
-        obrigatorio: true,
-        dataSolicitacao: "2024-10-20",
-        status: "aprovado",
-        tipo: "atos_constitutivos",
-        arquivo: {
-          nome: "contrato_social.pdf",
-          url: "/documentos/contrato_social.pdf",
-          dataUpload: "2024-10-23"
-        }
-      },
-      {
-        id: "3",
-        nome: "Certidão Negativa de Falência",
-        descricao: "Certidão negativa de falência e concordata",
-        obrigatorio: true,
-        dataSolicitacao: "2024-10-20",
-        status: "aprovado",
-        tipo: "certidao_falencia",
-        arquivo: {
-          nome: "certidao_negativa_falencia.pdf",
-          url: "/documentos/certidao_negativa_falencia.pdf",
-          dataUpload: "2024-10-25"
-        }
-      },
-      {
-        id: "4",
-        nome: "Certificado de Regularidade do FGTS",
-        descricao: "CRF - Certificado de Regularidade do FGTS",
-        obrigatorio: true,
-        dataSolicitacao: "2024-10-20",
-        status: "aprovado",
-        tipo: "crf_fgts",
-        arquivo: {
-          nome: "crf_fgts.pdf",
-          url: "/documentos/crf_fgts.pdf",
-          dataUpload: "2024-10-26"
-        }
-      },
-      {
-        id: "5",
-        nome: "Certidão Negativa Trabalhista",
-        descricao: "Certidão negativa de débitos trabalhistas",
-        obrigatorio: true,
-        dataSolicitacao: "2024-10-20",
-        status: "aprovado",
-        tipo: "certidao_trabalhista",
-        arquivo: {
-          nome: "certidao_trabalhista.pdf",
-          url: "/documentos/certidao_trabalhista.pdf",
-          dataUpload: "2024-10-27"
-        }
-      },
-      {
-        id: "6",
-        nome: "Declaração de Representação",
-        descricao: "Declaração de que o representante tem poderes para assinar em nome da instituição",
-        obrigatorio: true,
-        dataSolicitacao: "2024-10-20",
-        status: "aprovado",
-        tipo: "declaracao_representacao",
-        arquivo: {
-          nome: "declaracao_representacao.pdf",
-          url: "/documentos/declaracao_representacao.pdf",
-          dataUpload: "2024-10-28"
-        }
-      }
-    ]
-  }
-];
+// Função para converter ProjetoCompleto para Projeto (compatibilidade)
+const converterProjeto = (projetoCompleto: ProjetoCompleto): Projeto => {
+  return {
+    id: projetoCompleto.id,
+    nome: projetoCompleto.nome,
+    categoria: projetoCompleto.categoria || '',
+    proponente: projetoCompleto.proponente?.nome || 'Proponente não encontrado',
+    tipoProponente: (projetoCompleto.proponente?.tipo as "PF" | "PJ" | "Grupo") || "PF",
+    valorSolicitado: Number(projetoCompleto.valor_solicitado),
+    dataSubmissao: projetoCompleto.data_submissao || projetoCompleto.created_at,
+    status: mapearStatus(projetoCompleto.status),
+    parecerista: projetoCompleto.parecerista?.nome,
+    edital: projetoCompleto.edital?.codigo || 'Edital não encontrado',
+    documentosHabilitacao: projetoCompleto.documentos_habilitacao?.map(doc => ({
+      id: doc.id,
+      nome: doc.nome,
+      descricao: doc.descricao || '',
+      obrigatorio: doc.obrigatorio || false,
+      dataSolicitacao: doc.data_solicitacao || doc.created_at,
+      status: doc.status as "pendente" | "enviado" | "aprovado" | "rejeitado",
+      tipo: doc.tipo as any,
+      arquivo: doc.arquivo_nome ? {
+        nome: doc.arquivo_nome,
+        url: doc.arquivo_url || '',
+        dataUpload: doc.data_upload || doc.created_at
+      } : undefined
+    })),
+    necessitaComprovanteResidencia: projetoCompleto.necessita_comprovante_residencia || false
+  };
+};
 
-const pareceristas: Parecerista[] = [
-  { id: "1", nome: "Ana Costa", especialidade: "Música", projetosEmAnalise: 2 },
-  { id: "2", nome: "Carlos Lima", especialidade: "Teatro", projetosEmAnalise: 1 },
-  { id: "3", nome: "Lucia Mendes", especialidade: "Artes Visuais", projetosEmAnalise: 0 },
-  { id: "4", nome: "Roberto Silva", especialidade: "Dança", projetosEmAnalise: 3 }
-];
+// Mapear status do banco para interface
+const mapearStatus = (status: string): "Recebido" | "Em Avaliação" | "Avaliado" | "Aprovado" | "Rejeitado" | "Em execução" => {
+  const statusMap: Record<string, "Recebido" | "Em Avaliação" | "Avaliado" | "Aprovado" | "Rejeitado" | "Em execução"> = {
+    'recebido': 'Recebido',
+    'em_avaliacao': 'Em Avaliação',
+    'avaliado': 'Avaliado',
+    'aprovado': 'Aprovado',
+    'rejeitado': 'Rejeitado',
+    'em_execucao': 'Em execução'
+  };
+  return statusMap[status] || 'Recebido';
+};
 
-// Dados dos editais
-const editais = [
-  { codigo: "PNAB-2025-001", nome: "PNAB 2025 - Edital de Fomento Cultural" },
-  { codigo: "PNAB-2025-002", nome: "Edital de Apoio às Artes Cênicas" },
-  { codigo: "PNAB-2025-003", nome: "Fomento à Música Popular Brasileira" },
-  { codigo: "PNAB-2025-004", nome: "Artes Visuais e Exposições" }
-];
+// Converter métricas do banco para interface
+const converterMetricas = (metricas: ProjetoMetricas) => {
+  return {
+    recebidos: metricas.recebidos,
+    emAvaliacao: metricas.emAvaliacao,
+    pendentes: metricas.pendentes,
+    aprovados: metricas.aprovados
+  };
+};
 
 export const ProjetosAdminMain = () => {
-  const [projetos, setProjetos] = useState<Projeto[]>(projetosExemplo);
-  const [filtros, setFiltros] = useState({
+  // Hook personalizado para gerenciar projetos
+  const {
+    projetos: projetosCompletos,
+    pareceristas: pareceristasCompletos,
+    editais: editaisCompletos,
+    loading,
+    error,
+    atribuirParecerista,
+    decidirProjeto,
+    filtrarProjetos,
+    calcularMetricas
+  } = useProjetos();
+
+  const [filtros, setFiltros] = useState<ProjetoFiltros>({
     busca: "",
     parecerista: "Todos",
-    edital: "Todos"
+    edital: "Todos",
+    status: "Todos"
   });
   
   // Estados dos modais
@@ -221,34 +128,233 @@ export const ProjetosAdminMain = () => {
   const [modalParecerista, setModalParecerista] = useState<{ aberto: boolean; projeto?: Projeto }>({ aberto: false });
   const [modalDecisao, setModalDecisao] = useState<{ aberto: boolean; projeto?: Projeto }>({ aberto: false });
 
-  // Filtrar projetos
-  const projetosFiltrados = projetos.filter(projeto => {
-    // Busca em nome do projeto, proponente e categoria
-    const matchBusca = projeto.nome.toLowerCase().includes(filtros.busca.toLowerCase()) ||
-                      projeto.proponente.toLowerCase().includes(filtros.busca.toLowerCase()) ||
-                      projeto.categoria.toLowerCase().includes(filtros.busca.toLowerCase());
+  // Converter projetos para formato compatível
+  const projetos = projetosCompletos.map(converterProjeto);
+  
+  // Converter pareceristas para formato compatível
+  const pareceristas = pareceristasCompletos.map(p => ({
+    id: p.id,
+    nome: p.nome,
+    especialidade: p.especialidade?.join(', ') || '',
+    projetosEmAnalise: p.projetos_em_analise || 0
+  }));
 
-    // Filtro por parecerista
-    const matchParecerista =
-      filtros.parecerista === "Todos" ||
-      (filtros.parecerista === "Não atribuído" && !projeto.parecerista) ||
-      projeto.parecerista === filtros.parecerista;
+  // Converter editais para formato compatível
+  const editais = editaisCompletos.map(e => ({
+    codigo: e.codigo,
+    nome: e.nome
+  }));
 
-    // Filtro por edital
-    const matchEdital =
-      filtros.edital === "Todos" ||
-      projeto.edital === filtros.edital;
+  // Filtrar projetos usando o hook
+  const projetosFiltrados = filtrarProjetos(filtros).map(converterProjeto);
 
-    return matchBusca && matchParecerista && matchEdital;
-  });
+  // Calcular métricas usando o hook
+  const metricas = converterMetricas(calcularMetricas());
 
-  // Calcular métricas
-  const metricas = {
-    recebidos: projetos.filter(p => p.status === "Recebido").length,
-    emAvaliacao: projetos.filter(p => p.status === "Em Avaliação").length,
-    pendentes: projetos.filter(p => p.status === "Avaliado").length,
-    aprovados: projetos.filter(p => p.status === "Aprovado").length
-  };
+  // Configuração das colunas para o ListTemplate
+  const columns: ListColumn[] = [
+    {
+      key: 'nome',
+      label: 'Projeto',
+      sortable: true,
+      render: (item) => (
+        <div className="space-y-1">
+          <div className="font-medium">{item.nome}</div>
+          <div className="text-sm text-gray-500">{item.categoria}</div>
+        </div>
+      )
+    },
+    {
+      key: 'proponente',
+      label: 'Proponente',
+      render: (item) => (
+        <div className="space-y-1">
+          <div className="font-medium">{item.proponente}</div>
+          <div className="text-sm text-gray-500">{item.tipoProponente}</div>
+        </div>
+      )
+    },
+    {
+      key: 'valorSolicitado',
+      label: 'Valor Solicitado',
+      sortable: true,
+      render: (item) => new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL'
+      }).format(item.valorSolicitado)
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      render: (item) => {
+        const statusConfig = {
+          'Recebido': { color: 'bg-blue-100 text-blue-800', icon: <FileText className="h-3 w-3" /> },
+          'Aguardando Avaliação': { color: 'bg-yellow-100 text-yellow-800', icon: <Clock className="h-3 w-3" /> },
+          'Em Avaliação': { color: 'bg-orange-100 text-orange-800', icon: <BarChart3 className="h-3 w-3" /> },
+          'Avaliado': { color: 'bg-purple-100 text-purple-800', icon: <CheckCircle className="h-3 w-3" /> },
+          'Aprovado': { color: 'bg-green-100 text-green-800', icon: <CheckCircle className="h-3 w-3" /> },
+          'Rejeitado': { color: 'bg-red-100 text-red-800', icon: <XCircle className="h-3 w-3" /> },
+          'Em execução': { color: 'bg-indigo-100 text-indigo-800', icon: <Clock className="h-3 w-3" /> }
+        };
+        const config = statusConfig[item.status as keyof typeof statusConfig] || statusConfig['Recebido'];
+        
+        return (
+          <div className="flex items-center gap-2">
+            {config.icon}
+            <span className={`px-2 py-1 rounded-full text-xs font-medium ${config.color}`}>
+              {item.status}
+            </span>
+          </div>
+        );
+      }
+    },
+    {
+      key: 'parecerista',
+      label: 'Parecerista',
+      render: (item) => item.parecerista || 'Não atribuído'
+    },
+    {
+      key: 'dataSubmissao',
+      label: 'Data de Submissão',
+      render: (item) => new Date(item.dataSubmissao).toLocaleDateString('pt-BR')
+    }
+  ];
+
+  // Configuração dos filtros
+  const filters: ListFilter[] = [
+    {
+      key: 'status',
+      label: 'Status',
+      type: 'select',
+      options: [
+        { value: 'Recebido', label: 'Recebido' },
+        { value: 'Aguardando Avaliação', label: 'Aguardando Avaliação' },
+        { value: 'Em Avaliação', label: 'Em Avaliação' },
+        { value: 'Avaliado', label: 'Avaliado' },
+        { value: 'Aprovado', label: 'Aprovado' },
+        { value: 'Rejeitado', label: 'Rejeitado' },
+        { value: 'Em execução', label: 'Em execução' }
+      ]
+    },
+    {
+      key: 'parecerista',
+      label: 'Parecerista',
+      type: 'select',
+      options: [
+        { value: 'Todos', label: 'Todos' },
+        ...pareceristas.map(p => ({ value: p.nome, label: p.nome }))
+      ]
+    },
+    {
+      key: 'edital',
+      label: 'Edital',
+      type: 'select',
+      options: [
+        { value: 'Todos', label: 'Todos' },
+        ...editais.map(e => ({ value: e.codigo, label: e.codigo }))
+      ]
+    }
+  ];
+
+  // Configuração das ações
+  const actions: ListAction[] = [
+    {
+      key: 'view',
+      label: 'Visualizar',
+      icon: <Eye className="h-4 w-4" />,
+      variant: 'ghost',
+      onClick: (item) => handleVerDetalhes(item)
+    },
+    {
+      key: 'assign',
+      label: 'Atribuir Parecerista',
+      icon: <User className="h-4 w-4" />,
+      variant: 'ghost',
+      onClick: (item) => handleAtribuirParecerista(item),
+      show: (item) => item.status === 'Recebido' || item.status === 'Aguardando Avaliação'
+    },
+    {
+      key: 'evaluate',
+      label: 'Avaliar',
+      icon: <BarChart3 className="h-4 w-4" />,
+      variant: 'ghost',
+      onClick: (item) => handleVerAvaliacao(item),
+      show: (item) => item.status === 'Em Avaliação'
+    },
+    {
+      key: 'approve',
+      label: 'Aprovar',
+      icon: <CheckCircle className="h-4 w-4" />,
+      variant: 'ghost',
+      onClick: (item) => handleAprovarRejeitar(item),
+      show: (item) => item.status === 'Avaliado'
+    },
+    {
+      key: 'reject',
+      label: 'Rejeitar',
+      icon: <XCircle className="h-4 w-4" />,
+      variant: 'ghost',
+      onClick: (item) => handleAprovarRejeitar(item),
+      show: (item) => item.status === 'Avaliado'
+    }
+  ];
+
+  // Ações em lote
+  const bulkActions: ListAction[] = [
+    {
+      key: 'export',
+      label: 'Exportar Selecionados',
+      icon: <FileText className="h-4 w-4" />,
+      variant: 'outline',
+      onClick: (items) => {
+        console.log('Exportando projetos:', items);
+      }
+    },
+    {
+      key: 'assign',
+      label: 'Atribuir Parecerista',
+      icon: <User className="h-4 w-4" />,
+      variant: 'outline',
+      onClick: (items) => {
+        console.log('Atribuindo parecerista para:', items);
+      }
+    }
+  ];
+
+  // Cards de status
+  const statusCards: StatusCard[] = [
+    {
+      title: 'Total de Projetos',
+      value: projetos.length,
+      subtitle: 'inscritos',
+      color: 'blue',
+      icon: <FileText className="h-6 w-6" />
+    },
+    {
+      title: 'Em Avaliação',
+      value: metricas.emAvaliacao,
+      subtitle: 'aguardando parecer',
+      color: 'orange',
+      icon: <BarChart3 className="h-6 w-6" />
+    },
+    {
+      title: 'Aprovados',
+      value: metricas.aprovados,
+      subtitle: 'projetos aprovados',
+      color: 'green',
+      icon: <CheckCircle className="h-6 w-6" />
+    },
+    {
+      title: 'Valor Total',
+      value: new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL'
+      }).format(projetos.reduce((sum, p) => sum + p.valorSolicitado, 0)),
+      subtitle: 'solicitado',
+      color: 'purple',
+      icon: <DollarSign className="h-6 w-6" />
+    }
+  ];
 
   // Handlers
   const handleVerDetalhes = (projeto: Projeto) => {
@@ -267,83 +373,114 @@ export const ProjetosAdminMain = () => {
     setModalDecisao({ aberto: true, projeto });
   };
 
-  const confirmarAtribuicao = (projetoId: string, pareceristaId: string) => {
-    const parecerista = pareceristas.find(p => p.id === pareceristaId);
-    setProjetos(prev => prev.map(p => 
-      p.id === projetoId 
-        ? { ...p, status: "Em Avaliação" as const, parecerista: parecerista?.nome }
-        : p
-    ));
+  const confirmarAtribuicao = async (projetoId: string, pareceristaId: string) => {
+    try {
+      await atribuirParecerista(projetoId, pareceristaId);
     setModalParecerista({ aberto: false });
+    } catch (err) {
+      console.error('Erro ao atribuir parecerista:', err);
+    }
   };
 
-  const confirmarDecisao = (projetoId: string, decisao: "Aprovado" | "Rejeitado", justificativa: string) => {
-    setProjetos(prev => prev.map(p =>
-      p.id === projetoId
-        ? { ...p, status: decisao }
-        : p
-    ));
+  const confirmarDecisao = async (projetoId: string, decisao: "Aprovado" | "Rejeitado", justificativa: string) => {
+    try {
+      const statusDecisao = decisao === "Aprovado" ? "aprovado" : "rejeitado";
+      await decidirProjeto(projetoId, statusDecisao, justificativa);
     setModalDecisao({ aberto: false });
+    } catch (err) {
+      console.error('Erro ao decidir projeto:', err);
+    }
   };
 
   const handleAtualizarProjeto = (projetoAtualizado: Projeto) => {
-    setProjetos(prev => prev.map(p =>
-      p.id === projetoAtualizado.id ? projetoAtualizado : p
-    ));
+    // Esta função pode ser implementada se necessário para atualizações locais
+    // Por enquanto, os dados são atualizados automaticamente pelo hook
+    console.log('Projeto atualizado:', projetoAtualizado);
   };
 
   return (
-    <main className="flex-1 p-6 bg-prefeitura-accent">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Cabeçalho */}
-        <div>
-          <h1 className="text-3xl font-bold text-prefeitura-primary">Gestão de Projetos</h1>
-          <p className="text-prefeitura-muted mt-2">Gerencie todos os projetos da PNAB</p>
-        </div>
+    <>
+      <ListTemplate
+        data={projetosFiltrados}
+        title="Gestão de Projetos"
+        subtitle="Gerencie todos os projetos da PNAB"
+        columns={columns}
+        filters={filters}
+        actions={actions}
+        bulkActions={bulkActions}
+        statusCards={statusCards}
+        searchable={true}
+        selectable={true}
+        sortable={true}
+        loading={loading}
+        error={error}
+        onSearch={(term) => setFiltros(prev => ({ ...prev, busca: term }))}
+        onFilterChange={(newFilters) => {
+          setFiltros(prev => ({
+            ...prev,
+            status: newFilters.status || 'Todos',
+            parecerista: newFilters.parecerista || 'Todos',
+            edital: newFilters.edital || 'Todos'
+          }));
+        }}
+        onSort={(column, direction) => console.log('Ordenação:', column, direction)}
+        onSelect={(items) => console.log('Selecionados:', items)}
+        onRefresh={() => window.location.reload()}
+      />
 
-        {/* Cards de Status */}
-        <StatusCards metricas={metricas} />
+      {/* Modal de detalhes */}
+      <DetailsModal
+        open={modalDetalhes.aberto}
+        onClose={() => setModalDetalhes({ aberto: false })}
+        title="Detalhes do Projeto"
+        data={modalDetalhes.projeto || {}}
+        sections={modalDetalhes.projeto ? [
+          {
+            title: 'Informações do Projeto',
+            fields: [
+              { key: 'nome', label: 'Nome do Projeto', value: modalDetalhes.projeto.nome, type: 'text' },
+              { key: 'categoria', label: 'Categoria', value: modalDetalhes.projeto.categoria, type: 'badge', color: 'info' },
+              { key: 'proponente', label: 'Proponente', value: modalDetalhes.projeto.proponente, type: 'text' },
+              { key: 'tipoProponente', label: 'Tipo', value: modalDetalhes.projeto.tipoProponente, type: 'badge', color: 'default' },
+              { key: 'valorSolicitado', label: 'Valor Solicitado', value: modalDetalhes.projeto.valorSolicitado, type: 'currency' },
+              { key: 'status', label: 'Status', value: modalDetalhes.projeto.status, type: 'badge', color: 'success' },
+              { key: 'dataSubmissao', label: 'Data de Submissão', value: modalDetalhes.projeto.dataSubmissao, type: 'date' },
+              { key: 'parecerista', label: 'Parecerista', value: modalDetalhes.projeto.parecerista || 'Não atribuído', type: 'text' },
+              { key: 'edital', label: 'Edital', value: modalDetalhes.projeto.edital, type: 'text' }
+            ]
+          }
+        ] : []}
+        actions={[
+          {
+            key: 'edit',
+            label: 'Editar',
+            icon: <Edit className="h-4 w-4" />,
+            onClick: () => console.log('Editando projeto')
+          },
+          {
+            key: 'evaluate',
+            label: 'Avaliar',
+            icon: <BarChart3 className="h-4 w-4" />,
+            onClick: () => console.log('Avaliando projeto')
+          }
+        ]}
+      />
 
-        {/* Filtros e Busca */}
-        <FiltrosEBusca
-          filtros={filtros}
-          setFiltros={setFiltros}
-          pareceristas={pareceristas.map(p => ({ id: p.id, nome: p.nome }))}
-          editais={editais}
-        />
+      {/* Modais existentes mantidos para compatibilidade */}
+      <AtribuirPareceristaModal 
+        aberto={modalParecerista.aberto}
+        projeto={modalParecerista.projeto}
+        pareceristas={pareceristas}
+        onFechar={() => setModalParecerista({ aberto: false })}
+        onConfirmar={confirmarAtribuicao}
+      />
 
-        {/* Tabela de Projetos */}
-        <TabelaProjetos 
-          projetos={projetosFiltrados}
-          onVerDetalhes={handleVerDetalhes}
-          onAtribuirParecerista={handleAtribuirParecerista}
-          onVerAvaliacao={handleVerAvaliacao}
-          onAprovarRejeitar={handleAprovarRejeitar}
-        />
-
-        {/* Modais */}
-        <DetalhesProjetoModal
-          aberto={modalDetalhes.aberto}
-          projeto={modalDetalhes.projeto}
-          onFechar={() => setModalDetalhes({ aberto: false })}
-          onAtualizarProjeto={handleAtualizarProjeto}
-        />
-
-        <AtribuirPareceristaModal 
-          aberto={modalParecerista.aberto}
-          projeto={modalParecerista.projeto}
-          pareceristas={pareceristas}
-          onFechar={() => setModalParecerista({ aberto: false })}
-          onConfirmar={confirmarAtribuicao}
-        />
-
-        <DecisaoFinalModal 
-          aberto={modalDecisao.aberto}
-          projeto={modalDecisao.projeto}
-          onFechar={() => setModalDecisao({ aberto: false })}
-          onConfirmar={confirmarDecisao}
-        />
-      </div>
-    </main>
+      <DecisaoFinalModal 
+        aberto={modalDecisao.aberto}
+        projeto={modalDecisao.projeto}
+        onFechar={() => setModalDecisao({ aberto: false })}
+        onConfirmar={confirmarDecisao}
+      />
+    </>
   );
 };
