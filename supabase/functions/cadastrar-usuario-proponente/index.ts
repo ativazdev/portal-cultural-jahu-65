@@ -1,6 +1,10 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { corsHeaders } from '../_shared/cors.ts'
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -9,7 +13,9 @@ serve(async (req) => {
   }
 
   try {
+    console.log('📝 Recebendo requisição de cadastro de proponente')
     const { prefeitura_id, nome, email, senha } = await req.json()
+    console.log('📝 Dados recebidos:', { prefeitura_id, nome, email, senha: senha ? '***' : '' })
 
     // Validações básicas
     if (!prefeitura_id || !nome || !email || !senha) {
@@ -51,6 +57,7 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey)
 
     // Verificar se a prefeitura existe
+    console.log('🔍 Verificando prefeitura:', prefeitura_id)
     const { data: prefeitura, error: prefeituraError } = await supabase
       .from('prefeituras')
       .select('id')
@@ -58,6 +65,7 @@ serve(async (req) => {
       .single()
 
     if (prefeituraError || !prefeitura) {
+      console.log('❌ Erro ao buscar prefeitura:', prefeituraError)
       return new Response(
         JSON.stringify({ error: 'Prefeitura não encontrada' }),
         { 
@@ -66,8 +74,10 @@ serve(async (req) => {
         }
       )
     }
+    console.log('✅ Prefeitura encontrada:', prefeitura.id)
 
     // Verificar se o email já existe
+    console.log('🔍 Verificando se email já existe:', email)
     const { data: usuarioExistente } = await supabase
       .from('usuarios_proponentes')
       .select('id')
@@ -75,6 +85,7 @@ serve(async (req) => {
       .single()
 
     if (usuarioExistente) {
+      console.log('⚠️ Email já cadastrado')
       return new Response(
         JSON.stringify({ error: 'Este email já está cadastrado' }),
         { 
@@ -83,8 +94,10 @@ serve(async (req) => {
         }
       )
     }
+    console.log('✅ Email disponível')
 
     // Inserir usuário (o trigger vai criptografar a senha)
+    console.log('📝 Inserindo novo usuário no banco...')
     const { data: novoUsuario, error: insertError } = await supabase
       .from('usuarios_proponentes')
       .insert({
@@ -97,7 +110,7 @@ serve(async (req) => {
       .single()
 
     if (insertError) {
-      console.error('Erro ao inserir usuário:', insertError)
+      console.error('❌ Erro ao inserir usuário:', insertError)
       return new Response(
         JSON.stringify({ error: 'Erro ao criar usuário', details: insertError.message }),
         { 
@@ -106,6 +119,7 @@ serve(async (req) => {
         }
       )
     }
+    console.log('✅ Usuário criado com sucesso:', novoUsuario.id)
 
     return new Response(
       JSON.stringify({

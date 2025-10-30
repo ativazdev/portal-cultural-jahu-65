@@ -70,7 +70,7 @@ export const ProponenteEditais = () => {
       setLoading(true);
 
       // Buscar o ID da prefeitura do proponente
-      const { data: proponenteData, error: proponenteError } = await supabase
+      const { data: proponenteData, error: proponenteError } = await (supabase as any)
         .from('usuarios_proponentes')
         .select('prefeitura_id')
         .eq('id', proponente.id)
@@ -89,7 +89,7 @@ export const ProponenteEditais = () => {
       const prefeituraId = proponenteData.prefeitura_id;
 
       // Buscar editais ativos
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('editais')
         .select('*')
         .eq('prefeitura_id', prefeituraId)
@@ -144,7 +144,7 @@ export const ProponenteEditais = () => {
     
     try {
       // Primeiro, buscar os proponentes vinculados ao usuário
-      const { data: proponentes, error: proponentesError } = await supabase
+      const { data: proponentes, error: proponentesError } = await (supabase as any)
         .from('proponentes')
         .select('id')
         .eq('usuario_id', proponente.id);
@@ -156,7 +156,7 @@ export const ProponenteEditais = () => {
       const proponenteIds = proponentes.map(p => p.id);
       
       // Verificar se existe um projeto para algum dos proponentes do usuário
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('projetos')
         .select('id')
         .in('proponente_id', proponenteIds)
@@ -169,8 +169,48 @@ export const ProponenteEditais = () => {
     }
   };
 
-  const handleInscrever = (editalId: string) => {
-    navigate(`/${nomePrefeitura}/proponente/editais/${editalId}/cadastrar-projeto`);
+  const handleInscrever = async (editalId: string) => {
+    if (!proponente) return;
+    
+    try {
+      // Primeiro, buscar os proponentes vinculados ao usuário
+      const { data: proponentes, error: proponentesError } = await (supabase as any)
+        .from('proponentes')
+        .select('id')
+        .eq('usuario_id', proponente.id);
+      
+      if (proponentesError || !proponentes || proponentes.length === 0) {
+        // Se não tem proponentes, ir direto para o cadastro
+        navigate(`/${nomePrefeitura}/proponente/editais/${editalId}/cadastrar-projeto`);
+        return;
+      }
+      
+      const proponenteIds = proponentes.map(p => p.id);
+      
+      // Verificar se existe um projeto em rascunho para este edital
+      const { data: projetoRascunho, error: projetoError } = await (supabase as any)
+        .from('projetos')
+        .select('*')
+        .in('proponente_id', proponenteIds)
+        .eq('edital_id', editalId)
+        .eq('status', 'rascunho')
+        .single();
+      
+      // Se encontrou rascunho, navegar com flag para abrir modal
+      if (!projetoError && projetoRascunho) {
+        navigate(`/${nomePrefeitura}/proponente/editais/${editalId}/cadastrar-projeto`, {
+          state: { fromEditais: true }
+        });
+        return;
+      }
+      
+      // Se não tem rascunho, navegar normalmente sem flag
+      navigate(`/${nomePrefeitura}/proponente/editais/${editalId}/cadastrar-projeto`);
+    } catch (error) {
+      console.error('Erro ao verificar rascunho:', error);
+      // Em caso de erro, navegar mesmo assim
+      navigate(`/${nomePrefeitura}/proponente/editais/${editalId}/cadastrar-projeto`);
+    }
   };
 
   const handleVerProjeto = async (editalId: string) => {
@@ -178,7 +218,7 @@ export const ProponenteEditais = () => {
     
     try {
       // Primeiro, buscar os proponentes vinculados ao usuário
-      const { data: proponentes, error: proponentesError } = await supabase
+      const { data: proponentes, error: proponentesError } = await (supabase as any)
         .from('proponentes')
         .select('id')
         .eq('usuario_id', proponente.id);
@@ -194,7 +234,7 @@ export const ProponenteEditais = () => {
       const proponenteIds = proponentes.map(p => p.id);
       
       // Buscar o projeto para algum dos proponentes do usuário
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('projetos')
         .select('id')
         .in('proponente_id', proponenteIds)
@@ -298,14 +338,6 @@ export const ProponenteEditais = () => {
                   </div>
 
                   <div className="flex gap-2">
-                    <Button
-                      onClick={() => handleVerProjeto(edital.id)}
-                      variant="outline"
-                      size="sm"
-                    >
-                      <Eye className="mr-2 h-4 w-4" />
-                      Ver Meu Projeto
-                    </Button>
                     <Button
                       onClick={() => handleInscrever(edital.id)}
                       size="sm"

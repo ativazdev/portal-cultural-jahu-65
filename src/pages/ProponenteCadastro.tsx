@@ -25,20 +25,43 @@ export const ProponenteCadastro = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [prefeituraId, setPrefeituraId] = useState<string | null>(null);
 
-  // Buscar o ID da prefeitura pelo nome
+  // Buscar o ID da prefeitura pelo municipio
   useEffect(() => {
     const buscarPrefeitura = async () => {
       if (!nomePrefeitura) return;
       
       try {
+        // Buscar todas as prefeituras e comparar o slug
         const { data, error } = await supabase
           .from('prefeituras')
-          .select('id')
-          .eq('nome', nomePrefeitura)
-          .single();
+          .select('id, municipio');
         
-        if (!error && data) {
-          setPrefeituraId(data.id);
+        if (error) {
+          console.error('Erro ao buscar prefeitura:', error);
+          return;
+        }
+        
+        if (!data || data.length === 0) {
+          console.error('Nenhuma prefeitura encontrada');
+          return;
+        }
+        
+        // Encontrar a prefeitura cujo slug corresponde ao nomePrefeitura
+        const prefeitura = data.find(p => {
+          const slugDoMunicipio = p.municipio
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+            .replace(/[^a-z0-9]+/g, '-')      // Substitui especiais por hífen
+            .replace(/^-+|-+$/g, '');         // Remove hífens das pontas
+          
+          return slugDoMunicipio === nomePrefeitura.toLowerCase();
+        });
+        
+        if (prefeitura) {
+          setPrefeituraId(prefeitura.id);
+        } else {
+          console.error('Prefeitura não encontrada para o slug:', nomePrefeitura);
         }
       } catch (error) {
         console.error('Erro ao buscar prefeitura:', error);

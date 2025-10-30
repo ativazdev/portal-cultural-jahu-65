@@ -61,7 +61,7 @@ export const useEditaisPrefeitura = (prefeituraId: string) => {
     }
   };
 
-  const toggleStatus = async (id: string, status: 'aberto' | 'arquivado'): Promise<boolean> => {
+  const toggleStatus = async (id: string, status: 'ativo' | 'arquivado' | 'rascunho'): Promise<boolean> => {
     try {
       const success = await editalService.updateStatus(id, status);
       if (success) {

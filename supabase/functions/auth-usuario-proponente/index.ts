@@ -1,7 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { create, getNumericDate } from "https://deno.land/x/djwt@v2.8/mod.ts"
-import { corsHeaders } from '../_shared/cors.ts'
+import { create } from "https://deno.land/x/djwt@v2.8/mod.ts"
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -66,27 +70,34 @@ serve(async (req) => {
         p_usuario_id: usuario.id
       })
 
-    // Gerar JWT customizado
-    const jwtSecret = Deno.env.get('JWT_SECRET') || 'your-secret-key'
+    // Criar token JWT customizado
+    const jwtSecret = Deno.env.get('SUPABASE_JWT_SECRET')
+    if (!jwtSecret) {
+      throw new Error('JWT Secret não configurado')
+    }
+
     const key = await crypto.subtle.importKey(
       "raw",
       new TextEncoder().encode(jwtSecret),
       { name: "HMAC", hash: "SHA-256" },
       false,
-      ["sign"]
+      ["sign", "verify"]
     )
+
+    const payload = {
+      sub: usuario.id,
+      email: usuario.email,
+      nome: usuario.nome,
+      prefeitura_id: usuario.prefeitura_id,
+      user_type: 'proponente',
+      role: 'authenticated',
+      iat: Math.floor(Date.now() / 1000),
+      exp: Math.floor(Date.now() / 1000) + (60 * 60 * 24 * 7) // 7 dias
+    }
 
     const jwt = await create(
       { alg: "HS256", typ: "JWT" },
-      {
-        sub: usuario.id,
-        email: usuario.email,
-        nome: usuario.nome,
-        prefeitura_id: usuario.prefeitura_id,
-        user_type: 'proponente',
-        iat: getNumericDate(0),
-        exp: getNumericDate(60 * 60 * 24 * 7), // 7 dias
-      },
+      payload,
       key
     )
 

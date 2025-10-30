@@ -14,8 +14,9 @@ export interface Pendencia {
 export interface CreatePendenciaData {
   text: string;
   projeto_id: string;
-  criado_por: string;
+  criado_por?: string;
   arquivo?: string;
+  descricao?: string; // Para compatibilidade com a tela do proponente
 }
 
 export interface UpdatePendenciaData {
@@ -50,9 +51,21 @@ export const pendenciaService = {
 
   async create(data: CreatePendenciaData): Promise<Pendencia | null> {
     try {
+      const insertData: any = {
+        projeto_id: data.projeto_id,
+        text: data.descricao || data.text,
+        arquivo: data.arquivo || null,
+        realizada: false
+      };
+      
+      // Só adiciona criado_por se for fornecido
+      if (data.criado_por) {
+        insertData.criado_por = data.criado_por;
+      }
+
       const { data: result, error } = await supabase
         .from('pendencias')
-        .insert(data)
+        .insert(insertData)
         .select(`
           *,
           criado_por_nome:user_profiles!criado_por(nome)

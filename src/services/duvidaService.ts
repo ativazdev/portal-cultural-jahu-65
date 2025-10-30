@@ -10,6 +10,7 @@ export interface Duvida {
   fechada: boolean;
   respondida_por?: string;
   categoria?: string;
+  edital_id?: string;
   created_at: string;
 }
 
@@ -19,6 +20,7 @@ export interface CreateDuvidaData {
   proponente_id?: string;
   parecerista_id?: string;
   categoria?: string;
+  edital_id?: string;
 }
 
 export interface UpdateDuvidaData {
@@ -78,6 +80,7 @@ export const duvidaService = {
           proponente_id: data.proponente_id,
           parecerista_id: data.parecerista_id,
           categoria: data.categoria,
+          edital_id: data.edital_id,
           fechada: false
         })
         .select()

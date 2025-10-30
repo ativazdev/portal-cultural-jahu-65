@@ -48,6 +48,150 @@ import { useContasMonitoradas } from "@/hooks/useContasMonitoradas";
 import { useDocumentosHabilitacao } from "@/hooks/useDocumentosHabilitacao";
 import { ProjetoWithDetails } from "@/services/projetoService";
 
+// Helpers (datas e Gantt)
+const formatarData = (data: string | Date) => {
+  if (!data) return '';
+  const s = typeof data === 'string' ? data : data.toISOString().slice(0, 10);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    const [y, m, d] = s.split('-');
+    return `${d}/${m}/${y}`;
+  }
+  return new Date(s).toLocaleDateString('pt-BR');
+};
+
+// Funções de tradução
+const traduzirGenero = (genero: string) => {
+  const generos: { [key: string]: string } = {
+    'mulher-cis': 'Mulher cisgênero',
+    'homem-cis': 'Homem cisgênero',
+    'mulher-trans': 'Mulher transgênero',
+    'homem-trans': 'Homem transgênero',
+    'nao-binaria': 'Pessoa não binária',
+    'nao-informar': 'Não informar',
+  };
+  return generos[genero] || genero;
+};
+
+const traduzirRaca = (raca: string) => {
+  const racas: { [key: string]: string } = {
+    'branca': 'Branca',
+    'preta': 'Preta',
+    'parda': 'Parda',
+    'indigena': 'Indígena',
+    'amarela': 'Amarela',
+  };
+  return racas[raca] || raca;
+};
+
+const traduzirComunidade = (comunidade: string) => {
+  const comunidades: { [key: string]: string } = {
+    'nao': 'Não pertenço a comunidade tradicional',
+    'extrativistas': 'Comunidades extrativistas',
+    'ribeirinhas': 'Comunidades ribeirinhas',
+    'rurais': 'Comunidades rurais',
+    'indigenas': 'Indígenas',
+    'ciganos': 'Povos ciganos',
+    'pescadores': 'Pescadores(as) artesanais',
+    'terreiro': 'Povos de terreiro',
+    'quilombolas': 'Quilombolas',
+    'outra': 'Outra comunidade tradicional',
+  };
+  return comunidades[comunidade] || comunidade;
+};
+
+const traduzirEscolaridade = (escolaridade: string) => {
+  const escolaridades: { [key: string]: string } = {
+    'sem-educacao': 'Sem educação formal',
+    'fundamental-inc': 'Ensino fundamental incompleto',
+    'fundamental-comp': 'Ensino fundamental completo',
+    'medio-inc': 'Ensino médio incompleto',
+    'medio-comp': 'Ensino médio completo',
+    'tecnico': 'Curso técnico completo',
+    'superior-inc': 'Ensino superior incompleto',
+    'superior-comp': 'Ensino superior completo',
+    'pos-comp': 'Pós-graduação completa',
+    'pos-inc': 'Pós-graduação incompleta',
+  };
+  return escolaridades[escolaridade] || escolaridade;
+};
+
+const traduzirRenda = (renda: string) => {
+  const rendas: { [key: string]: string } = {
+    'nenhuma': 'Nenhuma renda',
+    'ate-1': 'Até 1 salário mínimo',
+    '1-3': 'De 1 a 3 salários mínimos',
+    '3-5': 'De 3 a 5 salários mínimos',
+    '5-7': 'De 5 a 7 salários mínimos',
+    '7-10': 'De 7 a 10 salários mínimos',
+    'mais-10': 'Mais de 10 salários mínimos',
+  };
+  return rendas[renda] || renda;
+};
+
+const traduzirProgramaSocial = (programa: string) => {
+  const programas: { [key: string]: string } = {
+    'bolsa-familia': 'Bolsa Família',
+    'bpc': 'Benefício de Prestação Continuada (BPC)',
+    'cadunico': 'Cadastro Único (CadÚnico)',
+    'bolsa-verde': 'Programa Bolsa Verde',
+    'outro': 'Outro',
+    'nenhum': 'Nenhum',
+  };
+  return programas[programa] || programa;
+};
+
+const traduzirCotas = (cotas: string) => {
+  const cotasMap: { [key: string]: string } = {
+    'racial': 'Racial',
+    'pcd': 'PCD',
+    'social': 'Social',
+  };
+  return cotasMap[cotas] || cotas;
+};
+
+const traduzirFuncaoArtistica = (funcao: string) => {
+  const funcoes: { [key: string]: string } = {
+    'artista': 'Artista, artesão(a), brincante, criador(a)',
+    'instrutor': 'Instrutor(a), oficineiro(a), educador(a)',
+    'curador': 'Curador(a), programador(a)',
+    'produtor': 'Produtor(a)',
+    'gestor': 'Gestor(a)',
+    'tecnico': 'Técnico(a)',
+    'critico': 'Crítico(a), pesquisador(a)',
+    'outro': 'Outro',
+  };
+  return funcoes[funcao] || funcao;
+};
+
+const traduzirDeficiencia = (deficiencia: string) => {
+  const deficiencias: { [key: string]: string } = {
+    'auditiva': 'Auditiva',
+    'fisica': 'Física',
+    'intelectual': 'Intelectual',
+    'multipla': 'Múltipla',
+    'visual': 'Visual',
+    'outro': 'Outro',
+  };
+  return deficiencias[deficiencia] || deficiencia;
+};
+
+const toDateOnly = (d: string) => new Date(d + 'T00:00:00');
+const diffDays = (a: Date, b: Date) => Math.max(0, Math.round((b.getTime() - a.getTime()) / (1000 * 60 * 60 * 24)));
+const etapaColor = (etapa?: string) => {
+  switch (etapa) {
+    case 'Pré-produção':
+      return 'bg-blue-500';
+    case 'Produção':
+      return 'bg-green-500';
+    case 'Pós-produção':
+      return 'bg-purple-500';
+    case 'Divulgação':
+      return 'bg-amber-500';
+    default:
+      return 'bg-gray-400';
+  }
+};
+
 export const PrefeituraProjetoDetalhes = () => {
   const { nomePrefeitura, editalId, projetoId } = useParams<{ 
     nomePrefeitura: string; 
@@ -65,6 +209,8 @@ export const PrefeituraProjetoDetalhes = () => {
 
   // Estados para modal de avaliação
   const [showAvaliacaoModal, setShowAvaliacaoModal] = useState(false);
+  const [showAtribuirPareceristaModal, setShowAtribuirPareceristaModal] = useState(false);
+  const [avaliacaoSelecionadaId, setAvaliacaoSelecionadaId] = useState<string>('');
   const [pareceristaSelecionado, setPareceristaSelecionado] = useState('');
 
   // Estados para modais de prestação de contas
@@ -248,6 +394,31 @@ export const PrefeituraProjetoDetalhes = () => {
       toast({
         title: "Erro",
         description: "Não foi possível remover a avaliação.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleAtribuirParecerista = async () => {
+    if (!pareceristaSelecionado || !avaliacaoSelecionadaId) return;
+
+    const success = await updateAvaliacao(avaliacaoSelecionadaId, {
+      parecerista_id: pareceristaSelecionado,
+      status: 'pendente'
+    });
+
+    if (success) {
+      toast({
+        title: "Parecerista atribuído",
+        description: "O parecerista foi atribuído à avaliação com sucesso.",
+      });
+      setShowAtribuirPareceristaModal(false);
+      setPareceristaSelecionado('');
+      setAvaliacaoSelecionadaId('');
+    } else {
+      toast({
+        title: "Erro",
+        description: "Não foi possível atribuir o parecerista.",
         variant: "destructive",
       });
     }
@@ -728,31 +899,208 @@ export const PrefeituraProjetoDetalhes = () => {
                 </CardContent>
               </Card>
 
-              {/* Proponente */}
-              <Card>
+              {/* Proponente - detalhado */}
+              <Card className={projeto.proponente?.tipo === "PF" ? "border-l-4 border-l-blue-600" : "border-l-4 border-l-green-600"}>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <User className="h-5 w-5" />
                     Proponente
+                    {projeto.proponente?.tipo && (
+                      <Badge 
+                        variant={projeto.proponente.tipo === "PF" ? "default" : "secondary"}
+                        className={`text-xs ${projeto.proponente.tipo === "PF" ? "bg-blue-600 text-white" : "bg-green-600 text-white"}`}
+                      >
+                        {projeto.proponente.tipo === "PF" ? "Pessoa Física" : "Pessoa Jurídica"}
+                      </Badge>
+                    )}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {/* Nome principal */}
                   <div>
-                    <label className="text-sm font-medium text-gray-500">Nome</label>
-                    <p className="text-sm">{projeto.proponente?.nome || 'Não informado'}</p>
+                    <h3 className="font-bold text-lg text-gray-900">{projeto.proponente?.nome || 'Não informado'}</h3>
+                    {projeto.proponente?.nome_artistico && (
+                      <p className="text-sm text-gray-600 italic">Nome artístico: {projeto.proponente.nome_artistico}</p>
+                    )}
+                    {projeto.proponente?.razao_social && (
+                      <p className="text-sm text-gray-600 italic">Razão Social: {projeto.proponente.razao_social}</p>
+                    )}
                   </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">Tipo</label>
-                    <p className="text-sm">{projeto.proponente?.tipo || 'Não informado'}</p>
+
+                  {/* Dados de Identificação */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 border-t">
+                    {projeto.proponente?.cpf && (
+                      <div>
+                        <span className="text-xs text-gray-500 font-medium">CPF:</span>
+                        <p className="text-sm text-gray-700">{projeto.proponente.cpf}</p>
+                      </div>
+                    )}
+                    {projeto.proponente?.cnpj && (
+                      <div>
+                        <span className="text-xs text-gray-500 font-medium">CNPJ:</span>
+                        <p className="text-sm text-gray-700">{projeto.proponente.cnpj}</p>
+                      </div>
+                    )}
+                    {projeto.proponente?.rg && (
+                      <div>
+                        <span className="text-xs text-gray-500 font-medium">RG:</span>
+                        <p className="text-sm text-gray-700">{projeto.proponente.rg}</p>
+                      </div>
+                    )}
+                    {projeto.proponente?.data_nascimento && (
+                      <div>
+                        <span className="text-xs text-gray-500 font-medium">Data de Nascimento:</span>
+                        <p className="text-sm text-gray-700">{formatarData(projeto.proponente.data_nascimento)}</p>
+                      </div>
+                    )}
                   </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">Email</label>
-                    <p className="text-sm">{projeto.proponente?.email || 'Não informado'}</p>
+
+                  {/* Contato */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 border-t">
+                    {projeto.proponente?.telefone && (
+                      <div>
+                        <span className="text-xs text-gray-500 font-medium">Telefone:</span>
+                        <p className="text-sm text-gray-700">{projeto.proponente.telefone}</p>
+                      </div>
+                    )}
+                    {projeto.proponente?.email && (
+                      <div>
+                        <span className="text-xs text-gray-500 font-medium">Email:</span>
+                        <p className="text-sm text-gray-700">{projeto.proponente.email}</p>
+                      </div>
+                    )}
                   </div>
+
+                  {/* Endereço */}
+                  {projeto.proponente?.endereco && (
+                    <div className="pt-2 border-t">
+                      <h4 className="text-sm font-semibold text-gray-700 mb-2">Endereço</h4>
+                      <p className="text-sm text-gray-700">
+                        {projeto.proponente.endereco}
+                      </p>
+                      <p className="text-sm text-gray-700">
+                        {[
+                          projeto.proponente.cidade,
+                          projeto.proponente.estado,
+                          projeto.proponente.cep
+                        ].filter(Boolean).join(' - ')}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Dados Pessoais PF */}
+                  {projeto.proponente?.tipo === "PF" && (
+                    <>
+                      {(projeto.proponente.comunidade_tradicional || projeto.proponente.genero || projeto.proponente.raca || projeto.proponente.escolaridade || projeto.proponente.renda_mensal) && (
+                        <div className="pt-2 border-t">
+                          <h4 className="text-sm font-semibold text-gray-700 mb-2">Dados Pessoais</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {projeto.proponente.comunidade_tradicional && (
+                              <div>
+                                <span className="text-xs text-gray-500 font-medium">Comunidade Tradicional:</span>
+                                <p className="text-sm text-gray-700">{traduzirComunidade(projeto.proponente.comunidade_tradicional)}</p>
+                              </div>
+                            )}
+                            {projeto.proponente.genero && (
+                              <div>
+                                <span className="text-xs text-gray-500 font-medium">Gênero:</span>
+                                <p className="text-sm text-gray-700">{traduzirGenero(projeto.proponente.genero)}</p>
+                              </div>
+                            )}
+                            {projeto.proponente.raca && (
+                              <div>
+                                <span className="text-xs text-gray-500 font-medium">Raça/Cor:</span>
+                                <p className="text-sm text-gray-700">{traduzirRaca(projeto.proponente.raca)}</p>
+                              </div>
+                            )}
+                            {projeto.proponente.escolaridade && (
+                              <div>
+                                <span className="text-xs text-gray-500 font-medium">Escolaridade:</span>
+                                <p className="text-sm text-gray-700">{traduzirEscolaridade(projeto.proponente.escolaridade)}</p>
+                              </div>
+                            )}
+                            {projeto.proponente.renda_mensal && (
+                              <div>
+                                <span className="text-xs text-gray-500 font-medium">Renda Mensal:</span>
+                                <p className="text-sm text-gray-700">{traduzirRenda(projeto.proponente.renda_mensal)}</p>
+                              </div>
+                            )}
+                            {projeto.proponente.pcd && (
+                              <div>
+                                <span className="text-xs text-gray-500 font-medium">PCD:</span>
+                                <p className="text-sm text-gray-700">Sim{projeto.proponente.tipo_deficiencia && ` - ${traduzirDeficiencia(projeto.proponente.tipo_deficiencia)}`}</p>
+                              </div>
+                            )}
+                            {projeto.proponente.programa_social && (
+                              <div>
+                                <span className="text-xs text-gray-500 font-medium">Programa Social:</span>
+                                <p className="text-sm text-gray-700">{traduzirProgramaSocial(projeto.proponente.programa_social)}</p>
+                              </div>
+                            )}
+                            {projeto.proponente.concorre_cotas && (
+                              <div>
+                                <span className="text-xs text-gray-500 font-medium">Concorre Cotas:</span>
+                                <p className="text-sm text-gray-700">Sim{projeto.proponente.tipo_cotas && ` - ${traduzirCotas(projeto.proponente.tipo_cotas)}`}</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Atividade Artística */}
+                      {(projeto.proponente.funcao_artistica || projeto.proponente.representa_coletivo) && (
+                        <div className="pt-2 border-t">
+                          <h4 className="text-sm font-semibold text-gray-700 mb-2">Atividade Artística</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {projeto.proponente.funcao_artistica && (
+                              <div>
+                                <span className="text-xs text-gray-500 font-medium">Função:</span>
+                                <p className="text-sm text-gray-700">{traduzirFuncaoArtistica(projeto.proponente.funcao_artistica)}</p>
+                              </div>
+                            )}
+                            {projeto.proponente.representa_coletivo && projeto.proponente.nome_coletivo && (
+                              <div>
+                                <span className="text-xs text-gray-500 font-medium">Coletivo:</span>
+                                <p className="text-sm text-gray-700">{projeto.proponente.nome_coletivo}</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Currículo */}
+                      {projeto.proponente.mini_curriculo && (
+                        <div className="pt-2 border-t">
+                          <span className="text-xs text-gray-500 font-medium">Mini Currículo:</span>
+                          <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">{projeto.proponente.mini_curriculo}</p>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {/* Dados PJ */}
+                  {projeto.proponente?.tipo === "PJ" && (
+                    <>
+                      {projeto.proponente.inscricao_estadual && (
+                        <div className="pt-2 border-t">
+                          <h4 className="text-sm font-semibold text-gray-700 mb-2">Inscrições</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div>
+                              <span className="text-xs text-gray-500 font-medium">Inscrição Estadual:</span>
+                              <p className="text-sm text-gray-700">{projeto.proponente.inscricao_estadual}</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                    </>
+                  )}
                 </CardContent>
               </Card>
+            </div>
 
-              {/* Valor e Financiamento */}
+            {/* Grid Valor e Financiamento + Orçamento */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -811,9 +1159,45 @@ export const PrefeituraProjetoDetalhes = () => {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Orçamento */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <DollarSign className="h-5 w-5" />
+                    Orçamento Detalhado
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {projeto.orcamento && projeto.orcamento.length > 0 ? (
+                    <div className="space-y-3">
+                      {projeto.orcamento.map((item, index) => (
+                        <div key={item.id || index} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div className="flex-1">
+                            <p className="font-medium">{item.descricao}</p>
+                            <p className="text-sm text-gray-500">{item.justificativa}</p>
+                            <p className="text-xs text-gray-400 mt-1">
+                              {item.quantidade} {item.unidade_medida} × R$ {item.valor_unitario.toLocaleString('pt-BR')}
+                            </p>
+                          </div>
+                          <p className="font-medium">R$ {(item.valor_unitario * item.quantidade).toLocaleString('pt-BR')}</p>
+                        </div>
+                      ))}
+                      <div className="border-t pt-3 mt-3">
+                        <div className="flex items-center justify-between font-bold text-lg">
+                          <span>Total</span>
+                          <span>R$ {projeto.orcamento.reduce((sum, item) => sum + (item.valor_unitario * item.quantidade), 0).toLocaleString('pt-BR')}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-center text-gray-500 py-8">Nenhum item de orçamento cadastrado.</p>
+                  )}
+                </CardContent>
+              </Card>
             </div>
 
-            {/* Equipe */}
+            {/* Equipe - detalhada */}
             {projeto.equipe && projeto.equipe.length > 0 && (
               <Card>
                 <CardHeader>
@@ -824,13 +1208,26 @@ export const PrefeituraProjetoDetalhes = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {projeto.equipe.map((membro, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div>
-                          <p className="font-medium">{membro.nome}</p>
-                          <p className="text-sm text-gray-500">{membro.funcao}</p>
+                    {projeto.equipe.map((membro: any, index: number) => (
+                      <div key={index} className="p-3 border rounded-lg">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <p className="font-medium">{membro.nome}</p>
+                            <p className="text-sm text-gray-500">{membro.funcao}</p>
+                          </div>
                         </div>
-                        <p className="text-sm text-gray-500">{membro.email}</p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2 text-sm text-gray-600">
+                          <p><span className="font-medium">CPF/CNPJ:</span> {membro.cpf_cnpj || '—'}</p>
+                          <div className="flex flex-wrap gap-2">
+                            {membro.indigena && <Badge variant="outline">Indígena</Badge>}
+                            {membro.lgbtqiapn && <Badge variant="outline">LGBTQIAPN+</Badge>}
+                            {membro.preto_pardo && <Badge variant="outline">Preto/Pardo</Badge>}
+                            {membro.deficiencia && <Badge variant="outline">PCD</Badge>}
+                          </div>
+                        </div>
+                        {membro.mini_curriculo && (
+                          <p className="text-sm text-gray-700 mt-2 whitespace-pre-wrap">{membro.mini_curriculo}</p>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -838,7 +1235,7 @@ export const PrefeituraProjetoDetalhes = () => {
               </Card>
             )}
 
-            {/* Atividades */}
+            {/* Atividades com Gantt + lista */}
             {projeto.atividades && projeto.atividades.length > 0 && (
               <Card>
                 <CardHeader>
@@ -848,53 +1245,84 @@ export const PrefeituraProjetoDetalhes = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-3">
-                    {projeto.atividades.map((atividade, index) => (
-                      <div key={index} className="p-3 border rounded-lg">
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="font-medium">{atividade.nome}</h4>
-                          <div className="text-sm text-gray-500">
-                            {new Date(atividade.data_inicio).toLocaleDateString('pt-BR')} - {new Date(atividade.data_fim).toLocaleDateString('pt-BR')}
+                  {(() => {
+                    const atividades: any[] = projeto.atividades as any[];
+                    const inicioMin = atividades.reduce((min, a) => {
+                      const d = toDateOnly(a.data_inicio);
+                      return !min || d < min ? d : min;
+                    }, null as Date | null) as Date;
+                    const fimMax = atividades.reduce((max, a) => {
+                      const d = toDateOnly(a.data_fim);
+                      return !max || d > max ? d : max;
+                    }, null as Date | null) as Date;
+                    const totalDias = Math.max(1, diffDays(inicioMin, fimMax) + 1);
+
+                    return (
+                      <div className="space-y-4">
+                        <div className="text-xs text-gray-500 flex items-center justify-between">
+                          <span>{formatarData(inicioMin)}</span>
+                          <span>{formatarData(fimMax)}</span>
+                        </div>
+                        <div className="relative w-full border rounded-md p-3">
+                          <div className="relative" style={{ height: `${atividades.length * 56}px` }}>
+                            {atividades.map((a, i) => {
+                              const ini = toDateOnly(a.data_inicio);
+                              const fim = toDateOnly(a.data_fim);
+                              const leftPct = (diffDays(inicioMin, ini) / totalDias) * 100;
+                              const widthPct = (Math.max(1, diffDays(ini, fim) + 1) / totalDias) * 100;
+                              return (
+                                <div key={i} className="absolute left-0 right-0" style={{ top: `${i * 56}px` }}>
+                                  <div className="flex items-center justify-between mb-1 pr-2">
+                                    <div className="font-medium text-sm truncate max-w-[60%]">
+                                      {(a as any).nome_atividade || (a as any).nome}
+                                    </div>
+                                    <div className="text-xs text-gray-500">
+                                      {formatarData(a.data_inicio)} - {formatarData(a.data_fim)}
+                                    </div>
+                                  </div>
+                                  <div className="relative h-3 w-full bg-gray-100 rounded">
+                                    <div
+                                      className={`absolute h-3 rounded ${etapaColor((a as any).etapa)}`}
+                                      style={{ left: `${leftPct}%`, width: `${widthPct}%` }}
+                                    />
+                                  </div>
+                                  {a.descricao && (
+                                    <div className="text-xs text-gray-600 mt-1 truncate">{a.descricao}</div>
+                                  )}
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
-                        <p className="text-sm text-gray-600">{atividade.descricao}</p>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Orçamento */}
-            {projeto.orcamento && projeto.orcamento.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <DollarSign className="h-5 w-5" />
-                    Orçamento Detalhado
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {projeto.orcamento.map((item, index) => (
-                      <div key={item.id || index} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div className="flex-1">
-                          <p className="font-medium">{item.descricao}</p>
-                          <p className="text-sm text-gray-500">{item.justificativa}</p>
-                          <p className="text-xs text-gray-400 mt-1">
-                            {item.quantidade} {item.unidade_medida} × R$ {item.valor_unitario.toLocaleString('pt-BR')}
-                          </p>
+                        <div className="flex flex-wrap gap-3 text-xs text-gray-600">
+                          {['Pré-produção','Produção','Pós-produção','Divulgação'].map((e) => (
+                            <div key={e} className="flex items-center gap-2">
+                              <span className={`inline-block w-3 h-3 rounded ${etapaColor(e)}`}></span>
+                              <span>{e}</span>
+                            </div>
+                          ))}
                         </div>
-                        <p className="font-medium">R$ {(item.valor_unitario * item.quantidade).toLocaleString('pt-BR')}</p>
+                        <div className="space-y-3">
+                          {atividades.map((a, i) => (
+                            <div key={`list-${i}`} className="p-3 border rounded-lg">
+                              <div className="flex items-center justify-between mb-1">
+                                <h4 className="font-medium">{(a as any).nome_atividade || (a as any).nome}</h4>
+                                <div className="text-sm text-gray-500">
+                                  {formatarData(a.data_inicio)} - {formatarData(a.data_fim)}
+                                </div>
+                              </div>
+                              {(a as any).etapa && (
+                                <p className="text-xs text-gray-500 mb-1">Etapa: {(a as any).etapa}</p>
+                              )}
+                              {a.descricao && (
+                                <p className="text-sm text-gray-600">{a.descricao}</p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    ))}
-                    <div className="border-t pt-3 mt-3">
-                      <div className="flex items-center justify-between font-bold text-lg">
-                        <span>Total</span>
-                        <span>R$ {projeto.orcamento.reduce((sum, item) => sum + (item.valor_unitario * item.quantidade), 0).toLocaleString('pt-BR')}</span>
-                      </div>
-                    </div>
-                  </div>
+                    );
+                  })()}
                 </CardContent>
               </Card>
             )}
@@ -1077,6 +1505,21 @@ export const PrefeituraProjetoDetalhes = () => {
                             </div>
                             
                             <div className="flex items-center gap-2">
+                              {avaliacao.status === 'aguardando_parecerista' && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setAvaliacaoSelecionadaId(avaliacao.id);
+                                    setShowAtribuirPareceristaModal(true);
+                                  }}
+                                  className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                  title="Atribuir parecerista"
+                                >
+                                  <User className="h-4 w-4 mr-1" />
+                                  Atribuir Parecerista
+                                </Button>
+                              )}
                               {avaliacao.status !== 'avaliado' && (
                                 <Button
                                   variant="ghost"
@@ -1948,6 +2391,192 @@ export const PrefeituraProjetoDetalhes = () => {
               disabled={!pareceristaSelecionado || pareceristas.length === 0}
             >
               Criar Avaliação
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal para atribuir parecerista */}
+      <Dialog open={showAtribuirPareceristaModal} onOpenChange={setShowAtribuirPareceristaModal}>
+        <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Atribuir Parecerista</DialogTitle>
+            <DialogDescription>
+              Selecione um parecerista para avaliar este projeto.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {/* Informações do Projeto */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h4 className="font-semibold text-sm text-blue-900 mb-2">Projeto para Avaliação</h4>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div>
+                  <span className="font-medium text-gray-700">Nome:</span>
+                  <p className="text-gray-900">{projeto.nome}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-700">Modalidade:</span>
+                  <p className="text-gray-900">{projeto.modalidade}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-700">Proponente:</span>
+                  <p className="text-gray-900">{projeto.proponente?.nome || 'Não informado'}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-700">Valor Solicitado:</span>
+                  <p className="text-gray-900 font-bold">
+                    R$ {projeto.valor_solicitado?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="parecerista-select-atribuir">Parecerista</Label>
+              <Select value={pareceristaSelecionado} onValueChange={setPareceristaSelecionado}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Selecione um parecerista" />
+                </SelectTrigger>
+                <SelectContent className="max-h-[400px]">
+                  {pareceristas.map((parecerista) => {
+                    const temEspecialidadeCombinada = parecerista.especialidades && parecerista.especialidades.length > 0 
+                      ? parecerista.especialidades.includes(projeto.modalidade)
+                      : false;
+                    
+                    return (
+                      <SelectItem key={parecerista.id} value={parecerista.id}>
+                        <div className="flex flex-col gap-1 py-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{parecerista.nome}</span>
+                            {temEspecialidadeCombinada && (
+                              <span className="text-xs text-green-600">✓</span>
+                            )}
+                          </div>
+                          {parecerista.especialidades && parecerista.especialidades.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                              {parecerista.especialidades.slice(0, 3).map((esp, idx) => (
+                                <span 
+                                  key={idx} 
+                                  className={`text-xs px-1.5 py-0.5 rounded ${
+                                    esp === projeto.modalidade 
+                                      ? 'bg-green-100 text-green-700 font-medium' 
+                                      : 'bg-gray-100 text-gray-600'
+                                  }`}
+                                >
+                                  {esp}
+                                </span>
+                              ))}
+                              {parecerista.especialidades.length > 3 && (
+                                <span className="text-xs text-gray-500">
+                                  +{parecerista.especialidades.length - 3}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+              {pareceristas.length === 0 && (
+                <p className="text-sm text-gray-500 mt-1">
+                  Nenhum parecerista disponível. Cadastre pareceristas primeiro.
+                </p>
+              )}
+            </div>
+
+            {/* Detalhes do Parecerista Selecionado */}
+            {pareceristaSelecionado && (
+              <div className="border rounded-lg p-4 bg-gray-50">
+                {(() => {
+                  const parecerista = pareceristas.find(p => p.id === pareceristaSelecionado);
+                  if (!parecerista) return null;
+
+                  // Verificar se o parecerista tem especialidade que combina com o projeto
+                  const temEspecialidadeCombinada = parecerista.especialidades && parecerista.especialidades.length > 0 
+                    ? parecerista.especialidades.includes(projeto.modalidade)
+                    : false;
+
+                  return (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-semibold text-sm">{parecerista.nome}</h4>
+                        {temEspecialidadeCombinada && (
+                          <Badge className="bg-green-100 text-green-800 text-xs">
+                            ✓ Especialidade combinada
+                          </Badge>
+                        )}
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        {parecerista.experiencia_anos > 0 && (
+                          <div>
+                            <span className="font-medium text-gray-700">Experiência:</span>
+                            <p className="text-gray-900">{parecerista.experiencia_anos} {parecerista.experiencia_anos === 1 ? 'ano' : 'anos'}</p>
+                          </div>
+                        )}
+                        
+                        {parecerista.area_atuacao && (
+                          <div>
+                            <span className="font-medium text-gray-700">Área de Atuação:</span>
+                            <p className="text-gray-900">{parecerista.area_atuacao}</p>
+                          </div>
+                        )}
+
+                        {parecerista.especialidades && parecerista.especialidades.length > 0 && (
+                          <div className="col-span-2">
+                            <span className="font-medium text-gray-700">Especialidades:</span>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {parecerista.especialidades.map((esp, idx) => (
+                                <Badge 
+                                  key={idx} 
+                                  variant="outline" 
+                                  className={esp === projeto.modalidade ? "border-green-500 text-green-700" : ""}
+                                >
+                                  {esp}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {parecerista.formacao_academica && (
+                          <div className="col-span-2">
+                            <span className="font-medium text-gray-700">Formação:</span>
+                            <p className="text-gray-900">{parecerista.formacao_academica}</p>
+                          </div>
+                        )}
+
+                        {parecerista.mini_curriculo && (
+                          <div className="col-span-2">
+                            <span className="font-medium text-gray-700">Mini Currículo:</span>
+                            <p className="text-gray-900 text-xs mt-1 line-clamp-3">{parecerista.mini_curriculo}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowAtribuirPareceristaModal(false);
+                setPareceristaSelecionado('');
+                setAvaliacaoSelecionadaId('');
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleAtribuirParecerista}
+              disabled={!pareceristaSelecionado || pareceristas.length === 0}
+            >
+              Atribuir
             </Button>
           </DialogFooter>
         </DialogContent>

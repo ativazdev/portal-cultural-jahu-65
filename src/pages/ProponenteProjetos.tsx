@@ -9,7 +9,11 @@ import {
   Eye,
   FolderOpen,
   AlertCircle,
-  FileText
+  FileText,
+  Clock,
+  CheckCircle,
+  XCircle,
+  PlayCircle
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ProponenteLayout } from "@/components/layout/ProponenteLayout";
@@ -55,7 +59,7 @@ export const ProponenteProjetos = () => {
       setLoading(true);
 
       // Buscar os proponentes vinculados ao usuário
-      const { data: proponentes, error: proponentesError } = await supabase
+      const { data: proponentes, error: proponentesError } = await (supabase as any)
         .from('proponentes')
         .select('id')
         .eq('usuario_id', proponente.id);
@@ -68,10 +72,20 @@ export const ProponenteProjetos = () => {
       
       const proponenteIds = proponentes.map(p => p.id);
       
-      // Buscar projetos dos proponentes
-      const { data, error } = await supabase
+      // Buscar projetos dos proponentes com dados do edital
+      const { data, error } = await (supabase as any)
         .from('projetos')
-        .select('*')
+        .select(`
+          *,
+          edital:editais (
+            id,
+            nome,
+            codigo,
+            data_abertura,
+            data_final_envio_projeto,
+            valor_maximo
+          )
+        `)
         .in('proponente_id', proponenteIds)
         .order('created_at', { ascending: false });
 
@@ -91,25 +105,19 @@ export const ProponenteProjetos = () => {
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    const statusConfig: Record<string, { label: string; color: string }> = {
-      rascunho: { label: 'Rascunho', color: 'bg-yellow-500' },
-      recebido: { label: 'Recebido', color: 'bg-blue-500' },
-      em_avaliacao: { label: 'Em Avaliação', color: 'bg-orange-500' },
-      avaliado: { label: 'Avaliado', color: 'bg-purple-500' },
-      aprovado: { label: 'Aprovado', color: 'bg-green-500' },
-      rejeitado: { label: 'Rejeitado', color: 'bg-red-500' },
-      em_execucao: { label: 'Em Execução', color: 'bg-blue-600' },
-      concluido: { label: 'Concluído', color: 'bg-gray-500' },
+  const getStatusConfig = (status: string) => {
+    const configs: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
+      'rascunho': { label: 'Rascunho', color: 'bg-gray-100 text-gray-800', icon: <FileText className="h-4 w-4" /> },
+      'aguardando_avaliacao': { label: 'Aguardando Avaliação', color: 'bg-yellow-100 text-yellow-800', icon: <Clock className="h-4 w-4" /> },
+      'recebido': { label: 'Recebido', color: 'bg-blue-100 text-blue-800', icon: <CheckCircle className="h-4 w-4" /> },
+      'em_avaliacao': { label: 'Em Avaliação', color: 'bg-orange-100 text-orange-800', icon: <Search className="h-4 w-4" /> },
+      'avaliado': { label: 'Avaliado', color: 'bg-purple-100 text-purple-800', icon: <CheckCircle className="h-4 w-4" /> },
+      'aprovado': { label: 'Aprovado', color: 'bg-green-100 text-green-800', icon: <CheckCircle className="h-4 w-4" /> },
+      'rejeitado': { label: 'Rejeitado', color: 'bg-red-100 text-red-800', icon: <XCircle className="h-4 w-4" /> },
+      'em_execucao': { label: 'Em Execução', color: 'bg-purple-100 text-purple-800', icon: <PlayCircle className="h-4 w-4" /> },
+      'concluido': { label: 'Concluído', color: 'bg-green-100 text-green-800', icon: <CheckCircle className="h-4 w-4" /> }
     };
-
-    const config = statusConfig[status] || { label: status, color: 'bg-gray-500' };
-    
-    return (
-      <Badge className={config.color}>
-        {config.label}
-      </Badge>
-    );
+    return configs[status] || configs['rascunho'];
   };
 
   return (
@@ -147,35 +155,85 @@ export const ProponenteProjetos = () => {
           </Card>
         ) : (
           <div className="grid gap-6">
-            {filteredProjetos.map((projeto) => (
-              <Card key={projeto.id} className="hover:shadow-lg transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-2 flex-1">
-                      <div className="flex items-center gap-2">
-                        {getStatusBadge(projeto.status)}
-                      </div>
-                      <h3 className="text-xl font-bold">{projeto.nome}</h3>
-                      <p className="text-gray-600">{projeto.descricao}</p>
-                      <div className="flex items-center gap-4 text-sm text-gray-500">
-                        <span>Modalidade: {projeto.modalidade}</span>
-                        {projeto.data_submissao && (
-                          <span>Enviado em: {new Date(projeto.data_submissao).toLocaleDateString('pt-BR')}</span>
+            {filteredProjetos.map((projeto) => {
+              const statusConfig = getStatusConfig(projeto.status);
+              const edital = (projeto.edital as any);
+              
+              return (
+                <Card key={projeto.id} className="hover:shadow-lg transition-shadow">
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-3 flex-1">
+                        <div className="flex items-center gap-2">
+                          <Badge className={`${statusConfig.color} flex items-center gap-2`}>
+                            {statusConfig.icon}
+                            {statusConfig.label}
+                          </Badge>
+                        </div>
+                        <div>
+                          <h3 className="text-xl font-bold">{projeto.nome}</h3>
+                          <p className="text-gray-600 mt-1">{projeto.descricao}</p>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
+                          <span className="font-medium">Modalidade: {projeto.modalidade}</span>
+                          {edital?.codigo && (
+                            <span className="font-medium">Edital: {edital.codigo}</span>
+                          )}
+                          {edital?.nome && (
+                            <span className="text-gray-600">{edital.nome}</span>
+                          )}
+                          {projeto.data_submissao ? (
+                            <span>Enviado em: {new Date(projeto.data_submissao).toLocaleDateString('pt-BR')}</span>
+                          ) : (
+                            <span className="text-orange-600 font-medium">Rascunho não enviado</span>
+                          )}
+                        </div>
+                        {edital && (edital.data_abertura || edital.data_final_envio_projeto) && (
+                          <div className="flex items-center gap-4 text-xs text-gray-400 pt-2 border-t">
+                            {edital.data_abertura && (
+                              <span>Abertura: {new Date(edital.data_abertura).toLocaleDateString('pt-BR')}</span>
+                            )}
+                            {edital.data_final_envio_projeto && (
+                              <span>Encerramento: {new Date(edital.data_final_envio_projeto).toLocaleDateString('pt-BR')}</span>
+                            )}
+                            {edital.valor_maximo && (
+                              <span className="font-medium text-gray-600">
+                                Valor máximo: R$ {edital.valor_maximo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                              </span>
+                            )}
+                          </div>
                         )}
                       </div>
+                      <Button
+                        onClick={() => {
+                          if (projeto.status === 'rascunho') {
+                            navigate(`/${nomePrefeitura}/proponente/editais/${edital?.id || projeto.edital_id}/cadastrar-projeto`, {
+                              state: { projetoId: projeto.id }
+                            });
+                          } else {
+                            navigate(`/${nomePrefeitura}/proponente/projetos/${projeto.id}`);
+                          }
+                        }}
+                        variant="outline"
+                        size="sm"
+                      >
+                        {projeto.status === 'rascunho' ? (
+                          <>
+                            <FileText className="mr-2 h-4 w-4" />
+                            Finalizar Inscrição
+                          </>
+                        ) : (
+                          <>
+                            <Eye className="mr-2 h-4 w-4" />
+                            Ver Detalhes
+                          </>
+                        )}
+                      </Button>
                     </div>
-                    <Button
-                      onClick={() => navigate(`/${nomePrefeitura}/proponente/projetos/${projeto.id}`)}
-                      variant="outline"
-                      size="sm"
-                    >
-                      <Eye className="mr-2 h-4 w-4" />
-                      Ver Detalhes
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         )}
       </div>

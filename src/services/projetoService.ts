@@ -43,17 +43,59 @@ export interface ProjetoWithDetails extends Projeto {
     codigo: string;
   };
   proponente: {
+    id: string;
     nome: string;
+    nome_artistico?: string;
     email: string;
     tipo: string;
+    telefone?: string;
+    endereco?: string;
+    cep?: string;
+    cidade?: string;
+    estado?: string;
+    cpf?: string;
+    cnpj?: string;
+    rg?: string;
+    data_nascimento?: string;
+    mini_curriculo?: string;
+    comunidade_tradicional?: string;
+    outra_comunidade?: string;
+    genero?: string;
+    raca?: string;
+    pcd?: boolean;
+    tipo_deficiencia?: string;
+    outra_deficiencia?: string;
+    escolaridade?: string;
+    renda_mensal?: string;
+    programa_social?: string;
+    outro_programa_social?: string;
+    concorre_cotas?: boolean;
+    tipo_cotas?: string;
+    funcao_artistica?: string;
+    outra_funcao_artistica?: string;
+    representa_coletivo?: boolean;
+    nome_coletivo?: string;
+    ano_coletivo?: string;
+    inscricao_estadual?: string;
+    nome_representante?: string;
+    cpf_representante?: string;
+    razao_social?: string;
   };
   equipe: Array<{
     nome: string;
     funcao: string;
-    email: string;
+    email?: string;
+    cpf_cnpj?: string;
+    indigena?: boolean;
+    lgbtqiapn?: boolean;
+    preto_pardo?: boolean;
+    deficiencia?: boolean;
+    mini_curriculo?: string;
   }>;
   atividades: Array<{
-    nome: string;
+    nome?: string; // legado
+    nome_atividade?: string;
+    etapa?: string;
     descricao: string;
     data_inicio: string;
     data_fim: string;
@@ -104,8 +146,8 @@ export const projetoService = {
         .from('projetos')
         .select(`
           *,
-          edital:edital_id (nome, codigo),
-          proponente:proponente_id (nome, email, tipo),
+          edital:edital_id (nome, codigo, valor_maximo),
+          proponente:proponente_id (*),
           equipe:equipe_projeto (*),
           atividades:atividades_projeto (*),
           orcamento:itens_orcamento_projeto (*),

@@ -21,7 +21,8 @@ import {
   Building2,
   LogOut,
   Calendar,
-  DollarSign
+  DollarSign,
+  CheckCircle
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { PrefeituraLayout } from "@/components/layout/PrefeituraLayout";
@@ -51,7 +52,7 @@ export const PrefeituraEditais = () => {
   const [modalConfirmacao, setModalConfirmacao] = useState<{
     aberto: boolean;
     edital: Edital | null;
-    acao: 'arquivar' | 'desarquivar' | 'excluir' | null;
+    acao: 'ativar' | 'arquivar' | 'desarquivar' | 'excluir' | null;
   }>({ aberto: false, edital: null, acao: null });
 
   // Estados para filtros e busca
@@ -118,12 +119,12 @@ export const PrefeituraEditais = () => {
       render: (item) => (
         <Badge 
           className={
-            item.status === 'aberto' ? 'bg-green-100 text-green-800' :
+            item.status === 'ativo' ? 'bg-green-100 text-green-800' :
             item.status === 'rascunho' ? 'bg-yellow-100 text-yellow-800' :
             'bg-gray-100 text-gray-800'
           }
         >
-          {item.status === 'aberto' ? 'Ativo' : 
+          {item.status === 'ativo' ? 'Ativo' : 
            item.status === 'rascunho' ? 'Rascunho' : 'Arquivado'}
         </Badge>
       )
@@ -173,7 +174,7 @@ export const PrefeituraEditais = () => {
       label: 'Status',
       type: 'select',
       options: [
-        { value: 'aberto', label: 'Ativo' },
+        { value: 'ativo', label: 'Ativo' },
         { value: 'rascunho', label: 'Rascunho' },
         { value: 'arquivado', label: 'Arquivado' }
       ]
@@ -193,6 +194,16 @@ export const PrefeituraEditais = () => {
       }
     },
     {
+      key: 'ativar',
+      label: 'Ativar',
+      icon: <CheckCircle className="h-4 w-4" />,
+      variant: 'outline',
+      onClick: (item) => {
+        setModalConfirmacao({ aberto: true, edital: item, acao: 'ativar' });
+      },
+      show: (item) => item.status === 'rascunho' || item.status === 'arquivado'
+    },
+    {
       key: 'arquivar',
       label: 'Arquivar',
       icon: <Archive className="h-4 w-4" />,
@@ -200,17 +211,7 @@ export const PrefeituraEditais = () => {
       onClick: (item) => {
         setModalConfirmacao({ aberto: true, edital: item, acao: 'arquivar' });
       },
-      show: (item) => item.status === 'aberto'
-    },
-    {
-      key: 'desarquivar',
-      label: 'Desarquivar',
-      icon: <ArchiveRestore className="h-4 w-4" />,
-      variant: 'outline',
-      onClick: (item) => {
-        setModalConfirmacao({ aberto: true, edital: item, acao: 'desarquivar' });
-      },
-      show: (item) => item.status === 'arquivado'
+      show: (item) => item.status === 'ativo' || item.status === 'rascunho'
     },
     {
       key: 'ver_projetos',
@@ -247,7 +248,7 @@ export const PrefeituraEditais = () => {
     },
     {
       title: 'Editais Ativos',
-      value: editais.filter(e => e.status === 'aberto').length.toString(),
+      value: editais.filter(e => e.status === 'ativo').length.toString(),
       subtitle: 'Em andamento',
       icon: <Calendar className="h-4 w-4" />,
       color: 'green'
@@ -325,19 +326,44 @@ export const PrefeituraEditais = () => {
 
     try {
       switch (acao) {
+        case 'ativar':
+          await toggleStatus(edital.id, 'ativo');
+          toast({
+            title: "Sucesso",
+            description: "Edital ativado com sucesso!",
+          });
+          break;
         case 'arquivar':
           await toggleStatus(edital.id, 'arquivado');
+          toast({
+            title: "Sucesso",
+            description: "Edital arquivado com sucesso!",
+          });
           break;
         case 'desarquivar':
-          await toggleStatus(edital.id, 'aberto');
+          await toggleStatus(edital.id, 'ativo');
+          toast({
+            title: "Sucesso",
+            description: "Edital desarquivado com sucesso!",
+          });
           break;
         case 'excluir':
           await deleteEdital(edital.id);
+          toast({
+            title: "Sucesso",
+            description: "Edital excluído com sucesso!",
+          });
           break;
       }
       setModalConfirmacao({ aberto: false, edital: null, acao: null });
+      await refresh();
     } catch (error) {
       console.error('Erro ao executar ação:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao executar ação. Tente novamente.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -408,9 +434,9 @@ export const PrefeituraEditais = () => {
           open={modalConfirmacao.aberto}
           onClose={() => setModalConfirmacao({ aberto: false, edital: null, acao: null })}
           onConfirm={handleExecutarAcao}
-          title={`${modalConfirmacao.acao === 'arquivar' ? 'Arquivar' : modalConfirmacao.acao === 'desarquivar' ? 'Desarquivar' : 'Excluir'} Edital`}
-          description={`Tem certeza que deseja ${modalConfirmacao.acao === 'arquivar' ? 'arquivar' : modalConfirmacao.acao === 'desarquivar' ? 'desarquivar' : 'excluir'} o edital "${modalConfirmacao.edital?.nome}"?`}
-          confirmText={modalConfirmacao.acao === 'arquivar' ? 'Arquivar' : modalConfirmacao.acao === 'desarquivar' ? 'Desarquivar' : 'Excluir'}
+          title={`${modalConfirmacao.acao === 'ativar' ? 'Ativar' : modalConfirmacao.acao === 'arquivar' ? 'Arquivar' : modalConfirmacao.acao === 'desarquivar' ? 'Desarquivar' : 'Excluir'} Edital`}
+          description={`Tem certeza que deseja ${modalConfirmacao.acao === 'ativar' ? 'ativar' : modalConfirmacao.acao === 'arquivar' ? 'arquivar' : modalConfirmacao.acao === 'desarquivar' ? 'desarquivar' : 'excluir'} o edital "${modalConfirmacao.edital?.nome}"?`}
+          confirmText={modalConfirmacao.acao === 'ativar' ? 'Ativar' : modalConfirmacao.acao === 'arquivar' ? 'Arquivar' : modalConfirmacao.acao === 'desarquivar' ? 'Desarquivar' : 'Excluir'}
           cancelText="Cancelar"
           variant={modalConfirmacao.acao === 'excluir' ? 'destructive' : 'default'}
           loading={loading}

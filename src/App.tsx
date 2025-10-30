@@ -23,6 +23,8 @@ import { ProponenteEditais } from "./pages/ProponenteEditais";
 import { ProponenteProjetos } from "./pages/ProponenteProjetos";
 import { ProponenteProjetoDetalhes } from "./pages/ProponenteProjetoDetalhes";
 import { ProponenteSuporte } from "./pages/ProponenteSuporte";
+import { ProponenteProponentes } from "./pages/ProponenteProponentes";
+import { ProponenteCadastrarProjeto } from "./pages/ProponenteCadastrarProjeto";
 import { AuthGuard } from "./components/auth/AuthGuard";
 import NotFound from "./pages/NotFound";
 
@@ -78,6 +80,11 @@ const App = () => (
               <ProponenteEditais />
             </AuthGuard>
           } />
+          <Route path="/:nomePrefeitura/proponente/editais/:editalId/cadastrar-projeto" element={
+            <AuthGuard>
+              <ProponenteCadastrarProjeto />
+            </AuthGuard>
+          } />
           <Route path="/:nomePrefeitura/proponente/projetos" element={
             <AuthGuard>
               <ProponenteProjetos />
@@ -91,6 +98,11 @@ const App = () => (
           <Route path="/:nomePrefeitura/proponente/suporte" element={
             <AuthGuard>
               <ProponenteSuporte />
+            </AuthGuard>
+          } />
+          <Route path="/:nomePrefeitura/proponente/proponentes" element={
+            <AuthGuard>
+              <ProponenteProponentes />
             </AuthGuard>
           } />
           

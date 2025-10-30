@@ -13,6 +13,7 @@ export interface DocumentoHabilitacao {
   arquivo_tamanho?: number;
   data_solicitacao?: string;
   data_upload?: string;
+  motivo_rejeicao?: string;
   created_at: string;
   updated_at: string;
 }
@@ -36,6 +37,7 @@ export interface UpdateDocumentoHabilitacaoData {
   arquivo_url?: string;
   arquivo_tamanho?: number;
   data_upload?: string;
+  motivo_rejeicao?: string;
 }
 
 export const documentoHabilitacaoService = {

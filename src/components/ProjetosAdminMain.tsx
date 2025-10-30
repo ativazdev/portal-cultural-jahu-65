@@ -467,20 +467,20 @@ export const ProjetosAdminMain = () => {
       />
 
       {/* Modais existentes mantidos para compatibilidade */}
-      <AtribuirPareceristaModal 
-        aberto={modalParecerista.aberto}
-        projeto={modalParecerista.projeto}
-        pareceristas={pareceristas}
-        onFechar={() => setModalParecerista({ aberto: false })}
-        onConfirmar={confirmarAtribuicao}
-      />
+        <AtribuirPareceristaModal 
+          aberto={modalParecerista.aberto}
+          projeto={modalParecerista.projeto}
+          pareceristas={pareceristas}
+          onFechar={() => setModalParecerista({ aberto: false })}
+          onConfirmar={confirmarAtribuicao}
+        />
 
-      <DecisaoFinalModal 
-        aberto={modalDecisao.aberto}
-        projeto={modalDecisao.projeto}
-        onFechar={() => setModalDecisao({ aberto: false })}
-        onConfirmar={confirmarDecisao}
-      />
+        <DecisaoFinalModal 
+          aberto={modalDecisao.aberto}
+          projeto={modalDecisao.projeto}
+          onFechar={() => setModalDecisao({ aberto: false })}
+          onConfirmar={confirmarDecisao}
+        />
     </>
   );
 };

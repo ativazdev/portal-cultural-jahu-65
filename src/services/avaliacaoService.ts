@@ -27,7 +27,7 @@ export interface Avaliacao {
 export interface CreateAvaliacaoData {
   prefeitura_id: string;
   projeto_id: string;
-  parecerista_id: string;
+  parecerista_id?: string;
   status?: 'aguardando_parecerista' | 'pendente' | 'em_avaliacao' | 'avaliado';
 }
 
@@ -163,11 +163,19 @@ export const avaliacaoService = {
     }
   },
 
-  async getPareceristasDisponiveis(prefeituraId: string): Promise<Array<{id: string, nome: string}>> {
+  async getPareceristasDisponiveis(prefeituraId: string): Promise<Array<{
+    id: string;
+    nome: string;
+    especialidades: string[];
+    experiencia_anos: number;
+    area_atuacao: string | null;
+    formacao_academica: string | null;
+    mini_curriculo: string | null;
+  }>> {
     try {
       const { data, error } = await supabase
         .from('pareceristas')
-        .select('id, nome')
+        .select('id, nome, especialidades, experiencia_anos, area_atuacao, formacao_academica, mini_curriculo')
         .eq('prefeitura_id', prefeituraId)
         .eq('status', 'ativo')
         .order('nome');

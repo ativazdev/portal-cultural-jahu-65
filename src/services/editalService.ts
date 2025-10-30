@@ -9,7 +9,7 @@ export interface Edital {
   data_abertura: string;
   data_final_envio_projeto: string;
   horario_final_envio_projeto: string;
-  status: 'rascunho' | 'aberto' | 'fechado' | 'arquivado';
+  status: 'rascunho' | 'ativo' | 'arquivado';
   total_projetos: number;
   valor_maximo: number;
   prazo_avaliacao: number;

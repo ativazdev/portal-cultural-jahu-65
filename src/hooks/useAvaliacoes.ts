@@ -3,7 +3,15 @@ import { avaliacaoService, Avaliacao, CreateAvaliacaoData, UpdateAvaliacaoData }
 
 export const useAvaliacoes = (projetoId: string, prefeituraId: string) => {
   const [avaliacoes, setAvaliacoes] = useState<Avaliacao[]>([]);
-  const [pareceristas, setPareceristas] = useState<Array<{id: string, nome: string}>>([]);
+  const [pareceristas, setPareceristas] = useState<Array<{
+    id: string;
+    nome: string;
+    especialidades: string[];
+    experiencia_anos: number;
+    area_atuacao: string | null;
+    formacao_academica: string | null;
+    mini_curriculo: string | null;
+  }>>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
