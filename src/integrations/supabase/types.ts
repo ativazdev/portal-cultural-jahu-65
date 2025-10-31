@@ -92,60 +92,93 @@ export type Database = {
       }
       avaliacoes: {
         Row: {
+          bonus_criterio_f: number | null
+          bonus_criterio_g: number | null
+          bonus_criterio_h: number | null
+          bonus_criterio_i: number | null
           created_at: string | null
+          data_atribuicao: string | null
           data_avaliacao: string | null
+          data_conclusao: string | null
+          data_inicio_avaliacao: string | null
           id: string
+          nota_criterio_a: number | null
+          nota_criterio_b: number | null
+          nota_criterio_c: number | null
+          nota_criterio_d: number | null
+          nota_criterio_e: number | null
           nota_final: number | null
-          nota_impacto: number | null
-          nota_inovacao: number | null
-          nota_orcamento: number | null
-          nota_relevancia: number | null
-          nota_sustentabilidade: number | null
-          nota_viabilidade: number | null
+          obs_criterio_a: string | null
+          obs_criterio_b: string | null
+          obs_criterio_c: string | null
+          obs_criterio_d: string | null
+          obs_criterio_e: string | null
           parecer_tecnico: string | null
-          parecerista_id: string
+          parecerista_id: string | null
           prefeitura_id: string
           projeto_id: string
           recomendacao: string | null
-          status: string | null
+          status: Database["public"]["Enums"]["status_avaliacao"] | null
           updated_at: string | null
         }
         Insert: {
+          bonus_criterio_f?: number | null
+          bonus_criterio_g?: number | null
+          bonus_criterio_h?: number | null
+          bonus_criterio_i?: number | null
           created_at?: string | null
+          data_atribuicao?: string | null
           data_avaliacao?: string | null
+          data_conclusao?: string | null
+          data_inicio_avaliacao?: string | null
           id?: string
+          nota_criterio_a?: number | null
+          nota_criterio_b?: number | null
+          nota_criterio_c?: number | null
+          nota_criterio_d?: number | null
+          nota_criterio_e?: number | null
           nota_final?: number | null
-          nota_impacto?: number | null
-          nota_inovacao?: number | null
-          nota_orcamento?: number | null
-          nota_relevancia?: number | null
-          nota_sustentabilidade?: number | null
-          nota_viabilidade?: number | null
+          obs_criterio_a?: string | null
+          obs_criterio_b?: string | null
+          obs_criterio_c?: string | null
+          obs_criterio_d?: string | null
+          obs_criterio_e?: string | null
           parecer_tecnico?: string | null
-          parecerista_id: string
+          parecerista_id?: string | null
           prefeitura_id: string
           projeto_id: string
           recomendacao?: string | null
-          status?: string | null
+          status?: Database["public"]["Enums"]["status_avaliacao"] | null
           updated_at?: string | null
         }
         Update: {
+          bonus_criterio_f?: number | null
+          bonus_criterio_g?: number | null
+          bonus_criterio_h?: number | null
+          bonus_criterio_i?: number | null
           created_at?: string | null
+          data_atribuicao?: string | null
           data_avaliacao?: string | null
+          data_conclusao?: string | null
+          data_inicio_avaliacao?: string | null
           id?: string
+          nota_criterio_a?: number | null
+          nota_criterio_b?: number | null
+          nota_criterio_c?: number | null
+          nota_criterio_d?: number | null
+          nota_criterio_e?: number | null
           nota_final?: number | null
-          nota_impacto?: number | null
-          nota_inovacao?: number | null
-          nota_orcamento?: number | null
-          nota_relevancia?: number | null
-          nota_sustentabilidade?: number | null
-          nota_viabilidade?: number | null
+          obs_criterio_a?: string | null
+          obs_criterio_b?: string | null
+          obs_criterio_c?: string | null
+          obs_criterio_d?: string | null
+          obs_criterio_e?: string | null
           parecer_tecnico?: string | null
-          parecerista_id?: string
+          parecerista_id?: string | null
           prefeitura_id?: string
           projeto_id?: string
           recomendacao?: string | null
-          status?: string | null
+          status?: Database["public"]["Enums"]["status_avaliacao"] | null
           updated_at?: string | null
         }
         Relationships: [

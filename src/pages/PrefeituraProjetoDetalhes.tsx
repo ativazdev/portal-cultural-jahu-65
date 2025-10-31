@@ -1449,45 +1449,90 @@ export const PrefeituraProjetoDetalhes = () => {
                                 </div>
                               </div>
 
-                              {/* Notas detalhadas */}
-                              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm text-gray-600 mb-2">
-                                {avaliacao.nota_relevancia && (
-                                  <div>
-                                    <span className="font-medium">Relevância:</span>
-                                    <p>{avaliacao.nota_relevancia.toFixed(1)}</p>
-                                  </div>
-                                )}
-                                {avaliacao.nota_viabilidade && (
-                                  <div>
-                                    <span className="font-medium">Viabilidade:</span>
-                                    <p>{avaliacao.nota_viabilidade.toFixed(1)}</p>
-                                  </div>
-                                )}
-                                {avaliacao.nota_impacto && (
-                                  <div>
-                                    <span className="font-medium">Impacto:</span>
-                                    <p>{avaliacao.nota_impacto.toFixed(1)}</p>
-                                  </div>
-                                )}
-                                {avaliacao.nota_orcamento && (
-                                  <div>
-                                    <span className="font-medium">Orçamento:</span>
-                                    <p>{avaliacao.nota_orcamento.toFixed(1)}</p>
-                                  </div>
-                                )}
-                                {avaliacao.nota_inovacao && (
-                                  <div>
-                                    <span className="font-medium">Inovação:</span>
-                                    <p>{avaliacao.nota_inovacao.toFixed(1)}</p>
-                                  </div>
-                                )}
-                                {avaliacao.nota_sustentabilidade && (
-                                  <div>
-                                    <span className="font-medium">Sustentabilidade:</span>
-                                    <p>{avaliacao.nota_sustentabilidade.toFixed(1)}</p>
-                                  </div>
-                                )}
+                              {/* Notas detalhadas - Critérios Obrigatórios */}
+                              <div className="space-y-4 mb-4">
+                                <h4 className="font-semibold text-gray-900">Critérios Obrigatórios</h4>
+                                <div className="grid grid-cols-1 gap-3">
+                                  {(avaliacao as any).nota_criterio_a !== null && (avaliacao as any).nota_criterio_a !== undefined && (
+                                    <div className="border rounded p-3">
+                                      <span className="font-medium text-sm">Critério A - Qualidade do Projeto:</span>
+                                      <p className="text-lg font-bold">{(avaliacao as any).nota_criterio_a?.toFixed(1)}</p>
+                                      {(avaliacao as any).obs_criterio_a && (
+                                        <p className="text-sm text-gray-600 mt-1">{(avaliacao as any).obs_criterio_a}</p>
+                                      )}
+                                    </div>
+                                  )}
+                                  {(avaliacao as any).nota_criterio_b !== null && (avaliacao as any).nota_criterio_b !== undefined && (
+                                    <div className="border rounded p-3">
+                                      <span className="font-medium text-sm">Critério B - Relevância Cultural:</span>
+                                      <p className="text-lg font-bold">{(avaliacao as any).nota_criterio_b?.toFixed(1)}</p>
+                                      {(avaliacao as any).obs_criterio_b && (
+                                        <p className="text-sm text-gray-600 mt-1">{(avaliacao as any).obs_criterio_b}</p>
+                                      )}
+                                    </div>
+                                  )}
+                                  {(avaliacao as any).nota_criterio_c !== null && (avaliacao as any).nota_criterio_c !== undefined && (
+                                    <div className="border rounded p-3">
+                                      <span className="font-medium text-sm">Critério C - Integração Comunitária:</span>
+                                      <p className="text-lg font-bold">{(avaliacao as any).nota_criterio_c?.toFixed(1)}</p>
+                                      {(avaliacao as any).obs_criterio_c && (
+                                        <p className="text-sm text-gray-600 mt-1">{(avaliacao as any).obs_criterio_c}</p>
+                                      )}
+                                    </div>
+                                  )}
+                                  {(avaliacao as any).nota_criterio_d !== null && (avaliacao as any).nota_criterio_d !== undefined && (
+                                    <div className="border rounded p-3">
+                                      <span className="font-medium text-sm">Critério D - Trajetória Artística:</span>
+                                      <p className="text-lg font-bold">{(avaliacao as any).nota_criterio_d?.toFixed(1)}</p>
+                                      {(avaliacao as any).obs_criterio_d && (
+                                        <p className="text-sm text-gray-600 mt-1">{(avaliacao as any).obs_criterio_d}</p>
+                                      )}
+                                    </div>
+                                  )}
+                                  {(avaliacao as any).nota_criterio_e !== null && (avaliacao as any).nota_criterio_e !== undefined && (
+                                    <div className="border rounded p-3">
+                                      <span className="font-medium text-sm">Critério E - Promoção de Diversidade:</span>
+                                      <p className="text-lg font-bold">{(avaliacao as any).nota_criterio_e?.toFixed(1)}</p>
+                                      {(avaliacao as any).obs_criterio_e && (
+                                        <p className="text-sm text-gray-600 mt-1">{(avaliacao as any).obs_criterio_e}</p>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
                               </div>
+
+                              {/* Critérios Bônus */}
+                              {((avaliacao as any).bonus_criterio_f || (avaliacao as any).bonus_criterio_g || (avaliacao as any).bonus_criterio_h || (avaliacao as any).bonus_criterio_i) && (
+                                <div className="space-y-2 mt-4 mb-4">
+                                  <h4 className="font-semibold text-gray-900">Critérios Bônus</h4>
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    {(avaliacao as any).bonus_criterio_f && (avaliacao as any).bonus_criterio_f > 0 && (
+                                      <div className="border rounded p-3 bg-blue-50">
+                                        <span className="font-medium text-sm">Critério F - Agente cultural do gênero feminino:</span>
+                                        <p className="text-lg font-bold text-blue-600">{(avaliacao as any).bonus_criterio_f?.toFixed(1)}</p>
+                                      </div>
+                                    )}
+                                    {(avaliacao as any).bonus_criterio_g && (avaliacao as any).bonus_criterio_g > 0 && (
+                                      <div className="border rounded p-3 bg-blue-50">
+                                        <span className="font-medium text-sm">Critério G - Agente cultural negro ou indígena:</span>
+                                        <p className="text-lg font-bold text-blue-600">{(avaliacao as any).bonus_criterio_g?.toFixed(1)}</p>
+                                      </div>
+                                    )}
+                                    {(avaliacao as any).bonus_criterio_h && (avaliacao as any).bonus_criterio_h > 0 && (
+                                      <div className="border rounded p-3 bg-blue-50">
+                                        <span className="font-medium text-sm">Critério H - Agente cultural com deficiência:</span>
+                                        <p className="text-lg font-bold text-blue-600">{(avaliacao as any).bonus_criterio_h?.toFixed(1)}</p>
+                                      </div>
+                                    )}
+                                    {(avaliacao as any).bonus_criterio_i && (avaliacao as any).bonus_criterio_i > 0 && (
+                                      <div className="border rounded p-3 bg-blue-50">
+                                        <span className="font-medium text-sm">Critério I - Agente cultural de região de menor IDH:</span>
+                                        <p className="text-lg font-bold text-blue-600">{(avaliacao as any).bonus_criterio_i?.toFixed(1)}</p>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
 
                               {avaliacao.parecer_tecnico && (
                                 <div className="mt-2">

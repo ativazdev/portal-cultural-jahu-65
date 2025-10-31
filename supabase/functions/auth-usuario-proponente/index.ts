@@ -71,7 +71,7 @@ serve(async (req) => {
       })
 
     // Criar token JWT customizado
-    const jwtSecret = Deno.env.get('SUPABASE_JWT_SECRET')
+    const jwtSecret = Deno.env.get('JWT_SECRET')
     if (!jwtSecret) {
       throw new Error('JWT Secret não configurado')
     }
