@@ -128,6 +128,7 @@ export function useEditais() {
       // Processar dados
       const editaisProcessados = editaisData?.map(edital => ({
         ...edital,
+        status: String(edital.status || 'rascunho'), // Garantir que status seja string
         arquivos: edital.arquivos_edital || [],
         total_projetos_inscritos: edital.projetos?.[0]?.count || 0
       })) || [];
@@ -330,6 +331,40 @@ export function useEditais() {
     }
   };
 
+  // Atualizar status do edital
+  const atualizarStatusEdital = async (id: string, novoStatus: string) => {
+    try {
+      setLoading(true);
+
+      const { error } = await supabase
+        .from('editais')
+        .update({
+          status: novoStatus as any,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      await buscarEditais();
+
+      toast({
+        title: 'Status atualizado!',
+        description: `O status do edital foi atualizado para "${novoStatus}".`,
+      });
+    } catch (err) {
+      console.error('Erro ao atualizar status do edital:', err);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível atualizar o status do edital.',
+        variant: 'destructive'
+      });
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Arquivar edital
   const arquivarEdital = async (id: string) => {
     try {
@@ -436,6 +471,21 @@ export function useEditais() {
     buscarEditais();
   }, [prefeitura?.id]);
 
+  // Função para validar se edital permite cadastro de projetos
+  const podeCadastrarProjetos = (edital: EditalCompleto): boolean => {
+    return edital.status === 'recebendo_projetos';
+  };
+
+  // Função para validar se edital permite avaliação
+  const permiteAvaliacao = (edital: EditalCompleto): boolean => {
+    return edital.status === 'avaliacao';
+  };
+
+  // Função para validar se edital permite recursos
+  const permiteRecursos = (edital: EditalCompleto): boolean => {
+    return edital.status === 'recurso' || edital.status === 'contra_razao';
+  };
+
   return {
     editais,
     loading,
@@ -443,9 +493,13 @@ export function useEditais() {
     buscarEditais,
     criarEdital,
     atualizarEdital,
+    atualizarStatusEdital,
     arquivarEdital,
     deletarArquivo,
     removerEditalOrfao,
-    getArquivoUrl
+    getArquivoUrl,
+    podeCadastrarProjetos,
+    permiteAvaliacao,
+    permiteRecursos
   };
 }

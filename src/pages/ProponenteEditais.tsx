@@ -10,12 +10,15 @@ import {
   DollarSign,
   Search,
   Eye,
-  Plus
+  Plus,
+  Download,
+  Loader2
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ProponenteLayout } from "@/components/layout/ProponenteLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useProponenteAuth } from "@/hooks/useProponenteAuth";
+import JSZip from 'jszip';
 
 interface Edital {
   id: string;
@@ -27,7 +30,7 @@ interface Edital {
   valor_maximo: number;
   status: string;
   modalidades: string[];
-  regulamento?: string;
+  regulamento?: string[];
 }
 
 export const ProponenteEditais = () => {
@@ -40,6 +43,7 @@ export const ProponenteEditais = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filteredEditais, setFilteredEditais] = useState<Edital[]>([]);
+  const [downloadingEditalId, setDownloadingEditalId] = useState<string | null>(null);
 
   useEffect(() => {
     if (proponente?.id) {
@@ -88,12 +92,12 @@ export const ProponenteEditais = () => {
       
       const prefeituraId = proponenteData.prefeitura_id;
 
-      // Buscar editais ativos
+      // Buscar editais recebendo projetos (incluindo regulamento)
       const { data, error } = await (supabase as any)
         .from('editais')
-        .select('*')
+        .select('id, codigo, nome, descricao, data_abertura, data_final_envio_projeto, valor_maximo, status, modalidades, regulamento')
         .eq('prefeitura_id', prefeituraId)
-        .eq('status', 'ativo')
+        .eq('status', 'recebendo_projetos')
         .order('data_final_envio_projeto', { ascending: true });
 
       if (error) throw error;
@@ -114,9 +118,15 @@ export const ProponenteEditais = () => {
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
-      ativo: { label: 'Ativo', color: 'bg-green-500' },
+      recebendo_projetos: { label: 'Recebendo Projetos', color: 'bg-blue-500' },
+      avaliacao: { label: 'Avaliação', color: 'bg-orange-500' },
+      recurso: { label: 'Recurso', color: 'bg-purple-500' },
+      contra_razao: { label: 'Contra-razão', color: 'bg-pink-500' },
+      em_execucao: { label: 'Em Execução', color: 'bg-indigo-500' },
+      finalizado: { label: 'Finalizado', color: 'bg-green-500' },
       rascunho: { label: 'Rascunho', color: 'bg-yellow-500' },
       arquivado: { label: 'Arquivado', color: 'bg-gray-500' },
+      ativo: { label: 'Ativo', color: 'bg-green-500' }, // Legacy
     };
 
     const config = statusConfig[status as keyof typeof statusConfig] || { label: status, color: 'bg-gray-500' };
@@ -259,6 +269,107 @@ export const ProponenteEditais = () => {
     }
   };
 
+  const handleDownloadRegulamento = async (edital: Edital) => {
+    if (!edital.regulamento || edital.regulamento.length === 0) {
+      toast({
+        title: "Aviso",
+        description: "Nenhum arquivo de regulamento encontrado para este edital.",
+      });
+      return;
+    }
+
+    try {
+      setDownloadingEditalId(edital.id);
+      const urlsRegulamento = edital.regulamento as string[];
+      const zip = new JSZip();
+
+      // Baixar cada arquivo e adicionar ao ZIP
+      for (let i = 0; i < urlsRegulamento.length; i++) {
+        try {
+          const url = urlsRegulamento[i];
+          
+          // Extrair o nome do arquivo e path do storage da URL
+          let fileName: string;
+          let storagePath: string;
+
+          if (url.startsWith('http://') || url.startsWith('https://')) {
+            // URL pública completa - extrair o path do storage
+            const urlObj = new URL(url);
+            const pathParts = urlObj.pathname.split('/');
+            // Procurar pelo bucket 'editais' e pegar o que vem depois
+            const bucketIndex = pathParts.indexOf('editais');
+            if (bucketIndex !== -1 && bucketIndex < pathParts.length - 1) {
+              storagePath = pathParts.slice(bucketIndex + 1).join('/');
+              fileName = pathParts[pathParts.length - 1] || `arquivo_${i + 1}.pdf`;
+            } else {
+              // Fallback: pegar última parte do path
+              storagePath = pathParts[pathParts.length - 1];
+              fileName = pathParts[pathParts.length - 1] || `arquivo_${i + 1}.pdf`;
+            }
+          } else {
+            // Já é um path do storage (apenas o nome do arquivo)
+            storagePath = url;
+            fileName = url.split('/').pop() || `arquivo_${i + 1}.pdf`;
+          }
+
+          // Baixar arquivo do storage
+          const { data: fileData, error: downloadError } = await supabase.storage
+            .from('editais')
+            .download(storagePath);
+
+          if (downloadError) {
+            console.error(`Erro ao baixar arquivo ${fileName}:`, downloadError);
+            // Tentar baixar diretamente pela URL se o download do storage falhar
+            try {
+              const response = await fetch(url);
+              if (response.ok) {
+                const blob = await response.blob();
+                zip.file(fileName, blob);
+              } else {
+                console.error(`Erro ao baixar arquivo ${fileName} via URL:`, response.statusText);
+              }
+            } catch (fetchError) {
+              console.error(`Erro ao fazer fetch do arquivo ${fileName}:`, fetchError);
+            }
+            continue;
+          }
+
+          if (fileData) {
+            // Adicionar arquivo ao ZIP
+            zip.file(fileName, fileData);
+          }
+        } catch (err) {
+          console.error(`Erro ao processar arquivo ${i + 1}:`, err);
+        }
+      }
+
+      // Gerar ZIP e fazer download
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const zipUrl = window.URL.createObjectURL(zipBlob);
+      const link = document.createElement('a');
+      link.href = zipUrl;
+      link.download = `regulamento_${edital.codigo}_${new Date().toISOString().split('T')[0]}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(zipUrl);
+
+      toast({
+        title: "Sucesso",
+        description: `Regulamento baixado com ${urlsRegulamento.length} arquivo(s) em ZIP!`,
+      });
+    } catch (error) {
+      console.error('Erro ao baixar arquivos do regulamento:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao baixar arquivos do regulamento. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setDownloadingEditalId(null);
+    }
+  };
+
   return (
     <ProponenteLayout 
       title="Editais Abertos"
@@ -345,6 +456,26 @@ export const ProponenteEditais = () => {
                       <Plus className="mr-2 h-4 w-4" />
                       Inscrever Projeto
                     </Button>
+                    {edital.regulamento && edital.regulamento.length > 0 && (
+                      <Button
+                        onClick={() => handleDownloadRegulamento(edital)}
+                        variant="outline"
+                        size="sm"
+                        disabled={downloadingEditalId === edital.id}
+                      >
+                        {downloadingEditalId === edital.id ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Baixando...
+                          </>
+                        ) : (
+                          <>
+                            <Download className="mr-2 h-4 w-4" />
+                            Baixar Regulamento
+                          </>
+                        )}
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>

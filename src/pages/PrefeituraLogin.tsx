@@ -7,7 +7,6 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Building2, Eye, EyeOff } from "lucide-react";
 import { usePrefeituraAuth } from "@/hooks/usePrefeituraAuth";
-import { testSupabaseConnection, testAuth } from "@/utils/testSupabase";
 
 export const PrefeituraLogin = () => {
   const { nomePrefeitura } = useParams<{ nomePrefeitura: string }>();

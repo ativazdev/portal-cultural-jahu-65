@@ -142,46 +142,181 @@ export function useProjetos() {
     }
   };
 
-  // Atribuir parecerista a um projeto
-  const atribuirParecerista = async (projetoId: string, pareceristaId: string) => {
+  // Atribuir parecerista(s) a um projeto (suporte a múltiplos pareceristas)
+  const atribuirParecerista = async (projetoId: string, pareceristaIds: string | string[]) => {
     try {
       setLoading(true);
 
-      // Atualizar projeto
-      const { error: projetoError } = await supabase
+      // Converter para array se for string único
+      const ids = Array.isArray(pareceristaIds) ? pareceristaIds : [pareceristaIds];
+
+      if (!prefeitura?.id) {
+        throw new Error('Prefeitura não identificada');
+      }
+
+      // Buscar projeto para obter prefeitura_id e status
+      const { data: projeto, error: projetoFetchError } = await supabase
         .from('projetos')
-        .update({
+        .select('prefeitura_id, parecerista_id, status')
+        .eq('id', projetoId)
+        .single();
+
+      if (projetoFetchError) throw projetoFetchError;
+
+      // Verificar se já existe uma avaliação final para este projeto
+      let avaliacaoFinalId: string | null = null;
+      const { data: avaliacaoFinalExistente } = await supabase
+        .from('avaliacoes_final')
+        .select('id')
+        .eq('projeto_id', projetoId)
+        .single();
+
+      if (avaliacaoFinalExistente) {
+        avaliacaoFinalId = avaliacaoFinalExistente.id;
+      } else {
+        // Criar avaliação final primeiro
+        const { data: novaAvaliacaoFinal, error: avaliacaoFinalError } = await supabase
+          .from('avaliacoes_final')
+          .insert({
+            prefeitura_id: projeto.prefeitura_id || prefeitura.id,
+            projeto_id: projetoId,
+            quantidade_pareceristas: ids.length,
+            status: 'pendente'
+          })
+          .select('id')
+          .single();
+
+        if (avaliacaoFinalError) throw avaliacaoFinalError;
+        avaliacaoFinalId = novaAvaliacaoFinal.id;
+      }
+
+      // Verificar quais pareceristas já têm avaliações
+      const { data: avaliacoesExistentes } = await supabase
+        .from('avaliacoes')
+        .select('parecerista_id')
+        .eq('projeto_id', projetoId);
+
+      const pareceristasJaAtribuidos = avaliacoesExistentes?.map(a => a.parecerista_id) || [];
+      const novosPareceristas = ids.filter(id => !pareceristasJaAtribuidos.includes(id));
+
+      // Criar avaliações para os novos pareceristas vinculadas à avaliação final
+      if (novosPareceristas.length > 0 && avaliacaoFinalId) {
+        const avaliacoesParaCriar = novosPareceristas.map(pareceristaId => ({
+          prefeitura_id: projeto.prefeitura_id || prefeitura.id,
+          projeto_id: projetoId,
           parecerista_id: pareceristaId,
-          status: 'em_avaliacao',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', projetoId);
+          avaliacao_final_id: avaliacaoFinalId,
+          status: 'pendente',
+          data_atribuicao: new Date().toISOString()
+        }));
 
-      if (projetoError) throw projetoError;
+        const { error: avaliacoesError } = await supabase
+          .from('avaliacoes')
+          .insert(avaliacoesParaCriar);
 
-      // Atualizar contador de projetos do parecerista
-      const { error: pareceristaError } = await supabase
-        .from('pareceristas')
-        .update({
-          projetos_em_analise: supabase.sql`projetos_em_analise + 1`
-        })
-        .eq('id', pareceristaId);
+        if (avaliacoesError) throw avaliacoesError;
 
-      if (pareceristaError) throw pareceristaError;
+        // Atualizar quantidade de pareceristas na avaliação final
+        const totalPareceristas = (avaliacoesExistentes?.length || 0) + novosPareceristas.length;
+        await supabase
+          .from('avaliacoes_final')
+          .update({ quantidade_pareceristas: totalPareceristas })
+          .eq('id', avaliacaoFinalId);
+
+        // Atualizar contador de projetos dos pareceristas
+        for (const id of novosPareceristas) {
+          await supabase
+            .from('pareceristas')
+            .update({
+              projetos_em_analise: supabase.sql`projetos_em_analise + 1`
+            })
+            .eq('id', id);
+        }
+      }
+
+      // Atualizar status do projeto para aguardando_avaliacao quando pareceristas são atribuídos
+      const totalAvaliacoes = (avaliacoesExistentes?.length || 0) + novosPareceristas.length;
+      if (totalAvaliacoes > 0 && projeto.status === 'aguardando_parecerista') {
+        const { error: projetoError } = await supabase
+          .from('projetos')
+          .update({
+            status: 'aguardando_avaliacao',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', projetoId);
+
+        if (projetoError) throw projetoError;
+      }
 
       // Recarregar dados
       await buscarProjetos();
       await buscarPareceristas();
 
       toast({
-        title: 'Parecerista atribuído!',
-        description: 'O parecerista foi atribuído ao projeto com sucesso.',
+        title: novosPareceristas.length > 1 ? 'Pareceristas atribuídos!' : 'Parecerista atribuído!',
+        description: `${novosPareceristas.length} parecerista(s) foi/foram atribuído(s) ao projeto com sucesso.`,
       });
     } catch (err) {
       console.error('Erro ao atribuir parecerista:', err);
       toast({
         title: 'Erro ao atribuir parecerista',
-        description: 'Não foi possível atribuir o parecerista ao projeto.',
+        description: 'Não foi possível atribuir o(s) parecerista(s) ao projeto.',
+        variant: 'destructive'
+      });
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Remover parecerista de um projeto
+  const removerParecerista = async (projetoId: string, pareceristaId: string) => {
+    try {
+      setLoading(true);
+
+      // Buscar avaliação
+      const { data: avaliacao, error: avaliacaoFetchError } = await supabase
+        .from('avaliacoes')
+        .select('id, status')
+        .eq('projeto_id', projetoId)
+        .eq('parecerista_id', pareceristaId)
+        .single();
+
+      if (avaliacaoFetchError) throw avaliacaoFetchError;
+
+      // Deletar avaliação
+      const { error: deleteError } = await supabase
+        .from('avaliacoes')
+        .delete()
+        .eq('id', avaliacao.id);
+
+      if (deleteError) throw deleteError;
+
+      // Atualizar contador do parecerista apenas se a avaliação não estava concluída
+      if (avaliacao.status !== 'avaliado') {
+        const { error: pareceristaError } = await supabase
+          .from('pareceristas')
+          .update({
+            projetos_em_analise: supabase.sql`GREATEST(0, projetos_em_analise - 1)`
+          })
+          .eq('id', pareceristaId);
+
+        if (pareceristaError) throw pareceristaError;
+      }
+
+      // Recarregar dados
+      await buscarProjetos();
+      await buscarPareceristas();
+
+      toast({
+        title: 'Parecerista removido!',
+        description: 'O parecerista foi removido do projeto com sucesso.',
+      });
+    } catch (err) {
+      console.error('Erro ao remover parecerista:', err);
+      toast({
+        title: 'Erro ao remover parecerista',
+        description: 'Não foi possível remover o parecerista do projeto.',
         variant: 'destructive'
       });
       throw err;
@@ -336,7 +471,9 @@ export function useProjetos() {
     loading,
     error,
     buscarProjetos,
+    buscarEditais,
     atribuirParecerista,
+    removerParecerista,
     decidirProjeto,
     filtrarProjetos,
     calcularMetricas,

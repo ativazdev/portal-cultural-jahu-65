@@ -137,6 +137,8 @@ export const PareceristaProjetos = () => {
     switch (status) {
       case 'rascunho':
         return <Badge className="bg-gray-100 text-gray-800">Rascunho</Badge>;
+      case 'aguardando_parecerista':
+        return <Badge className="bg-orange-100 text-orange-800">Aguardando Parecerista</Badge>;
       case 'aguardando_avaliacao':
         return <Badge className="bg-yellow-100 text-yellow-800">Aguardando Avaliação</Badge>;
       case 'recebido':
@@ -145,6 +147,10 @@ export const PareceristaProjetos = () => {
         return <Badge className="bg-orange-100 text-orange-800">Em Avaliação</Badge>;
       case 'avaliado':
         return <Badge className="bg-purple-100 text-purple-800">Avaliado</Badge>;
+      case 'habilitado':
+        return <Badge className="bg-green-100 text-green-800">Habilitado</Badge>;
+      case 'nao_habilitado':
+        return <Badge className="bg-red-100 text-red-800">Não Habilitado</Badge>;
       case 'aprovado':
         return <Badge className="bg-green-100 text-green-800">Aprovado</Badge>;
       case 'rejeitado':
@@ -230,7 +236,6 @@ export const PareceristaProjetos = () => {
                       <div className="flex items-center gap-3 mb-2">
                         <h3 className="font-semibold text-lg">{projeto.nome}</h3>
                         {getStatusBadge(projeto.status_avaliacao)}
-                        {getProjetoStatusBadge(projeto.status_projeto)}
                       </div>
                       <p className="text-sm text-gray-600 mb-2 line-clamp-2">
                         {projeto.descricao}

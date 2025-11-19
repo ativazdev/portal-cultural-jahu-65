@@ -384,7 +384,7 @@ export const ProponenteCadastrarProjeto = () => {
       }
 
       // Buscar prefeitura_id
-      const { data: proponenteData } = await supabase
+      const { data: proponenteData } = await (supabase as any)
         .from('proponentes')
         .select('prefeitura_id')
         .eq('id', formData.proponente_id)
@@ -636,13 +636,42 @@ export const ProponenteCadastrarProjeto = () => {
       setSaving(true);
 
       // Buscar prefeitura_id
-      const { data: proponenteData } = await supabase
+      const { data: proponenteData } = await (supabase as any)
         .from('proponentes')
         .select('prefeitura_id')
         .eq('id', formData.proponente_id)
         .single();
 
       if (!proponenteData) throw new Error('Proponente não encontrado');
+
+      // Gerar número de inscrição se não existir
+      let numeroInscricao = projetoExistente?.numero_inscricao || null;
+      
+      // Se não tiver número de inscrição, gerar um novo
+      if (!numeroInscricao) {
+        // Buscar código do edital
+        const { data: editalData } = await (supabase as any)
+          .from('editais')
+          .select('codigo')
+          .eq('id', editalId)
+          .single();
+
+        const codigoEdital = editalData?.codigo || 'EDT';
+
+        // Contar projetos existentes no edital com número de inscrição
+        const { count } = await (supabase as any)
+          .from('projetos')
+          .select('*', { count: 'exact', head: true })
+          .eq('edital_id', editalId)
+          .not('numero_inscricao', 'is', null);
+
+        // Gerar número sequencial (001, 002, 003...)
+        const proximoNumero = (count || 0) + 1;
+        const numeroFormatado = String(proximoNumero).padStart(3, '0');
+        
+        // Formato: CÓDIGO-001 (ex: EDT-001)
+        numeroInscricao = `${codigoEdital}-${numeroFormatado}`;
+      }
 
       const projetoData = {
         prefeitura_id: proponenteData.prefeitura_id,
@@ -669,8 +698,9 @@ export const ProponenteCadastrarProjeto = () => {
         outras_fontes: formData.outras_fontes || false,
         tipos_outras_fontes: formData.tipos_outras_fontes || null,
         detalhes_outras_fontes: formData.detalhes_outras_fontes || null,
-        status: 'aguardando_avaliacao',
-        data_submissao: new Date().toISOString()
+        status: 'aguardando_parecerista', // Projeto aguarda atribuição de pareceristas pela prefeitura
+        data_submissao: new Date().toISOString(),
+        numero_inscricao: numeroInscricao
       };
 
       let projetoId;
@@ -704,21 +734,7 @@ export const ProponenteCadastrarProjeto = () => {
         salvarOrcamento(projetoId)
       ]);
 
-      // Criar avaliação automaticamente
-      const { error: avaliacaoError } = await (supabase as any)
-        .from('avaliacoes')
-        .insert([{
-          prefeitura_id: proponenteData.prefeitura_id,
-          projeto_id: projetoId,
-          parecerista_id: null,
-          status: 'aguardando_parecerista',
-          data_atribuicao: new Date().toISOString()
-        }]);
-
-      if (avaliacaoError) {
-        console.error('Erro ao criar avaliação:', avaliacaoError);
-        // Não falhar a inscrição se a avaliação não for criada
-      }
+      // Não criar avaliação automaticamente - a prefeitura definirá os pareceristas
 
       toast({
         title: "Projeto inscrito",
@@ -928,7 +944,19 @@ export const ProponenteCadastrarProjeto = () => {
                 </SelectContent>
               </Select>
               {proponentes.length === 0 && (
-                <p className="text-sm text-red-500 mt-1">Você não possui proponentes cadastrados. Cadastre primeiro em Proponentes.</p>
+                <div className="mt-2 space-y-2">
+                  <p className="text-sm text-red-500">Você não possui proponentes cadastrados. Cadastre primeiro em Proponentes.</p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate(`/${nomePrefeitura}/proponente/proponentes`)}
+                    className="w-full sm:w-auto"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Ir para Cadastro de Proponentes
+                  </Button>
+                </div>
               )}
             </div>
 
@@ -2033,8 +2061,16 @@ export const ProponenteCadastrarProjeto = () => {
                   setShowWarningModal(false);
                 }}
                 className="w-full whitespace-normal"
+                disabled={saving}
               >
-                Apagar projeto em rascunho e criar novo
+                {saving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Apagando...
+                  </>
+                ) : (
+                  'Apagar projeto em rascunho e criar novo'
+                )}
               </Button>
               <Button
                 onClick={async () => {
@@ -2046,8 +2082,16 @@ export const ProponenteCadastrarProjeto = () => {
                   });
                 }}
                 className="w-full whitespace-normal"
+                disabled={saving}
               >
-                Finalizar projeto em rascunho
+                {saving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Salvando...
+                  </>
+                ) : (
+                  'Finalizar projeto em rascunho'
+                )}
               </Button>
             </DialogFooter>
           </DialogPrimitive.Content>

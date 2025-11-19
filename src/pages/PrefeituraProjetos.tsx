@@ -29,13 +29,18 @@ import {
 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { PrefeituraLayout } from "@/components/layout/PrefeituraLayout";
 import { useProjetosEdital } from "@/hooks/useProjetosEdital";
 import { usePrefeituraAuth } from "@/hooks/usePrefeituraAuth";
 import { Projeto } from "@/services/projetoService";
 import { gerarPDF } from "@/utils/pdfGenerator";
+import { supabase } from "@/integrations/supabase/client";
+import { recursosService, Recurso } from "@/services/recursosService";
+import { AlertCircle, MessageSquare, Loader2 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export const PrefeituraProjetos = () => {
   const { nomePrefeitura, editalId } = useParams<{ nomePrefeitura: string; editalId: string }>();
@@ -57,10 +62,39 @@ export const PrefeituraProjetos = () => {
   const [activeFilters, setActiveFilters] = useState<Record<string, string>>({});
   const [filteredData, setFilteredData] = useState<Projeto[]>([]);
 
-  // Estados para modal de exportação
-  const [showExportModal, setShowExportModal] = useState(false);
-  const [tipoExportacao, setTipoExportacao] = useState<'ranking' | 'aprovados' | 'proponentes'>('ranking');
-  const [modalidadesSelecionadas, setModalidadesSelecionadas] = useState<string[]>([]);
+
+  // Estado para recursos pendentes (para badges)
+  const [recursosPendentes, setRecursosPendentes] = useState<{ recursos: number; contraRazoes: number; total: number }>({ recursos: 0, contraRazoes: 0, total: 0 });
+  // Estado para todos os recursos/contra-razões (para exibir nas abas)
+  const [projetosComRecursos, setProjetosComRecursos] = useState<Array<{ projeto: any; recurso: Recurso }>>([]);
+  const [projetosComContraRazoes, setProjetosComContraRazoes] = useState<Array<{ projeto: any; contraRazao: Recurso }>>([]);
+  const [activeTab, setActiveTab] = useState<'projetos' | 'recursos' | 'contra_razao'>('projetos');
+  const [showModalResponder, setShowModalResponder] = useState(false);
+  const [recursoParaResponder, setRecursoParaResponder] = useState<Recurso | null>(null);
+  const [respostaRecurso, setRespostaRecurso] = useState('');
+  const [statusResposta, setStatusResposta] = useState<'deferido' | 'indeferido'>('deferido');
+  const [respondendoRecurso, setRespondendoRecurso] = useState(false);
+  const [projetoProcessando, setProjetoProcessando] = useState<string | null>(null);
+  const { user, profile } = usePrefeituraAuth();
+
+
+  // Buscar recursos pendentes (para badges) e todos os recursos/contra-razões (para abas)
+  useEffect(() => {
+    const carregarRecursos = async () => {
+      if (editalId) {
+        // Buscar apenas pendentes para os badges
+        const dados = await recursosService.getPendentesByEdital(editalId);
+        setRecursosPendentes(dados);
+        
+        // Buscar TODOS os recursos e contra-razões para exibir nas abas
+        const projetosRecursos = await recursosService.getProjetosComRecursos(editalId);
+        const projetosContraRazoes = await recursosService.getProjetosComContraRazoes(editalId);
+        setProjetosComRecursos(projetosRecursos);
+        setProjetosComContraRazoes(projetosContraRazoes);
+      }
+    };
+    carregarRecursos();
+  }, [editalId]);
 
   // Aplicar filtros e busca
   useEffect(() => {
@@ -138,10 +172,13 @@ export const PrefeituraProjetos = () => {
       render: (item) => {
         const statusConfig = {
           'rascunho': { label: 'Rascunho', color: 'bg-gray-100 text-gray-800', icon: <FileText className="h-3 w-3" /> },
+          'aguardando_parecerista': { label: 'Aguardando Parecerista', color: 'bg-orange-100 text-orange-800', icon: <Clock className="h-3 w-3" /> },
           'aguardando_avaliacao': { label: 'Aguardando Avaliação', color: 'bg-yellow-100 text-yellow-800', icon: <Clock className="h-3 w-3" /> },
           'recebido': { label: 'Recebido', color: 'bg-blue-100 text-blue-800', icon: <CheckCircle className="h-3 w-3" /> },
           'em_avaliacao': { label: 'Em Avaliação', color: 'bg-orange-100 text-orange-800', icon: <Search className="h-3 w-3" /> },
           'avaliado': { label: 'Avaliado', color: 'bg-purple-100 text-purple-800', icon: <CheckCircle className="h-3 w-3" /> },
+          'habilitado': { label: 'Habilitado', color: 'bg-green-100 text-green-800', icon: <CheckCircle className="h-3 w-3" /> },
+          'nao_habilitado': { label: 'Não Habilitado', color: 'bg-red-100 text-red-800', icon: <XCircle className="h-3 w-3" /> },
           'aprovado': { label: 'Aprovado', color: 'bg-green-100 text-green-800', icon: <CheckCircle className="h-3 w-3" /> },
           'rejeitado': { label: 'Rejeitado', color: 'bg-red-100 text-red-800', icon: <XCircle className="h-3 w-3" /> },
           'em_execucao': { label: 'Em Execução', color: 'bg-purple-100 text-purple-800', icon: <PlayCircle className="h-3 w-3" /> },
@@ -213,6 +250,66 @@ export const PrefeituraProjetos = () => {
     }
   ];
 
+  // Função para aprovar projeto
+  const handleAprovarProjeto = async (projeto: Projeto) => {
+    try {
+      setProjetoProcessando(projeto.id);
+      const { error } = await (supabase
+        .from('projetos') as any)
+        .update({ status: 'aprovado' })
+        .eq('id', projeto.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: `Projeto "${projeto.nome}" aprovado com sucesso!`,
+      });
+
+      // Recarregar projetos
+      await refresh();
+    } catch (error) {
+      console.error('Erro ao aprovar projeto:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao aprovar projeto. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setProjetoProcessando(null);
+    }
+  };
+
+  // Função para recusar projeto
+  const handleRecusarProjeto = async (projeto: Projeto) => {
+    try {
+      setProjetoProcessando(projeto.id);
+      const { error } = await (supabase
+        .from('projetos') as any)
+        .update({ status: 'rejeitado' })
+        .eq('id', projeto.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: `Projeto "${projeto.nome}" recusado com sucesso!`,
+      });
+
+      // Recarregar projetos
+      await refresh();
+    } catch (error) {
+      console.error('Erro ao recusar projeto:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao recusar projeto. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setProjetoProcessando(null);
+    }
+  };
+
   // Configuração das ações
   const actions: ListAction[] = [
     {
@@ -223,6 +320,26 @@ export const PrefeituraProjetos = () => {
       onClick: (item) => {
         navigate(`/${nomePrefeitura}/editais/${editalId}/projetos/${item.id}`);
       }
+    },
+    {
+      key: 'aprovar',
+      label: 'Aprovar',
+      icon: <CheckCircle className="h-4 w-4" />,
+      variant: 'default',
+      onClick: (item) => handleAprovarProjeto(item),
+      show: (item) => item.status === 'habilitado',
+      className: 'bg-green-600 hover:bg-green-700 text-white',
+      loading: (item) => projetoProcessando === item.id
+    },
+    {
+      key: 'recusar',
+      label: 'Recusar',
+      icon: <XCircle className="h-4 w-4" />,
+      variant: 'default',
+      onClick: (item) => handleRecusarProjeto(item),
+      show: (item) => item.status === 'habilitado',
+      className: 'bg-red-600 hover:bg-red-700 text-white',
+      loading: (item) => projetoProcessando === item.id
     }
   ];
 
@@ -240,7 +357,7 @@ export const PrefeituraProjetos = () => {
       value: stats.aguardando_avaliacao.toString(),
       subtitle: 'Aguardando início da avaliação',
       icon: <Clock className="h-4 w-4" />,
-      color: 'yellow'
+      color: 'orange'
     },
     {
       title: 'Em Avaliação',
@@ -269,6 +386,20 @@ export const PrefeituraProjetos = () => {
       subtitle: 'Valor solicitado',
       icon: <DollarSign className="h-4 w-4" />,
       color: 'purple'
+    },
+    {
+      title: 'Recursos Pendentes',
+      value: recursosPendentes.recursos.toString(),
+      subtitle: 'Aguardando resposta',
+      icon: <AlertCircle className="h-4 w-4" />,
+      color: recursosPendentes.recursos > 0 ? 'red' : 'gray'
+    },
+    {
+      title: 'Contra-razões Pendentes',
+      value: recursosPendentes.contraRazoes.toString(),
+      subtitle: 'Aguardando resposta',
+      icon: <AlertCircle className="h-4 w-4" />,
+      color: recursosPendentes.contraRazoes > 0 ? 'orange' : 'gray'
     }
   ];
 
@@ -306,186 +437,302 @@ export const PrefeituraProjetos = () => {
           </Button>
           <Button
             onClick={() => {
-              setShowExportModal(true);
-              setModalidadesSelecionadas([]);
+              navigate(`/${nomePrefeitura}/editais/${editalId}/exportar-ranking`);
             }}
             className="flex items-center gap-2"
           >
             <Download className="h-4 w-4" />
-            Exportar
+            Exportar Ranking
           </Button>
         </div>
 
-        <ListTemplate
-          data={filteredData}
-          title="Projetos do Edital"
-          subtitle="Visualize e gerencie os projetos submetidos para este edital"
-          columns={columns}
-          filters={filters}
-          actions={actions}
-          statusCards={statusCards}
-          searchable={true}
-          selectable={false}
-          sortable={true}
-          loading={loading}
-          onSearch={handleSearch}
-          onFilterChange={handleFilterChange}
-          onSort={(column, direction) => console.log('Ordenação:', column, direction)}
-          onRefresh={refresh}
-        />
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="projetos">Projetos</TabsTrigger>
+            <TabsTrigger value="recursos">
+              Recursos
+              {recursosPendentes.recursos > 0 && (
+                <Badge className="ml-2 bg-red-500">{recursosPendentes.recursos}</Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="contra_razao">
+              Contra-razão
+              {recursosPendentes.contraRazoes > 0 && (
+                <Badge className="ml-2 bg-orange-500">{recursosPendentes.contraRazoes}</Badge>
+              )}
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="projetos" className="space-y-4">
+            <ListTemplate
+              data={filteredData}
+              title="Projetos do Edital"
+              subtitle="Visualize e gerencie os projetos submetidos para este edital"
+              columns={columns}
+              filters={filters}
+              actions={actions}
+              statusCards={statusCards}
+              searchable={true}
+              selectable={false}
+              sortable={true}
+              loading={loading}
+              onSearch={handleSearch}
+              onFilterChange={handleFilterChange}
+              onSort={(column, direction) => console.log('Ordenação:', column, direction)}
+              onRefresh={refresh}
+            />
+          </TabsContent>
+
+          <TabsContent value="recursos" className="space-y-4">
+            <div className="bg-white rounded-lg border p-6">
+              <h3 className="text-lg font-semibold mb-4">Recursos</h3>
+              {projetosComRecursos.length === 0 ? (
+                <p className="text-gray-500 text-center py-8">Nenhum recurso encontrado</p>
+              ) : (
+                <div className="space-y-4">
+                  {projetosComRecursos.map((item) => (
+                    <div key={item.recurso.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <h4 className="font-semibold text-gray-900">{item.projeto.nome}</h4>
+                            <Badge variant="outline" className="text-xs">
+                              {item.projeto.numero_inscricao}
+                            </Badge>
+                            <Badge 
+                              className={
+                                item.recurso.status === 'pendente' ? 'bg-yellow-100 text-yellow-800' :
+                                item.recurso.status === 'em_analise' ? 'bg-blue-100 text-blue-800' :
+                                item.recurso.status === 'deferido' ? 'bg-green-100 text-green-800' :
+                                'bg-red-100 text-red-800'
+                              }
+                            >
+                              {item.recurso.status === 'pendente' ? 'Pendente' :
+                               item.recurso.status === 'em_analise' ? 'Em Análise' :
+                               item.recurso.status === 'deferido' ? 'Deferido' :
+                               'Indeferido'}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-gray-600 mb-2">
+                            <strong>Justificativa:</strong> {item.recurso.justificativa}
+                          </p>
+                          {item.recurso.resposta && (
+                            <div className="mt-2 p-3 bg-gray-50 rounded-lg">
+                              <p className="text-sm font-medium text-gray-700 mb-1">Resposta:</p>
+                              <p className="text-sm text-gray-600">{item.recurso.resposta}</p>
+                              {item.recurso.data_resposta && (
+                                <p className="text-xs text-gray-500 mt-1">
+                                  Respondido em: {new Date(item.recurso.data_resposta).toLocaleDateString('pt-BR')}
+                                </p>
+                              )}
+                            </div>
+                          )}
+                          <p className="text-xs text-gray-500 mt-2">
+                            Enviado em: {new Date(item.recurso.created_at).toLocaleDateString('pt-BR')}
+                          </p>
+                        </div>
+                        {item.recurso.status === 'pendente' && (
+                          <Button
+                            onClick={() => {
+                              setRecursoParaResponder(item.recurso);
+                              setShowModalResponder(true);
+                              setRespostaRecurso('');
+                              setStatusResposta('deferido');
+                            }}
+                            className="ml-4"
+                          >
+                            <MessageSquare className="h-4 w-4 mr-2" />
+                            Responder Recurso
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="contra_razao" className="space-y-4">
+            <div className="bg-white rounded-lg border p-6">
+              <h3 className="text-lg font-semibold mb-4">Contra-razões</h3>
+              {projetosComContraRazoes.length === 0 ? (
+                <p className="text-gray-500 text-center py-8">Nenhuma contra-razão encontrada</p>
+              ) : (
+                <div className="space-y-4">
+                  {projetosComContraRazoes.map((item) => (
+                    <div key={item.contraRazao.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <h4 className="font-semibold text-gray-900">{item.projeto.nome}</h4>
+                            <Badge variant="outline" className="text-xs">
+                              {item.projeto.numero_inscricao}
+                            </Badge>
+                            <Badge 
+                              className={
+                                item.contraRazao.status === 'pendente' ? 'bg-yellow-100 text-yellow-800' :
+                                item.contraRazao.status === 'em_analise' ? 'bg-blue-100 text-blue-800' :
+                                item.contraRazao.status === 'deferido' ? 'bg-green-100 text-green-800' :
+                                'bg-red-100 text-red-800'
+                              }
+                            >
+                              {item.contraRazao.status === 'pendente' ? 'Pendente' :
+                               item.contraRazao.status === 'em_analise' ? 'Em Análise' :
+                               item.contraRazao.status === 'deferido' ? 'Deferido' :
+                               'Indeferido'}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-gray-600 mb-2">
+                            <strong>Justificativa:</strong> {item.contraRazao.justificativa}
+                          </p>
+                          {item.contraRazao.resposta && (
+                            <div className="mt-2 p-3 bg-gray-50 rounded-lg">
+                              <p className="text-sm font-medium text-gray-700 mb-1">Resposta:</p>
+                              <p className="text-sm text-gray-600">{item.contraRazao.resposta}</p>
+                              {item.contraRazao.data_resposta && (
+                                <p className="text-xs text-gray-500 mt-1">
+                                  Respondido em: {new Date(item.contraRazao.data_resposta).toLocaleDateString('pt-BR')}
+                                </p>
+                              )}
+                            </div>
+                          )}
+                          <p className="text-xs text-gray-500 mt-2">
+                            Enviado em: {new Date(item.contraRazao.created_at).toLocaleDateString('pt-BR')}
+                          </p>
+                        </div>
+                        {item.contraRazao.status === 'pendente' && (
+                          <Button
+                            onClick={() => {
+                              setRecursoParaResponder(item.contraRazao);
+                              setShowModalResponder(true);
+                              setRespostaRecurso('');
+                              setStatusResposta('deferido');
+                            }}
+                            className="ml-4"
+                          >
+                            <MessageSquare className="h-4 w-4 mr-2" />
+                            Responder Contra-razão
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
 
-      {/* Modal de Exportação */}
-      <Dialog open={showExportModal} onOpenChange={setShowExportModal}>
-        <DialogContent className="sm:max-w-2xl">
+      {/* Modal de Responder Recurso/Contra-razão */}
+      <Dialog open={showModalResponder} onOpenChange={setShowModalResponder}>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Exportar Projetos</DialogTitle>
+            <DialogTitle>
+              Responder {recursoParaResponder?.tipo === 'recurso' ? 'Recurso' : 'Contra-razão'}
+            </DialogTitle>
             <DialogDescription>
-              Selecione o tipo de exportação e as modalidades desejadas
+              Forneça uma resposta para o {recursoParaResponder?.tipo === 'recurso' ? 'recurso' : 'contra-razão'} e defina o status.
             </DialogDescription>
           </DialogHeader>
-          
-          <div className="space-y-6 py-4">
-            {/* Tipo de Exportação */}
-            <div className="space-y-3">
-              <Label>Tipo de Exportação</Label>
-              <div className="grid grid-cols-1 gap-3">
-                <div 
-                  className={`border rounded-lg p-4 cursor-pointer transition-colors ${
-                    tipoExportacao === 'ranking' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                  onClick={() => setTipoExportacao('ranking')}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className={`w-5 h-5 rounded-full border-2 mt-0.5 flex items-center justify-center ${
-                      tipoExportacao === 'ranking' ? 'border-blue-500 bg-blue-500' : 'border-gray-300'
-                    }`}>
-                      {tipoExportacao === 'ranking' && <div className="w-2 h-2 bg-white rounded-full"></div>}
-                    </div>
-                    <div>
-                      <h4 className="font-medium">Ranking de Classificação</h4>
-                      <p className="text-sm text-gray-500">Separados por modalidade</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div 
-                  className={`border rounded-lg p-4 cursor-pointer transition-colors ${
-                    tipoExportacao === 'aprovados' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                  onClick={() => setTipoExportacao('aprovados')}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className={`w-5 h-5 rounded-full border-2 mt-0.5 flex items-center justify-center ${
-                      tipoExportacao === 'aprovados' ? 'border-blue-500 bg-blue-500' : 'border-gray-300'
-                    }`}>
-                      {tipoExportacao === 'aprovados' && <div className="w-2 h-2 bg-white rounded-full"></div>}
-                    </div>
-                    <div>
-                      <h4 className="font-medium">Projetos Aprovados</h4>
-                      <p className="text-sm text-gray-500">Separados por modalidade</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div 
-                  className={`border rounded-lg p-4 cursor-pointer transition-colors ${
-                    tipoExportacao === 'proponentes' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                  onClick={() => setTipoExportacao('proponentes')}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className={`w-5 h-5 rounded-full border-2 mt-0.5 flex items-center justify-center ${
-                      tipoExportacao === 'proponentes' ? 'border-blue-500 bg-blue-500' : 'border-gray-300'
-                    }`}>
-                      {tipoExportacao === 'proponentes' && <div className="w-2 h-2 bg-white rounded-full"></div>}
-                    </div>
-                    <div>
-                      <h4 className="font-medium">Proponentes Contemplados</h4>
-                      <p className="text-sm text-gray-500">Com dados do projeto, separados por modalidade</p>
-                    </div>
-                  </div>
-                </div>
+          <div className="space-y-4 py-4">
+            {recursoParaResponder && (
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <p className="text-sm font-medium text-gray-700 mb-2">Justificativa do {recursoParaResponder.tipo === 'recurso' ? 'recurso' : 'contra-razão'}:</p>
+                <p className="text-sm text-gray-600">{recursoParaResponder.justificativa}</p>
               </div>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="status">Status da Resposta</Label>
+              <Select value={statusResposta} onValueChange={(v) => setStatusResposta(v as any)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="deferido">Deferido</SelectItem>
+                  <SelectItem value="indeferido">Indeferido</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-
-            {/* Modalidades */}
-            <div className="space-y-3">
-              <Label>Modalidades</Label>
-              <div className="grid grid-cols-2 gap-3 max-h-60 overflow-y-auto border rounded-lg p-3">
-                {Array.from(new Set(projetos.map(p => p.modalidade))).map((modalidade) => (
-                  <div key={modalidade} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`modalidade-${modalidade}`}
-                      checked={modalidadesSelecionadas.includes(modalidade)}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          setModalidadesSelecionadas([...modalidadesSelecionadas, modalidade]);
-                        } else {
-                          setModalidadesSelecionadas(modalidadesSelecionadas.filter(m => m !== modalidade));
-                        }
-                      }}
-                    />
-                    <Label htmlFor={`modalidade-${modalidade}`} className="text-sm cursor-pointer">
-                      {modalidade}
-                    </Label>
-                  </div>
-                ))}
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="resposta">Resposta</Label>
+              <Textarea
+                id="resposta"
+                placeholder="Digite sua resposta..."
+                value={respostaRecurso}
+                onChange={(e) => setRespostaRecurso(e.target.value)}
+                rows={6}
+              />
             </div>
           </div>
-
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowExportModal(false)}>
+            <Button variant="outline" onClick={() => setShowModalResponder(false)}>
               Cancelar
             </Button>
             <Button
               onClick={async () => {
+                if (!recursoParaResponder || !respostaRecurso.trim()) {
+                  toast({
+                    title: "Erro",
+                    description: "Por favor, preencha a resposta.",
+                    variant: "destructive"
+                  });
+                  return;
+                }
+
                 try {
-                  // Filtrar projetos pelas modalidades selecionadas
-                  const projetosParaExportar = projetos.filter(p => 
-                    modalidadesSelecionadas.includes(p.modalidade)
-                  );
-
-                  if (projetosParaExportar.length === 0) {
-                    toast({
-                      title: "Atenção",
-                      description: "Nenhum projeto encontrado para as modalidades selecionadas.",
-                      variant: "destructive",
-                    });
-                    return;
-                  }
-
-                  // Gerar PDF
-                  await gerarPDF({
-                    tipo: tipoExportacao,
-                    modalidades: modalidadesSelecionadas,
-                    projetos: projetosParaExportar,
+                  setRespondendoRecurso(true);
+                  await recursosService.update(recursoParaResponder.id, {
+                    resposta: respostaRecurso,
+                    status: statusResposta,
+                    respondido_por: profile?.id || user?.id
                   });
 
                   toast({
                     title: "Sucesso",
-                    description: "PDF gerado com sucesso!",
+                    description: `${recursoParaResponder.tipo === 'recurso' ? 'Recurso' : 'Contra-razão'} respondido com sucesso!`,
                   });
 
-                  setShowExportModal(false);
-                } catch (error) {
-                  console.error('Erro ao gerar PDF:', error);
+                  // Recarregar dados
+                  const dados = await recursosService.getPendentesByEdital(editalId || '');
+                  setRecursosPendentes(dados);
+                  // Recarregar todos os recursos/contra-razões (não apenas pendentes)
+                  const projetosRecursos = await recursosService.getProjetosComRecursos(editalId || '');
+                  const projetosContraRazoes = await recursosService.getProjetosComContraRazoes(editalId || '');
+                  setProjetosComRecursos(projetosRecursos);
+                  setProjetosComContraRazoes(projetosContraRazoes);
+
+                  setShowModalResponder(false);
+                  setRecursoParaResponder(null);
+                  setRespostaRecurso('');
+                } catch (error: any) {
+                  console.error('Erro ao responder recurso:', error);
+                  const errorMessage = error?.message || error?.error?.message || 'Erro desconhecido';
                   toast({
                     title: "Erro",
-                    description: "Erro ao gerar PDF. Tente novamente.",
-                    variant: "destructive",
+                    description: errorMessage || "Não foi possível responder. Tente novamente.",
+                    variant: "destructive"
                   });
+                } finally {
+                  setRespondendoRecurso(false);
                 }
               }}
-              disabled={modalidadesSelecionadas.length === 0}
+              disabled={respondendoRecurso}
             >
-              <Download className="h-4 w-4 mr-2" />
-              Exportar PDF
+              {respondendoRecurso ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Enviando...
+                </>
+              ) : (
+                'Enviar Resposta'
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
     </PrefeituraLayout>
   );
 };

@@ -14,6 +14,7 @@ import {
   LogOut,
   ChevronDown,
   ChevronRight,
+  Headphones,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 // import { usePrefeituraUrl } from "@/contexts/PrefeituraContext";
@@ -27,6 +28,7 @@ import {
   SidebarMenuButton,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { ModalContatoSuporte } from "@/components/ModalContatoSuporte";
 
 const menuItemsBase = [
   { title: "Início", icon: Home, path: "dashboard" },
@@ -51,6 +53,7 @@ export const DashboardSidebar = () => {
   const getUrl = (path: string) => path; // Mock function
   const [minhaContaOpen, setMinhaContaOpen] = useState(true);
   const [ajudaOpen, setAjudaOpen] = useState(false);
+  const [modalSuporteOpen, setModalSuporteOpen] = useState(false);
   
   // Gerar menus com URLs da prefeitura
   const menuItems = useMemo(() => menuItemsBase.map(item => ({ ...item, url: getUrl(item.path) })), [getUrl]);
@@ -122,6 +125,14 @@ export const DashboardSidebar = () => {
               
               <SidebarMenuItem>
                 <SidebarMenuButton 
+                  onClick={() => setModalSuporteOpen(true)}
+                >
+                  <Headphones className="h-4 w-4" />
+                  {open && <span>Suporte</span>}
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton 
                   onClick={handleLogout}
                   className="text-red-600 hover:text-red-700 hover:bg-red-50"
                 >
@@ -133,6 +144,12 @@ export const DashboardSidebar = () => {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      
+      {/* Modal de Contato Suporte */}
+      <ModalContatoSuporte
+        open={modalSuporteOpen}
+        onClose={() => setModalSuporteOpen(false)}
+      />
     </Sidebar>
   );
 };

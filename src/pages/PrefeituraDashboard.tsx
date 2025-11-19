@@ -12,7 +12,8 @@ import {
   BarChart3,
   PieChart,
   Building2,
-  LogOut
+  LogOut,
+  AlertCircle
 } from "lucide-react";
 import { PrefeituraLayout } from "@/components/layout/PrefeituraLayout";
 import { usePrefeituraAuth } from "@/hooks/usePrefeituraAuth";
@@ -80,6 +81,20 @@ export const PrefeituraDashboard = () => {
       subtitle: "aguardando resposta",
       color: "red",
       icon: <HelpCircle className="h-6 w-6" />
+    },
+    {
+      title: "Recursos Pendentes",
+      value: dashboardData.cards.recursosPendentes,
+      subtitle: "aguardando resposta",
+      color: dashboardData.cards.recursosPendentes > 0 ? "red" : "gray",
+      icon: <AlertCircle className="h-6 w-6" />
+    },
+    {
+      title: "Contra-razões Pendentes",
+      value: dashboardData.cards.contraRazoesPendentes,
+      subtitle: "aguardando resposta",
+      color: dashboardData.cards.contraRazoesPendentes > 0 ? "orange" : "gray",
+      icon: <AlertCircle className="h-6 w-6" />
     }
   ] : [];
 

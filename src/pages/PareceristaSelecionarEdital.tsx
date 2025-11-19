@@ -130,19 +130,6 @@ export const PareceristaSelecionarEdital = () => {
     navigate(`/${nomePrefeitura}/parecerista/${editalId}/dashboard`);
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'ativo':
-        return <Badge className="bg-green-100 text-green-800">Ativo</Badge>;
-      case 'rascunho':
-        return <Badge className="bg-yellow-100 text-yellow-800">Rascunho</Badge>;
-      case 'arquivado':
-        return <Badge className="bg-gray-100 text-gray-800">Arquivado</Badge>;
-      default:
-        return <Badge>{status}</Badge>;
-    }
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center p-4">
@@ -203,14 +190,11 @@ export const PareceristaSelecionarEdital = () => {
                 onClick={() => handleSelecionarEdital(edital.id)}
               >
                 <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <CardTitle className="text-lg">{edital.nome}</CardTitle>
-                      <CardDescription className="mt-1">
-                        {edital.codigo}
-                      </CardDescription>
-                    </div>
-                    {getStatusBadge(edital.status)}
+                  <div>
+                    <CardTitle className="text-lg">{edital.nome}</CardTitle>
+                    <CardDescription className="mt-1">
+                      {edital.codigo}
+                    </CardDescription>
                   </div>
                 </CardHeader>
                 <CardContent>

@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { avaliacaoService, Avaliacao, CreateAvaliacaoData, UpdateAvaliacaoData } from '@/services/avaliacaoService';
 
 export const useAvaliacoes = (projetoId: string, prefeituraId: string) => {
   const [avaliacoes, setAvaliacoes] = useState<Avaliacao[]>([]);
+  const [avaliacaoFinal, setAvaliacaoFinal] = useState<any | null>(null);
   const [pareceristas, setPareceristas] = useState<Array<{
     id: string;
     nome: string;
@@ -19,8 +21,14 @@ export const useAvaliacoes = (projetoId: string, prefeituraId: string) => {
     try {
       setLoading(true);
       setError(null);
+      
+      // Sempre buscar avaliações individuais
       const data = await avaliacaoService.getByProjeto(projetoId);
       setAvaliacoes(data);
+      
+      // Sempre buscar avaliação final (se existir)
+      const final = await avaliacaoService.getAvaliacaoFinal(projetoId);
+      setAvaliacaoFinal(final);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao carregar avaliações');
     } finally {
@@ -88,6 +96,7 @@ export const useAvaliacoes = (projetoId: string, prefeituraId: string) => {
 
   return {
     avaliacoes,
+    avaliacaoFinal,
     pareceristas,
     loading,
     error,

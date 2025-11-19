@@ -284,7 +284,37 @@ export const ProponenteProponentes = () => {
     inscricaoMunicipal: "",
     nomeResponsavel: "",
     cpfResponsavel: "",
+    rgResponsavel: "",
+    dataNascimentoResponsavel: "",
+    telefoneResponsavel: "",
+    emailResponsavel: "",
     cargoResponsavel: "",
+    cepResponsavel: "",
+    enderecoResponsavel: "",
+    numeroResponsavel: "",
+    complementoResponsavel: "",
+    cidadeResponsavel: "",
+    estadoResponsavel: "",
+    comunidadeTradicionalResponsavel: "",
+    outraComunidadeResponsavel: "",
+    generoResponsavel: "",
+    racaResponsavel: "",
+    pcdResponsavel: "",
+    tipoDeficienciaResponsavel: "",
+    outraDeficienciaResponsavel: "",
+    escolaridadeResponsavel: "",
+    rendaMensalResponsavel: "",
+    programaSocialResponsavel: "",
+    outroProgramaSocialResponsavel: "",
+    concorreCotasResponsavel: "",
+    tipoCotasResponsavel: "",
+    funcaoArtisticaResponsavel: "",
+    outraFuncaoArtisticaResponsavel: "",
+    profissaoResponsavel: "",
+    miniCurriculoResponsavel: "",
+    enderecoSede: "",
+    numeroSede: "",
+    complementoSede: "",
     
     // Dados bancários
     banco: "",
@@ -373,8 +403,19 @@ export const ProponenteProponentes = () => {
       concorreCotas: false, tipoCotas: "",
       funcaoArtistica: "", outraFuncaoArtistica: "",
       representaColetivo: false, nomeColetivo: "", anoColetivo: "", quantidadePessoas: "", membrosColetivo: "", profissao: "",
-      cnpj: "", razaoSocial: "", inscricaoEstadual: "", inscricaoMunicipal: "",
-      nomeResponsavel: "", cpfResponsavel: "", cargoResponsavel: "",
+      cnpj: "", razaoSocial: "", nomeFantasia: "", inscricaoEstadual: "", inscricaoMunicipal: "",
+      nomeResponsavel: "", cpfResponsavel: "", rgResponsavel: "", dataNascimentoResponsavel: "",
+      telefoneResponsavel: "", emailResponsavel: "", cargoResponsavel: "",
+      cepResponsavel: "", enderecoResponsavel: "", numeroResponsavel: "", complementoResponsavel: "",
+      cidadeResponsavel: "", estadoResponsavel: "",
+      comunidadeTradicionalResponsavel: "", outraComunidadeResponsavel: "",
+      generoResponsavel: "", racaResponsavel: "",
+      pcdResponsavel: "", tipoDeficienciaResponsavel: "", outraDeficienciaResponsavel: "",
+      escolaridadeResponsavel: "", rendaMensalResponsavel: "",
+      programaSocialResponsavel: "", outroProgramaSocialResponsavel: "",
+      concorreCotasResponsavel: "", tipoCotasResponsavel: "",
+      funcaoArtisticaResponsavel: "", outraFuncaoArtisticaResponsavel: "",
+      profissaoResponsavel: "", miniCurriculoResponsavel: "",
       enderecoSede: "", numeroSede: "", complementoSede: "",
       banco: "", agencia: "", conta: "", tipoConta: "", pix: "",
     });
@@ -395,8 +436,19 @@ export const ProponenteProponentes = () => {
       concorreCotas: false, tipoCotas: "",
       funcaoArtistica: "", outraFuncaoArtistica: "",
       representaColetivo: false, nomeColetivo: "", anoColetivo: "", quantidadePessoas: "", membrosColetivo: "", profissao: "",
-      cnpj: "", razaoSocial: "", inscricaoEstadual: "", inscricaoMunicipal: "",
-      nomeResponsavel: "", cpfResponsavel: "", cargoResponsavel: "",
+      cnpj: "", razaoSocial: "", nomeFantasia: "", inscricaoEstadual: "", inscricaoMunicipal: "",
+      nomeResponsavel: "", cpfResponsavel: "", rgResponsavel: "", dataNascimentoResponsavel: "",
+      telefoneResponsavel: "", emailResponsavel: "", cargoResponsavel: "",
+      cepResponsavel: "", enderecoResponsavel: "", numeroResponsavel: "", complementoResponsavel: "",
+      cidadeResponsavel: "", estadoResponsavel: "",
+      comunidadeTradicionalResponsavel: "", outraComunidadeResponsavel: "",
+      generoResponsavel: "", racaResponsavel: "",
+      pcdResponsavel: "", tipoDeficienciaResponsavel: "", outraDeficienciaResponsavel: "",
+      escolaridadeResponsavel: "", rendaMensalResponsavel: "",
+      programaSocialResponsavel: "", outroProgramaSocialResponsavel: "",
+      concorreCotasResponsavel: "", tipoCotasResponsavel: "",
+      funcaoArtisticaResponsavel: "", outraFuncaoArtisticaResponsavel: "",
+      profissaoResponsavel: "", miniCurriculoResponsavel: "",
       enderecoSede: "", numeroSede: "", complementoSede: "",
       banco: "", agencia: "", conta: "", tipoConta: "", pix: "",
     });
@@ -446,14 +498,42 @@ export const ProponenteProponentes = () => {
       profissao: "",
       cnpj: proponente.cnpj || "",
       razaoSocial: proponente.razao_social || "",
+      nomeFantasia: proponente.tipo === "PJ" ? (proponente.nome || "") : "", // Para PJ, nome contém o nome fantasia
       inscricaoEstadual: proponente.inscricao_estadual || "",
       inscricaoMunicipal: proponente.inscricao_municipal || "",
       nomeResponsavel: proponente.nome_responsavel || "",
       cpfResponsavel: proponente.cpf_responsavel || "",
+      rgResponsavel: (proponente as any).rg_responsavel || "",
+      dataNascimentoResponsavel: (proponente as any).data_nascimento_responsavel || "",
+      telefoneResponsavel: (proponente as any).telefone_responsavel || "",
+      emailResponsavel: (proponente as any).email_responsavel || "",
       cargoResponsavel: proponente.cargo_responsavel || "",
+      cepResponsavel: (proponente as any).cep_responsavel || "",
+      enderecoResponsavel: (proponente as any).endereco_responsavel || "",
+      numeroResponsavel: (proponente as any).numero_responsavel || "",
+      complementoResponsavel: (proponente as any).complemento_responsavel || "",
+      cidadeResponsavel: (proponente as any).cidade_responsavel || "",
+      estadoResponsavel: (proponente as any).estado_responsavel || "",
+      comunidadeTradicionalResponsavel: (proponente as any).comunidade_tradicional_responsavel || "",
+      outraComunidadeResponsavel: (proponente as any).outra_comunidade_responsavel || "",
+      generoResponsavel: (proponente as any).genero_responsavel || "",
+      racaResponsavel: (proponente as any).raca_responsavel || "",
+      pcdResponsavel: (proponente as any).pcd_responsavel ? "sim" : "nao",
+      tipoDeficienciaResponsavel: (proponente as any).tipo_deficiencia_responsavel || "",
+      outraDeficienciaResponsavel: (proponente as any).outra_deficiencia_responsavel || "",
+      escolaridadeResponsavel: (proponente as any).escolaridade_responsavel || "",
+      rendaMensalResponsavel: (proponente as any).renda_mensal_responsavel || "",
+      programaSocialResponsavel: (proponente as any).programa_social_responsavel || "",
+      outroProgramaSocialResponsavel: (proponente as any).outro_programa_social_responsavel || "",
+      concorreCotasResponsavel: (proponente as any).concorre_cotas_responsavel ? "sim" : "nao",
+      tipoCotasResponsavel: (proponente as any).tipo_cotas_responsavel || "",
+      funcaoArtisticaResponsavel: (proponente as any).funcao_artistica_responsavel || "",
+      outraFuncaoArtisticaResponsavel: (proponente as any).outra_funcao_artistica_responsavel || "",
+      profissaoResponsavel: (proponente as any).profissao_responsavel || "",
+      miniCurriculoResponsavel: (proponente as any).mini_curriculo_responsavel || "",
       enderecoSede: proponente.endereco || "",
-      numeroSede: "",
-      complementoSede: "",
+      numeroSede: (proponente as any).numero || "",
+      complementoSede: (proponente as any).complemento || "",
       banco: proponente.banco || "",
       agencia: proponente.agencia || "",
       conta: proponente.conta || "",
@@ -526,8 +606,169 @@ export const ProponenteProponentes = () => {
       .substring(0, 9);
   };
 
+  // Função de validação do step atual
+  const validarStepAtual = (): { valido: boolean; mensagem?: string } => {
+    if (tipoRegistro === 'PF') {
+      switch (currentStep) {
+        case 1: // Dados Básicos
+          if (!formData.nome?.trim()) return { valido: false, mensagem: "Nome completo é obrigatório" };
+          if (!formData.cpf?.trim()) return { valido: false, mensagem: "CPF é obrigatório" };
+          if (!formData.rg?.trim()) return { valido: false, mensagem: "RG é obrigatório" };
+          if (!formData.dataNascimento) return { valido: false, mensagem: "Data de nascimento é obrigatória" };
+          if (!formData.telefone?.trim()) return { valido: false, mensagem: "Telefone é obrigatório" };
+          break;
+        case 2: // Endereço
+          if (!formData.cep?.trim()) return { valido: false, mensagem: "CEP é obrigatório" };
+          if (!formData.endereco?.trim()) return { valido: false, mensagem: "Logradouro é obrigatório" };
+          if (!formData.numero?.trim()) return { valido: false, mensagem: "Número é obrigatório" };
+          if (!formData.cidade?.trim()) return { valido: false, mensagem: "Cidade é obrigatória" };
+          if (!formData.estado) return { valido: false, mensagem: "Estado é obrigatório" };
+          break;
+        case 3: // Dados Pessoais
+          if (!formData.comunidadeTradicional) return { valido: false, mensagem: "Comunidade tradicional é obrigatória" };
+          if (formData.comunidadeTradicional === "outra" && !formData.outraComunidade?.trim()) {
+            return { valido: false, mensagem: "Especifique qual comunidade tradicional" };
+          }
+          if (!formData.genero) return { valido: false, mensagem: "Identidade de gênero é obrigatória" };
+          if (!formData.raca) return { valido: false, mensagem: "Raça, cor ou etnia é obrigatória" };
+          break;
+        case 4: // PCD
+          if (formData.pcd === undefined || formData.pcd === null || formData.pcd === "") {
+            return { valido: false, mensagem: "Informação sobre PCD é obrigatória" };
+          }
+          if (formData.pcd === "sim" && !formData.tipoDeficiencia) {
+            return { valido: false, mensagem: "Tipo de deficiência é obrigatório quando PCD é sim" };
+          }
+          if (formData.pcd === "sim" && formData.tipoDeficiencia === "outro" && !formData.outraDeficiencia?.trim()) {
+            return { valido: false, mensagem: "Especifique qual tipo de deficiência" };
+          }
+          break;
+        case 5: // Formação
+          if (!formData.escolaridade) return { valido: false, mensagem: "Escolaridade é obrigatória" };
+          if (!formData.rendaMensal) return { valido: false, mensagem: "Renda mensal é obrigatória" };
+          break;
+        case 6: // Programas Sociais
+          if (!formData.programaSocial) return { valido: false, mensagem: "Programa social é obrigatório" };
+          if (formData.programaSocial === "outro" && !formData.outroProgramaSocial?.trim()) {
+            return { valido: false, mensagem: "Especifique qual programa social" };
+          }
+          break;
+        case 7: // Cotas
+          if (formData.concorreCotas === undefined || formData.concorreCotas === null || formData.concorreCotas === "") {
+            return { valido: false, mensagem: "Informação sobre cotas é obrigatória" };
+          }
+          if (formData.concorreCotas === "sim" && !formData.tipoCotas) {
+            return { valido: false, mensagem: "Tipo de cotas é obrigatório quando concorre a cotas" };
+          }
+          break;
+        case 8: // Artístico
+          if (!formData.funcaoArtistica) return { valido: false, mensagem: "Função artística é obrigatória" };
+          if (formData.funcaoArtistica === "outro" && !formData.outraFuncaoArtistica?.trim()) {
+            return { valido: false, mensagem: "Especifique qual função artística" };
+          }
+          if (!formData.profissao?.trim()) return { valido: false, mensagem: "Profissão é obrigatória" };
+          break;
+        case 9: // Coletivo (opcional, sem validação obrigatória)
+          break;
+        case 10: // Experiência
+          if (!formData.miniCurriculo?.trim()) return { valido: false, mensagem: "Mini currículo é obrigatório" };
+          break;
+        case 11: // Bancário
+          if (!formData.banco?.trim()) return { valido: false, mensagem: "Banco é obrigatório" };
+          if (!formData.agencia?.trim()) return { valido: false, mensagem: "Agência é obrigatória" };
+          if (!formData.conta?.trim()) return { valido: false, mensagem: "Conta é obrigatória" };
+          if (!formData.tipoConta) return { valido: false, mensagem: "Tipo de conta é obrigatório" };
+          if (!formData.pix?.trim()) return { valido: false, mensagem: "Chave PIX é obrigatória" };
+          break;
+      }
+    } else if (tipoRegistro === 'PJ') {
+      switch (currentStep) {
+        case 1: // Dados da Empresa
+          if (!formData.razaoSocial?.trim()) return { valido: false, mensagem: "Razão social é obrigatória" };
+          if (!formData.nomeFantasia?.trim()) return { valido: false, mensagem: "Nome fantasia é obrigatório" };
+          if (!formData.cnpj?.trim()) return { valido: false, mensagem: "CNPJ é obrigatório" };
+          break;
+        case 2: // Endereço da Sede
+          if (!formData.cep?.trim()) return { valido: false, mensagem: "CEP é obrigatório" };
+          if (!formData.enderecoSede?.trim()) return { valido: false, mensagem: "Logradouro da sede é obrigatório" };
+          if (!formData.numeroSede?.trim()) return { valido: false, mensagem: "Número da sede é obrigatório" };
+          if (!formData.cidade?.trim()) return { valido: false, mensagem: "Cidade é obrigatória" };
+          if (!formData.estado) return { valido: false, mensagem: "Estado é obrigatório" };
+          break;
+        case 3: // Inscrições (opcional, sem validação obrigatória)
+          break;
+        case 4: // Responsável Legal
+          if (!formData.nomeResponsavel?.trim()) return { valido: false, mensagem: "Nome completo do responsável é obrigatório" };
+          if (!formData.cpfResponsavel?.trim()) return { valido: false, mensagem: "CPF do responsável é obrigatório" };
+          if (!formData.rgResponsavel?.trim()) return { valido: false, mensagem: "RG do responsável é obrigatório" };
+          if (!formData.dataNascimentoResponsavel) return { valido: false, mensagem: "Data de nascimento do responsável é obrigatória" };
+          if (!formData.telefoneResponsavel?.trim()) return { valido: false, mensagem: "Telefone do responsável é obrigatório" };
+          if (!formData.emailResponsavel?.trim()) return { valido: false, mensagem: "Email do responsável é obrigatório" };
+          if (!formData.cargoResponsavel?.trim()) return { valido: false, mensagem: "Cargo do responsável é obrigatório" };
+          if (!formData.cepResponsavel?.trim()) return { valido: false, mensagem: "CEP do responsável é obrigatório" };
+          if (!formData.enderecoResponsavel?.trim()) return { valido: false, mensagem: "Logradouro do responsável é obrigatório" };
+          if (!formData.numeroResponsavel?.trim()) return { valido: false, mensagem: "Número do endereço do responsável é obrigatório" };
+          if (!formData.cidadeResponsavel?.trim()) return { valido: false, mensagem: "Cidade do responsável é obrigatória" };
+          if (!formData.estadoResponsavel) return { valido: false, mensagem: "Estado do responsável é obrigatório" };
+          if (!formData.comunidadeTradicionalResponsavel) return { valido: false, mensagem: "Comunidade tradicional do responsável é obrigatória" };
+          if (formData.comunidadeTradicionalResponsavel === "outra" && !formData.outraComunidadeResponsavel?.trim()) {
+            return { valido: false, mensagem: "Especifique qual comunidade tradicional do responsável" };
+          }
+          if (!formData.generoResponsavel) return { valido: false, mensagem: "Identidade de gênero do responsável é obrigatória" };
+          if (!formData.racaResponsavel) return { valido: false, mensagem: "Raça, cor ou etnia do responsável é obrigatória" };
+          if (formData.pcdResponsavel === undefined || formData.pcdResponsavel === null || formData.pcdResponsavel === "") {
+            return { valido: false, mensagem: "Informação sobre PCD do responsável é obrigatória" };
+          }
+          if (formData.pcdResponsavel === "sim" && !formData.tipoDeficienciaResponsavel) {
+            return { valido: false, mensagem: "Tipo de deficiência do responsável é obrigatório quando PCD é sim" };
+          }
+          if (formData.pcdResponsavel === "sim" && formData.tipoDeficienciaResponsavel === "outro" && !formData.outraDeficienciaResponsavel?.trim()) {
+            return { valido: false, mensagem: "Especifique qual tipo de deficiência do responsável" };
+          }
+          if (!formData.escolaridadeResponsavel) return { valido: false, mensagem: "Escolaridade do responsável é obrigatória" };
+          if (!formData.rendaMensalResponsavel) return { valido: false, mensagem: "Renda mensal do responsável é obrigatória" };
+          if (!formData.programaSocialResponsavel) return { valido: false, mensagem: "Programa social do responsável é obrigatório" };
+          if (formData.programaSocialResponsavel === "outro" && !formData.outroProgramaSocialResponsavel?.trim()) {
+            return { valido: false, mensagem: "Especifique qual programa social do responsável" };
+          }
+          if (formData.concorreCotasResponsavel === undefined || formData.concorreCotasResponsavel === null || formData.concorreCotasResponsavel === "") {
+            return { valido: false, mensagem: "Informação sobre cotas do responsável é obrigatória" };
+          }
+          if (formData.concorreCotasResponsavel === "sim" && !formData.tipoCotasResponsavel) {
+            return { valido: false, mensagem: "Tipo de cotas do responsável é obrigatório quando concorre a cotas" };
+          }
+          if (!formData.funcaoArtisticaResponsavel) return { valido: false, mensagem: "Função artística do responsável é obrigatória" };
+          if (formData.funcaoArtisticaResponsavel === "outro" && !formData.outraFuncaoArtisticaResponsavel?.trim()) {
+            return { valido: false, mensagem: "Especifique qual função artística do responsável" };
+          }
+          if (!formData.profissaoResponsavel?.trim()) return { valido: false, mensagem: "Profissão do responsável é obrigatória" };
+          if (!formData.miniCurriculoResponsavel?.trim()) return { valido: false, mensagem: "Mini currículo do responsável é obrigatório" };
+          break;
+        case 5: // Bancário
+          if (!formData.banco?.trim()) return { valido: false, mensagem: "Banco é obrigatório" };
+          if (!formData.agencia?.trim()) return { valido: false, mensagem: "Agência é obrigatória" };
+          if (!formData.conta?.trim()) return { valido: false, mensagem: "Conta é obrigatória" };
+          if (!formData.tipoConta) return { valido: false, mensagem: "Tipo de conta é obrigatório" };
+          if (!formData.pix?.trim()) return { valido: false, mensagem: "Chave PIX é obrigatória" };
+          break;
+      }
+    }
+    
+    return { valido: true };
+  };
+
   // Funções de navegação de steps
   const nextStep = () => {
+    const validacao = validarStepAtual();
+    if (!validacao.valido) {
+      toast({
+        title: "Campos obrigatórios",
+        description: validacao.mensagem,
+        variant: "destructive",
+      });
+      return;
+    }
+    
     const maxSteps = tipoRegistro === 'PF' ? totalStepsPF : totalStepsPJ;
     if (currentStep < maxSteps) {
       setCurrentStep(currentStep + 1);
@@ -543,6 +784,18 @@ export const ProponenteProponentes = () => {
   const goToStep = (step: number) => {
     const maxSteps = tipoRegistro === 'PF' ? totalStepsPF : totalStepsPJ;
     if (step >= 1 && step <= maxSteps) {
+      // Se está tentando avançar para um step futuro, validar o step atual primeiro
+      if (step > currentStep) {
+        const validacao = validarStepAtual();
+        if (!validacao.valido) {
+          toast({
+            title: "Campos obrigatórios",
+            description: validacao.mensagem,
+            variant: "destructive",
+          });
+          return;
+        }
+      }
       setCurrentStep(step);
     }
   };
@@ -554,7 +807,7 @@ export const ProponenteProponentes = () => {
   };
 
   // Função para buscar CEP via ViaCEP
-  const buscarCEP = async (cep: string, tipoEndereco: 'PF' | 'PJ' = 'PF') => {
+  const buscarCEP = async (cep: string, tipoEndereco: 'PF' | 'PJ' | 'RESPONSAVEL' = 'PF') => {
     const cepLimpo = cep.replace(/\D/g, '');
     if (cepLimpo.length === 8) {
       try {
@@ -570,13 +823,21 @@ export const ProponenteProponentes = () => {
               estado: data.uf || prev.estado,
               cep: cep,
             }));
-          } else {
+          } else if (tipoEndereco === 'PJ') {
             setFormData((prev: any) => ({
               ...prev,
               enderecoSede: data.logradouro || prev.enderecoSede,
               cidade: data.localidade || prev.cidade,
               estado: data.uf || prev.estado,
               cep: cep,
+            }));
+          } else if (tipoEndereco === 'RESPONSAVEL') {
+            setFormData((prev: any) => ({
+              ...prev,
+              enderecoResponsavel: data.logradouro || prev.enderecoResponsavel,
+              cidadeResponsavel: data.localidade || prev.cidadeResponsavel,
+              estadoResponsavel: data.uf || prev.estadoResponsavel,
+              cepResponsavel: cep,
             }));
           }
           
@@ -616,32 +877,149 @@ export const ProponenteProponentes = () => {
       valorFormatado = aplicarMascaraCPF(value);
     } else if (field === 'cnpj') {
       valorFormatado = aplicarMascaraCNPJ(value);
-    } else if (field === 'rg') {
+    } else if (field === 'rg' || field === 'rgResponsavel') {
       valorFormatado = aplicarMascaraRG(value);
-    } else if (field === 'telefone' || field === 'telefoneRepresentante') {
+    } else if (field === 'telefone' || field === 'telefoneRepresentante' || field === 'telefoneResponsavel') {
       valorFormatado = aplicarMascaraTelefone(value);
-    } else if (field === 'cep') {
+    } else if (field === 'cep' || field === 'cepResponsavel') {
       valorFormatado = aplicarMascaraCEP(value);
     }
     
     setFormData((prev: any) => ({ ...prev, [field]: valorFormatado }));
     
-    // Buscar CEP automaticamente - precisamos saber se é PF ou PJ
+    // Buscar CEP automaticamente - precisamos saber se é PF, PJ ou Responsável
     if (field === 'cep' && valorFormatado.length === 9) {
       buscarCEP(valorFormatado, tipoRegistro as 'PF' | 'PJ');
+    } else if (field === 'cepResponsavel' && valorFormatado.length === 9) {
+      buscarCEP(valorFormatado, 'RESPONSAVEL');
     }
   };
 
-  const handleSalvarRegistro = async () => {
-    const nomeValido = tipoRegistro === 'PF' ? formData.nome : formData.razaoSocial;
-    const enderecoValido = tipoRegistro === 'PF' ? formData.endereco : formData.enderecoSede;
+  // Função de validação de campos obrigatórios
+  const validarCamposObrigatorios = (): { valido: boolean; mensagem?: string } => {
+    if (tipoRegistro === 'PF') {
+      // Validação PF
+      if (!formData.nome?.trim()) return { valido: false, mensagem: "Nome completo é obrigatório" };
+      if (!formData.cpf?.trim()) return { valido: false, mensagem: "CPF é obrigatório" };
+      if (!formData.rg?.trim()) return { valido: false, mensagem: "RG é obrigatório" };
+      if (!formData.dataNascimento) return { valido: false, mensagem: "Data de nascimento é obrigatória" };
+      if (!formData.telefone?.trim()) return { valido: false, mensagem: "Telefone é obrigatório" };
+      if (!formData.cep?.trim()) return { valido: false, mensagem: "CEP é obrigatório" };
+      if (!formData.endereco?.trim()) return { valido: false, mensagem: "Logradouro é obrigatório" };
+      if (!formData.numero?.trim()) return { valido: false, mensagem: "Número é obrigatório" };
+      if (!formData.cidade?.trim()) return { valido: false, mensagem: "Cidade é obrigatória" };
+      if (!formData.estado) return { valido: false, mensagem: "Estado é obrigatório" };
+      if (!formData.comunidadeTradicional) return { valido: false, mensagem: "Comunidade tradicional é obrigatória" };
+      if (formData.comunidadeTradicional === "outra" && !formData.outraComunidade?.trim()) {
+        return { valido: false, mensagem: "Especifique qual comunidade tradicional" };
+      }
+      if (!formData.genero) return { valido: false, mensagem: "Identidade de gênero é obrigatória" };
+      if (!formData.raca) return { valido: false, mensagem: "Raça, cor ou etnia é obrigatória" };
+      if (formData.pcd === undefined || formData.pcd === null || formData.pcd === "") {
+        return { valido: false, mensagem: "Informação sobre PCD é obrigatória" };
+      }
+      if (formData.pcd === "sim" && !formData.tipoDeficiencia) {
+        return { valido: false, mensagem: "Tipo de deficiência é obrigatório quando PCD é sim" };
+      }
+      if (formData.pcd === "sim" && formData.tipoDeficiencia === "outro" && !formData.outraDeficiencia?.trim()) {
+        return { valido: false, mensagem: "Especifique qual tipo de deficiência" };
+      }
+      if (!formData.escolaridade) return { valido: false, mensagem: "Escolaridade é obrigatória" };
+      if (!formData.rendaMensal) return { valido: false, mensagem: "Renda mensal é obrigatória" };
+      if (!formData.programaSocial) return { valido: false, mensagem: "Programa social é obrigatório" };
+      if (formData.programaSocial === "outro" && !formData.outroProgramaSocial?.trim()) {
+        return { valido: false, mensagem: "Especifique qual programa social" };
+      }
+      if (formData.concorreCotas === undefined || formData.concorreCotas === null || formData.concorreCotas === "") {
+        return { valido: false, mensagem: "Informação sobre cotas é obrigatória" };
+      }
+      if (formData.concorreCotas === "sim" && !formData.tipoCotas) {
+        return { valido: false, mensagem: "Tipo de cotas é obrigatório quando concorre a cotas" };
+      }
+      if (!formData.funcaoArtistica) return { valido: false, mensagem: "Função artística é obrigatória" };
+      if (formData.funcaoArtistica === "outro" && !formData.outraFuncaoArtistica?.trim()) {
+        return { valido: false, mensagem: "Especifique qual função artística" };
+      }
+      if (!formData.profissao?.trim()) return { valido: false, mensagem: "Profissão é obrigatória" };
+      if (!formData.miniCurriculo?.trim()) return { valido: false, mensagem: "Mini currículo é obrigatório" };
+      if (!formData.banco?.trim()) return { valido: false, mensagem: "Banco é obrigatório" };
+      if (!formData.agencia?.trim()) return { valido: false, mensagem: "Agência é obrigatória" };
+      if (!formData.conta?.trim()) return { valido: false, mensagem: "Conta é obrigatória" };
+      if (!formData.tipoConta) return { valido: false, mensagem: "Tipo de conta é obrigatório" };
+      if (!formData.pix?.trim()) return { valido: false, mensagem: "Chave PIX é obrigatória" };
+    } else if (tipoRegistro === 'PJ') {
+      // Validação PJ
+      if (!formData.razaoSocial?.trim()) return { valido: false, mensagem: "Razão social é obrigatória" };
+      if (!formData.nomeFantasia?.trim()) return { valido: false, mensagem: "Nome fantasia é obrigatório" };
+      if (!formData.cnpj?.trim()) return { valido: false, mensagem: "CNPJ é obrigatório" };
+      if (!formData.cep?.trim()) return { valido: false, mensagem: "CEP é obrigatório" };
+      if (!formData.enderecoSede?.trim()) return { valido: false, mensagem: "Logradouro da sede é obrigatório" };
+      if (!formData.numeroSede?.trim()) return { valido: false, mensagem: "Número da sede é obrigatório" };
+      if (!formData.cidade?.trim()) return { valido: false, mensagem: "Cidade é obrigatória" };
+      if (!formData.estado) return { valido: false, mensagem: "Estado é obrigatório" };
+      
+      // Validação do representante legal (todos os campos de PF)
+      if (!formData.nomeResponsavel?.trim()) return { valido: false, mensagem: "Nome completo do responsável é obrigatório" };
+      if (!formData.cpfResponsavel?.trim()) return { valido: false, mensagem: "CPF do responsável é obrigatório" };
+      if (!formData.rgResponsavel?.trim()) return { valido: false, mensagem: "RG do responsável é obrigatório" };
+      if (!formData.dataNascimentoResponsavel) return { valido: false, mensagem: "Data de nascimento do responsável é obrigatória" };
+      if (!formData.telefoneResponsavel?.trim()) return { valido: false, mensagem: "Telefone do responsável é obrigatório" };
+      if (!formData.emailResponsavel?.trim()) return { valido: false, mensagem: "Email do responsável é obrigatório" };
+      if (!formData.cargoResponsavel?.trim()) return { valido: false, mensagem: "Cargo do responsável é obrigatório" };
+      if (!formData.cepResponsavel?.trim()) return { valido: false, mensagem: "CEP do responsável é obrigatório" };
+      if (!formData.enderecoResponsavel?.trim()) return { valido: false, mensagem: "Logradouro do responsável é obrigatório" };
+      if (!formData.numeroResponsavel?.trim()) return { valido: false, mensagem: "Número do endereço do responsável é obrigatório" };
+      if (!formData.cidadeResponsavel?.trim()) return { valido: false, mensagem: "Cidade do responsável é obrigatória" };
+      if (!formData.estadoResponsavel) return { valido: false, mensagem: "Estado do responsável é obrigatório" };
+      if (!formData.comunidadeTradicionalResponsavel) return { valido: false, mensagem: "Comunidade tradicional do responsável é obrigatória" };
+      if (formData.comunidadeTradicionalResponsavel === "outra" && !formData.outraComunidadeResponsavel?.trim()) {
+        return { valido: false, mensagem: "Especifique qual comunidade tradicional do responsável" };
+      }
+      if (!formData.generoResponsavel) return { valido: false, mensagem: "Identidade de gênero do responsável é obrigatória" };
+      if (!formData.racaResponsavel) return { valido: false, mensagem: "Raça, cor ou etnia do responsável é obrigatória" };
+      if (formData.pcdResponsavel === undefined || formData.pcdResponsavel === null || formData.pcdResponsavel === "") {
+        return { valido: false, mensagem: "Informação sobre PCD do responsável é obrigatória" };
+      }
+      if (formData.pcdResponsavel === "sim" && !formData.tipoDeficienciaResponsavel) {
+        return { valido: false, mensagem: "Tipo de deficiência do responsável é obrigatório quando PCD é sim" };
+      }
+      if (formData.pcdResponsavel === "sim" && formData.tipoDeficienciaResponsavel === "outro" && !formData.outraDeficienciaResponsavel?.trim()) {
+        return { valido: false, mensagem: "Especifique qual tipo de deficiência do responsável" };
+      }
+      if (!formData.escolaridadeResponsavel) return { valido: false, mensagem: "Escolaridade do responsável é obrigatória" };
+      if (!formData.rendaMensalResponsavel) return { valido: false, mensagem: "Renda mensal do responsável é obrigatória" };
+      if (!formData.programaSocialResponsavel) return { valido: false, mensagem: "Programa social do responsável é obrigatório" };
+      if (formData.programaSocialResponsavel === "outro" && !formData.outroProgramaSocialResponsavel?.trim()) {
+        return { valido: false, mensagem: "Especifique qual programa social do responsável" };
+      }
+      if (formData.concorreCotasResponsavel === undefined || formData.concorreCotasResponsavel === null || formData.concorreCotasResponsavel === "") {
+        return { valido: false, mensagem: "Informação sobre cotas do responsável é obrigatória" };
+      }
+      if (formData.concorreCotasResponsavel === "sim" && !formData.tipoCotasResponsavel) {
+        return { valido: false, mensagem: "Tipo de cotas do responsável é obrigatório quando concorre a cotas" };
+      }
+      if (!formData.funcaoArtisticaResponsavel) return { valido: false, mensagem: "Função artística do responsável é obrigatória" };
+      if (formData.funcaoArtisticaResponsavel === "outro" && !formData.outraFuncaoArtisticaResponsavel?.trim()) {
+        return { valido: false, mensagem: "Especifique qual função artística do responsável" };
+      }
+      if (!formData.profissaoResponsavel?.trim()) return { valido: false, mensagem: "Profissão do responsável é obrigatória" };
+      if (!formData.miniCurriculoResponsavel?.trim()) return { valido: false, mensagem: "Mini currículo do responsável é obrigatório" };
+      if (!formData.banco?.trim()) return { valido: false, mensagem: "Banco é obrigatório" };
+      if (!formData.agencia?.trim()) return { valido: false, mensagem: "Agência é obrigatória" };
+      if (!formData.conta?.trim()) return { valido: false, mensagem: "Conta é obrigatória" };
+      if (!formData.tipoConta) return { valido: false, mensagem: "Tipo de conta é obrigatório" };
+      if (!formData.pix?.trim()) return { valido: false, mensagem: "Chave PIX é obrigatória" };
+    }
     
-    if (!nomeValido || !enderecoValido) {
+    return { valido: true };
+  };
+
+  const handleSalvarRegistro = async () => {
+    const validacao = validarCamposObrigatorios();
+    if (!validacao.valido) {
       toast({
         title: "Campos obrigatórios",
-        description: tipoRegistro === 'PF' 
-          ? "Preencha pelo menos nome e logradouro."
-          : "Preencha pelo menos razão social e logradouro da sede.",
+        description: validacao.mensagem,
         variant: "destructive",
       });
       return;
@@ -697,14 +1075,44 @@ export const ProponenteProponentes = () => {
         // dadosProponente.membros_coletivo = formData.membrosColetivo; // Coluna não existe na tabela
         // dadosProponente.profissao = formData.profissao; // Coluna não existe na tabela
       } else if (tipoRegistro === "PJ") {
+        dadosProponente.nome = formData.nomeFantasia; // Nome fantasia vai para a coluna nome
         dadosProponente.razao_social = formData.razaoSocial;
         dadosProponente.cnpj = formData.cnpj;
         dadosProponente.endereco = formData.enderecoSede;
+        dadosProponente.numero = formData.numeroSede;
+        dadosProponente.complemento = formData.complementoSede;
         dadosProponente.inscricao_estadual = formData.inscricaoEstadual;
         dadosProponente.inscricao_municipal = formData.inscricaoMunicipal;
         dadosProponente.nome_responsavel = formData.nomeResponsavel;
         dadosProponente.cpf_responsavel = formData.cpfResponsavel;
+        dadosProponente.rg_responsavel = formData.rgResponsavel;
+        dadosProponente.data_nascimento_responsavel = formData.dataNascimentoResponsavel;
+        dadosProponente.telefone_responsavel = formData.telefoneResponsavel;
+        dadosProponente.email_responsavel = formData.emailResponsavel;
         dadosProponente.cargo_responsavel = formData.cargoResponsavel;
+        dadosProponente.cep_responsavel = formData.cepResponsavel;
+        dadosProponente.endereco_responsavel = formData.enderecoResponsavel;
+        dadosProponente.numero_responsavel = formData.numeroResponsavel;
+        dadosProponente.complemento_responsavel = formData.complementoResponsavel;
+        dadosProponente.cidade_responsavel = formData.cidadeResponsavel;
+        dadosProponente.estado_responsavel = formData.estadoResponsavel;
+        dadosProponente.comunidade_tradicional_responsavel = formData.comunidadeTradicionalResponsavel;
+        dadosProponente.outra_comunidade_responsavel = formData.outraComunidadeResponsavel;
+        dadosProponente.genero_responsavel = formData.generoResponsavel;
+        dadosProponente.raca_responsavel = formData.racaResponsavel;
+        dadosProponente.pcd_responsavel = formData.pcdResponsavel === "sim" || formData.pcdResponsavel === true;
+        dadosProponente.tipo_deficiencia_responsavel = formData.tipoDeficienciaResponsavel;
+        dadosProponente.outra_deficiencia_responsavel = formData.outraDeficienciaResponsavel;
+        dadosProponente.escolaridade_responsavel = formData.escolaridadeResponsavel;
+        dadosProponente.renda_mensal_responsavel = formData.rendaMensalResponsavel;
+        dadosProponente.programa_social_responsavel = formData.programaSocialResponsavel;
+        dadosProponente.outro_programa_social_responsavel = formData.outroProgramaSocialResponsavel;
+        dadosProponente.concorre_cotas_responsavel = formData.concorreCotasResponsavel === "sim" || formData.concorreCotasResponsavel === true;
+        dadosProponente.tipo_cotas_responsavel = formData.tipoCotasResponsavel;
+        dadosProponente.funcao_artistica_responsavel = formData.funcaoArtisticaResponsavel;
+        dadosProponente.outra_funcao_artistica_responsavel = formData.outraFuncaoArtisticaResponsavel;
+        dadosProponente.profissao_responsavel = formData.profissaoResponsavel;
+        dadosProponente.mini_curriculo_responsavel = formData.miniCurriculoResponsavel;
       }
       
       // Dados bancários (comum para ambos)
@@ -719,12 +1127,14 @@ export const ProponenteProponentes = () => {
       dadosProponente.usuario_id = userProponente.id;
       dadosProponente.email = userProponente.email;
 
+      const client = getAuthenticatedClient();
       const { error } = await client
         .from('proponentes')
         .insert([dadosProponente]);
 
       if (error) throw error;
 
+      const nomeValido = tipoRegistro === 'PF' ? formData.nome : formData.razaoSocial;
       toast({
         title: "Proponente cadastrado!",
         description: `${nomeValido} foi cadastrado como ${tipoRegistro === "PF" ? "Pessoa Física" : "Pessoa Jurídica"} com sucesso.`,
@@ -745,14 +1155,20 @@ export const ProponenteProponentes = () => {
   };
 
   const handleSalvarEdicao = async () => {
-    const nomeValido = tipoRegistro === 'PF' ? formData.nome : formData.razaoSocial;
-    const enderecoValido = tipoRegistro === 'PF' ? formData.endereco : formData.enderecoSede;
-    if (!nomeValido || !enderecoValido || !proponenteEditando) {
+    if (!proponenteEditando) {
+      toast({
+        title: "Erro",
+        description: "Proponente não encontrado.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const validacao = validarCamposObrigatorios();
+    if (!validacao.valido) {
       toast({
         title: "Campos obrigatórios",
-        description: tipoRegistro === 'PF' 
-          ? "Preencha pelo menos nome e logradouro."
-          : "Preencha pelo menos razão social e logradouro da sede.",
+        description: validacao.mensagem,
         variant: "destructive",
       });
       return;
@@ -795,14 +1211,44 @@ export const ProponenteProponentes = () => {
         dadosProponente.nome_coletivo = formData.nomeColetivo;
         dadosProponente.ano_coletivo = formData.anoColetivo;
       } else if (tipoRegistro === "PJ") {
+        dadosProponente.nome = formData.nomeFantasia; // Nome fantasia vai para a coluna nome
         dadosProponente.razao_social = formData.razaoSocial;
         dadosProponente.cnpj = formData.cnpj;
         dadosProponente.endereco = formData.enderecoSede;
+        dadosProponente.numero = formData.numeroSede;
+        dadosProponente.complemento = formData.complementoSede;
         dadosProponente.inscricao_estadual = formData.inscricaoEstadual;
         dadosProponente.inscricao_municipal = formData.inscricaoMunicipal;
         dadosProponente.nome_responsavel = formData.nomeResponsavel;
         dadosProponente.cpf_responsavel = formData.cpfResponsavel;
+        dadosProponente.rg_responsavel = formData.rgResponsavel;
+        dadosProponente.data_nascimento_responsavel = formData.dataNascimentoResponsavel;
+        dadosProponente.telefone_responsavel = formData.telefoneResponsavel;
+        dadosProponente.email_responsavel = formData.emailResponsavel;
         dadosProponente.cargo_responsavel = formData.cargoResponsavel;
+        dadosProponente.cep_responsavel = formData.cepResponsavel;
+        dadosProponente.endereco_responsavel = formData.enderecoResponsavel;
+        dadosProponente.numero_responsavel = formData.numeroResponsavel;
+        dadosProponente.complemento_responsavel = formData.complementoResponsavel;
+        dadosProponente.cidade_responsavel = formData.cidadeResponsavel;
+        dadosProponente.estado_responsavel = formData.estadoResponsavel;
+        dadosProponente.comunidade_tradicional_responsavel = formData.comunidadeTradicionalResponsavel;
+        dadosProponente.outra_comunidade_responsavel = formData.outraComunidadeResponsavel;
+        dadosProponente.genero_responsavel = formData.generoResponsavel;
+        dadosProponente.raca_responsavel = formData.racaResponsavel;
+        dadosProponente.pcd_responsavel = formData.pcdResponsavel === "sim" || formData.pcdResponsavel === true;
+        dadosProponente.tipo_deficiencia_responsavel = formData.tipoDeficienciaResponsavel;
+        dadosProponente.outra_deficiencia_responsavel = formData.outraDeficienciaResponsavel;
+        dadosProponente.escolaridade_responsavel = formData.escolaridadeResponsavel;
+        dadosProponente.renda_mensal_responsavel = formData.rendaMensalResponsavel;
+        dadosProponente.programa_social_responsavel = formData.programaSocialResponsavel;
+        dadosProponente.outro_programa_social_responsavel = formData.outroProgramaSocialResponsavel;
+        dadosProponente.concorre_cotas_responsavel = formData.concorreCotasResponsavel === "sim" || formData.concorreCotasResponsavel === true;
+        dadosProponente.tipo_cotas_responsavel = formData.tipoCotasResponsavel;
+        dadosProponente.funcao_artistica_responsavel = formData.funcaoArtisticaResponsavel;
+        dadosProponente.outra_funcao_artistica_responsavel = formData.outraFuncaoArtisticaResponsavel;
+        dadosProponente.profissao_responsavel = formData.profissaoResponsavel;
+        dadosProponente.mini_curriculo_responsavel = formData.miniCurriculoResponsavel;
       }
       
       // Dados bancários (comum para ambos)
@@ -820,6 +1266,7 @@ export const ProponenteProponentes = () => {
 
       if (error) throw error;
 
+      const nomeValido = tipoRegistro === 'PF' ? formData.nome : formData.razaoSocial;
       toast({
         title: "Proponente atualizado!",
         description: `Os dados de ${nomeValido} foram atualizados com sucesso.`,
@@ -1116,24 +1563,164 @@ export const ProponenteProponentes = () => {
                               {/* Responsável Legal */}
                               {(proponente.nome_responsavel || proponente.cpf_responsavel || proponente.cargo_responsavel) && (
                                 <div className="pt-2 border-t">
-                                  <h4 className="text-sm font-semibold text-gray-700 mb-2">Responsável Legal</h4>
-                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                    {proponente.nome_responsavel && (
-                                      <div>
-                                        <span className="text-xs text-gray-500 font-medium">Nome:</span>
-                                        <p className="text-sm text-gray-700">{proponente.nome_responsavel}</p>
+                                  <h4 className="text-sm font-semibold text-gray-700 mb-2">Representante Legal</h4>
+                                  <div className="space-y-4">
+                                    {/* Dados Básicos */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                      {proponente.nome_responsavel && (
+                                        <div>
+                                          <span className="text-xs text-gray-500 font-medium">Nome:</span>
+                                          <p className="text-sm text-gray-700">{proponente.nome_responsavel}</p>
+                                        </div>
+                                      )}
+                                      {proponente.cpf_responsavel && (
+                                        <div>
+                                          <span className="text-xs text-gray-500 font-medium">CPF:</span>
+                                          <p className="text-sm text-gray-700">{proponente.cpf_responsavel}</p>
+                                        </div>
+                                      )}
+                                      {proponente.rg_responsavel && (
+                                        <div>
+                                          <span className="text-xs text-gray-500 font-medium">RG:</span>
+                                          <p className="text-sm text-gray-700">{proponente.rg_responsavel}</p>
+                                        </div>
+                                      )}
+                                      {proponente.data_nascimento_responsavel && (
+                                        <div>
+                                          <span className="text-xs text-gray-500 font-medium">Data de Nascimento:</span>
+                                          <p className="text-sm text-gray-700">{formatarData(proponente.data_nascimento_responsavel)}</p>
+                                        </div>
+                                      )}
+                                      {proponente.cargo_responsavel && (
+                                        <div>
+                                          <span className="text-xs text-gray-500 font-medium">Cargo:</span>
+                                          <p className="text-sm text-gray-700">{proponente.cargo_responsavel}</p>
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    {/* Contato */}
+                                    {(proponente.email_responsavel || proponente.telefone_responsavel) && (
+                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 border-t">
+                                        {proponente.email_responsavel && (
+                                          <div>
+                                            <span className="text-xs text-gray-500 font-medium">Email:</span>
+                                            <p className="text-sm text-gray-700">{proponente.email_responsavel}</p>
+                                          </div>
+                                        )}
+                                        {proponente.telefone_responsavel && (
+                                          <div>
+                                            <span className="text-xs text-gray-500 font-medium">Telefone:</span>
+                                            <p className="text-sm text-gray-700">{proponente.telefone_responsavel}</p>
+                                          </div>
+                                        )}
                                       </div>
                                     )}
-                                    {proponente.cpf_responsavel && (
-                                      <div>
-                                        <span className="text-xs text-gray-500 font-medium">CPF:</span>
-                                        <p className="text-sm text-gray-700">{proponente.cpf_responsavel}</p>
+
+                                    {/* Endereço */}
+                                    {proponente.endereco_responsavel && (
+                                      <div className="pt-2 border-t">
+                                        <h5 className="text-xs font-semibold text-gray-600 mb-1">Endereço</h5>
+                                        <p className="text-sm text-gray-700">
+                                          {[
+                                            proponente.endereco_responsavel,
+                                            proponente.numero_responsavel,
+                                            proponente.complemento_responsavel
+                                          ].filter(Boolean).join(', ')}
+                                        </p>
+                                        <p className="text-sm text-gray-700">
+                                          {[
+                                            proponente.cidade_responsavel,
+                                            proponente.estado_responsavel,
+                                            proponente.cep_responsavel
+                                          ].filter(Boolean).join(' - ')}
+                                        </p>
                                       </div>
                                     )}
-                                    {proponente.cargo_responsavel && (
-                                      <div>
-                                        <span className="text-xs text-gray-500 font-medium">Cargo:</span>
-                                        <p className="text-sm text-gray-700">{proponente.cargo_responsavel}</p>
+
+                                    {/* Dados Pessoais */}
+                                    {(proponente.comunidade_tradicional_responsavel || proponente.genero_responsavel || proponente.raca_responsavel || proponente.escolaridade_responsavel || proponente.renda_mensal_responsavel) && (
+                                      <div className="pt-2 border-t">
+                                        <h5 className="text-xs font-semibold text-gray-600 mb-2">Dados Pessoais</h5>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                          {proponente.comunidade_tradicional_responsavel && (
+                                            <div>
+                                              <span className="text-xs text-gray-500 font-medium">Comunidade Tradicional:</span>
+                                              <p className="text-sm text-gray-700">{traduzirComunidade(proponente.comunidade_tradicional_responsavel)}</p>
+                                            </div>
+                                          )}
+                                          {proponente.genero_responsavel && (
+                                            <div>
+                                              <span className="text-xs text-gray-500 font-medium">Gênero:</span>
+                                              <p className="text-sm text-gray-700">{traduzirGenero(proponente.genero_responsavel)}</p>
+                                            </div>
+                                          )}
+                                          {proponente.raca_responsavel && (
+                                            <div>
+                                              <span className="text-xs text-gray-500 font-medium">Raça/Cor:</span>
+                                              <p className="text-sm text-gray-700">{traduzirRaca(proponente.raca_responsavel)}</p>
+                                            </div>
+                                          )}
+                                          {proponente.escolaridade_responsavel && (
+                                            <div>
+                                              <span className="text-xs text-gray-500 font-medium">Escolaridade:</span>
+                                              <p className="text-sm text-gray-700">{traduzirEscolaridade(proponente.escolaridade_responsavel)}</p>
+                                            </div>
+                                          )}
+                                          {proponente.renda_mensal_responsavel && (
+                                            <div>
+                                              <span className="text-xs text-gray-500 font-medium">Renda Mensal:</span>
+                                              <p className="text-sm text-gray-700">{traduzirRenda(proponente.renda_mensal_responsavel)}</p>
+                                            </div>
+                                          )}
+                                          {proponente.pcd_responsavel && (
+                                            <div>
+                                              <span className="text-xs text-gray-500 font-medium">PCD:</span>
+                                              <p className="text-sm text-gray-700">Sim{proponente.tipo_deficiencia_responsavel && ` - ${traduzirDeficiencia(proponente.tipo_deficiencia_responsavel)}`}</p>
+                                            </div>
+                                          )}
+                                          {proponente.programa_social_responsavel && (
+                                            <div>
+                                              <span className="text-xs text-gray-500 font-medium">Programa Social:</span>
+                                              <p className="text-sm text-gray-700">{traduzirProgramaSocial(proponente.programa_social_responsavel)}</p>
+                                            </div>
+                                          )}
+                                          {proponente.concorre_cotas_responsavel && (
+                                            <div>
+                                              <span className="text-xs text-gray-500 font-medium">Concorre Cotas:</span>
+                                              <p className="text-sm text-gray-700">Sim{proponente.tipo_cotas_responsavel && ` - ${traduzirCotas(proponente.tipo_cotas_responsavel)}`}</p>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* Atividade Artística */}
+                                    {(proponente.funcao_artistica_responsavel || proponente.profissao_responsavel) && (
+                                      <div className="pt-2 border-t">
+                                        <h5 className="text-xs font-semibold text-gray-600 mb-2">Atividade Profissional</h5>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                          {proponente.funcao_artistica_responsavel && (
+                                            <div>
+                                              <span className="text-xs text-gray-500 font-medium">Função Artística:</span>
+                                              <p className="text-sm text-gray-700">{traduzirFuncaoArtistica(proponente.funcao_artistica_responsavel)}</p>
+                                            </div>
+                                          )}
+                                          {proponente.profissao_responsavel && (
+                                            <div>
+                                              <span className="text-xs text-gray-500 font-medium">Profissão:</span>
+                                              <p className="text-sm text-gray-700">{proponente.profissao_responsavel}</p>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* Currículo */}
+                                    {proponente.mini_curriculo_responsavel && (
+                                      <div className="pt-2 border-t">
+                                        <span className="text-xs text-gray-500 font-medium">Mini Currículo:</span>
+                                        <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">{proponente.mini_curriculo_responsavel}</p>
                                       </div>
                                     )}
                                   </div>
@@ -1283,12 +1870,13 @@ export const ProponenteProponentes = () => {
                       />
                     </div>
                     <div>
-                      <Label htmlFor="reg-nome-fantasia">Nome fantasia</Label>
+                      <Label htmlFor="reg-nome-fantasia">Nome fantasia *</Label>
                       <Input
                         id="reg-nome-fantasia"
                         value={formData.nomeFantasia}
                         onChange={(e) => handleInputChange("nomeFantasia", e.target.value)}
                         placeholder="Nome fantasia"
+                        required
                       />
                     </div>
                   </div>

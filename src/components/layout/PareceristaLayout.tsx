@@ -1,4 +1,4 @@
-import React, { ReactNode, useState } from "react";
+import React, { ReactNode, useState, useEffect } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { 
@@ -9,12 +9,18 @@ import {
   HelpCircle,
   LogOut,
   ClipboardList,
-  CheckSquare
+  CheckSquare,
+  Download,
+  Headphones
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BaseLayout } from "./BaseLayout";
 import { usePareceristaAuth } from "@/hooks/usePareceristaAuth";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import JSZip from 'jszip';
+import { ModalContatoSuporte } from "@/components/ModalContatoSuporte";
 
 interface PareceristaLayoutProps {
   children: ReactNode;
@@ -35,7 +41,10 @@ export const PareceristaLayout = ({
   const navigate = useNavigate();
   const location = useLocation();
   const { logout, isAuthenticated, loading, parecerista, prefeitura } = usePareceristaAuth();
+  const { toast } = useToast();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [loadingArquivos, setLoadingArquivos] = useState(false);
+  const [modalSuporteOpen, setModalSuporteOpen] = useState(false);
 
   // Verificar se está autenticado e tem parecerista válido
   React.useEffect(() => {
@@ -56,6 +65,132 @@ export const PareceristaLayout = ({
 
   const handleTrocarEdital = () => {
     navigate(`/${nomePrefeitura}/parecerista/selecionar-edital`);
+  };
+
+  const handleDownloadRegulamento = async () => {
+    if (!editalId) {
+      toast({
+        title: "Erro",
+        description: "Edital não encontrado.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setLoadingArquivos(true);
+
+      // Buscar edital e pegar a coluna regulamento
+      const { data: edital, error: editalError } = await supabase
+        .from('editais')
+        .select('regulamento, nome, codigo')
+        .eq('id', editalId)
+        .single();
+
+      if (editalError) throw editalError;
+
+      const editalData = edital as any;
+
+      if (!editalData || !editalData.regulamento || (editalData.regulamento as string[]).length === 0) {
+        toast({
+          title: "Aviso",
+          description: "Nenhum arquivo de regulamento encontrado para este edital.",
+        });
+        return;
+      }
+
+      const urlsRegulamento = editalData.regulamento as string[];
+      const zip = new JSZip();
+
+      // Baixar cada arquivo e adicionar ao ZIP
+      for (let i = 0; i < urlsRegulamento.length; i++) {
+        try {
+          const url = urlsRegulamento[i];
+          
+          // Extrair o nome do arquivo e path do storage da URL
+          // A URL pode ser uma URL pública completa do Supabase Storage
+          let fileName: string;
+          let storagePath: string;
+
+          if (url.startsWith('http://') || url.startsWith('https://')) {
+            // URL pública completa - extrair o path do storage
+            // Formato: https://[project].supabase.co/storage/v1/object/public/editais/[nome_arquivo]
+            const urlObj = new URL(url);
+            const pathParts = urlObj.pathname.split('/');
+            // Procurar pelo bucket 'editais' e pegar o que vem depois
+            const bucketIndex = pathParts.indexOf('editais');
+            if (bucketIndex !== -1 && bucketIndex < pathParts.length - 1) {
+              storagePath = pathParts.slice(bucketIndex + 1).join('/');
+              fileName = pathParts[pathParts.length - 1] || `arquivo_${i + 1}.pdf`;
+            } else {
+              // Fallback: pegar última parte do path
+              storagePath = pathParts[pathParts.length - 1];
+              fileName = pathParts[pathParts.length - 1] || `arquivo_${i + 1}.pdf`;
+            }
+          } else {
+            // Já é um path do storage (apenas o nome do arquivo)
+            storagePath = url;
+            fileName = url.split('/').pop() || `arquivo_${i + 1}.pdf`;
+          }
+
+          // Baixar arquivo do storage
+          const { data: fileData, error: downloadError } = await supabase.storage
+            .from('editais')
+            .download(storagePath);
+
+          if (downloadError) {
+            console.error(`Erro ao baixar arquivo ${fileName}:`, downloadError);
+            // Tentar baixar diretamente pela URL se o download do storage falhar
+            try {
+              const response = await fetch(url);
+              if (response.ok) {
+                const blob = await response.blob();
+                zip.file(fileName, blob);
+              } else {
+                console.error(`Erro ao baixar arquivo ${fileName} via URL:`, response.statusText);
+              }
+            } catch (fetchError) {
+              console.error(`Erro ao fazer fetch do arquivo ${fileName}:`, fetchError);
+            }
+            continue;
+          }
+
+          if (fileData) {
+            // Adicionar arquivo ao ZIP
+            zip.file(fileName, fileData);
+          }
+        } catch (err) {
+          console.error(`Erro ao processar arquivo ${i + 1}:`, err);
+        }
+      }
+
+      // Gerar ZIP e fazer download
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const zipUrl = window.URL.createObjectURL(zipBlob);
+      const link = document.createElement('a');
+      link.href = zipUrl;
+      const editalNome = editalData.nome || 'edital';
+      const editalCodigo = editalData.codigo || editalId;
+      link.download = `regulamento_${editalCodigo}_${new Date().toISOString().split('T')[0]}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(zipUrl);
+
+      toast({
+        title: "Sucesso",
+        description: `Regulamento baixado com ${urlsRegulamento.length} arquivo(s) em ZIP!`,
+      });
+    } catch (error) {
+      console.error('Erro ao baixar arquivos do regulamento:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao baixar arquivos do regulamento. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingArquivos(false);
+    }
   };
 
   // Exibir loading enquanto verifica autenticação
@@ -136,18 +271,37 @@ export const PareceristaLayout = ({
               </nav>
             )}
 
-            {/* Trocar Edital e Logout */}
+            {/* Trocar Edital, Download Regulamento, Suporte e Logout */}
             <div className="p-4 border-t space-y-2">
               {editalId && (
-                <Button
-                  variant="outline"
-                  className="w-full justify-start"
-                  onClick={handleTrocarEdital}
-                >
-                  <FileText className="mr-2 h-4 w-4" />
-                  Trocar Edital
-                </Button>
+                <>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start"
+                    onClick={handleTrocarEdital}
+                  >
+                    <FileText className="mr-2 h-4 w-4" />
+                    Trocar Edital
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start"
+                    onClick={handleDownloadRegulamento}
+                    disabled={loadingArquivos}
+                  >
+                    <Download className={`mr-2 h-4 w-4 ${loadingArquivos ? 'animate-spin' : ''}`} />
+                    {loadingArquivos ? 'Baixando...' : 'Baixar Regulamento'}
+                  </Button>
+                </>
               )}
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => setModalSuporteOpen(true)}
+              >
+                <Headphones className="mr-2 h-4 w-4" />
+                Suporte
+              </Button>
               <Button
                 variant="ghost"
                 className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
@@ -234,6 +388,12 @@ export const PareceristaLayout = ({
           </main>
         </div>
       </div>
+      
+      {/* Modal de Contato Suporte */}
+      <ModalContatoSuporte
+        open={modalSuporteOpen}
+        onClose={() => setModalSuporteOpen(false)}
+      />
     </BaseLayout>
   );
 };

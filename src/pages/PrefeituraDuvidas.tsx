@@ -21,7 +21,8 @@ import {
   User,
   Clock,
   CheckCircle,
-  Eye
+  Eye,
+  Loader2
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { PrefeituraLayout } from "@/components/layout/PrefeituraLayout";
@@ -355,6 +356,16 @@ export const PrefeituraDuvidas = () => {
                 </div>
               </div>
 
+              {/* Categoria */}
+              <div>
+                <Label className="text-sm font-medium text-gray-700">Categoria:</Label>
+                <div className="mt-1">
+                  <Badge variant="outline" className="text-sm">
+                    {modalResposta.duvida.categoria || 'Não especificada'}
+                  </Badge>
+                </div>
+              </div>
+
               {/* Resposta existente (se fechada) */}
               {modalResposta.duvida.fechada && modalResposta.duvida.resposta && (
                 <div>
@@ -392,7 +403,14 @@ export const PrefeituraDuvidas = () => {
                     onClick={handleResponder}
                     disabled={!resposta.trim() || isSubmitting}
                   >
-                    {isSubmitting ? 'Enviando...' : 'Responder'}
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Enviando...
+                      </>
+                    ) : (
+                      'Responder'
+                    )}
                   </Button>
                 )}
               </div>

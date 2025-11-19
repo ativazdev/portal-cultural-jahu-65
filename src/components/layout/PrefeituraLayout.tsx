@@ -1,4 +1,4 @@
-import React, { ReactNode, useState } from "react";
+import React, { ReactNode, useState, useEffect } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,12 +12,16 @@ import {
   FolderOpen, 
   HelpCircle,
   LogOut,
-  ChevronLeft
+  ChevronLeft,
+  AlertCircle,
+  Headphones
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BaseLayout, Container, PageHeader, PageContent } from "./BaseLayout";
 import { UserProfile } from "@/components/auth/UserProfile";
 import { usePrefeituraAuth } from "@/hooks/usePrefeituraAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { ModalContatoSuporte } from "@/components/ModalContatoSuporte";
 
 interface PrefeituraLayoutProps {
   children: ReactNode;
@@ -35,8 +39,28 @@ export const PrefeituraLayout = ({
   const { nomePrefeitura } = useParams<{ nomePrefeitura: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const { logout, isAuthenticated, loading, profile } = usePrefeituraAuth();
+  const { logout, isAuthenticated, loading, profile, prefeitura } = usePrefeituraAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [recursosPendentesCount, setRecursosPendentesCount] = useState(0);
+  const [modalSuporteOpen, setModalSuporteOpen] = useState(false);
+
+  // Buscar recursos pendentes para mostrar badge na sidebar
+  useEffect(() => {
+    const carregarRecursosPendentes = async () => {
+      if (prefeitura?.id) {
+        const { data, error } = await supabase
+          .from('recursos')
+          .select('id')
+          .eq('prefeitura_id', prefeitura.id)
+          .eq('status', 'pendente');
+
+        if (!error && data) {
+          setRecursosPendentesCount(data.length);
+        }
+      }
+    };
+    carregarRecursosPendentes();
+  }, [prefeitura?.id]);
 
   // Verificar se está autenticado e tem profile válido
   React.useEffect(() => {
@@ -45,10 +69,20 @@ export const PrefeituraLayout = ({
     }
   }, [loading, isAuthenticated, profile, navigate, nomePrefeitura]);
 
-  const navigation = [
+  const navigation: Array<{
+    name: string;
+    href: string;
+    icon: React.ComponentType<{ className?: string }>;
+    badge?: number;
+  }> = [
     { name: "Dashboard", href: `/${nomePrefeitura}/dashboard`, icon: Home },
     { name: "Pareceristas", href: `/${nomePrefeitura}/pareceristas`, icon: Users },
-    { name: "Editais", href: `/${nomePrefeitura}/editais`, icon: FileText },
+    { 
+      name: "Editais", 
+      href: `/${nomePrefeitura}/editais`, 
+      icon: FileText,
+      badge: recursosPendentesCount > 0 ? recursosPendentesCount : undefined
+    },
     { name: "Dúvidas", href: `/${nomePrefeitura}/duvidas`, icon: HelpCircle },
   ];
 
@@ -106,7 +140,7 @@ export const PrefeituraLayout = ({
                     key={item.name}
                     variant={isActive ? "secondary" : "ghost"}
                     className={cn(
-                      "w-full justify-start",
+                      "w-full justify-start relative",
                       isActive && "bg-primary/10 text-primary font-medium"
                     )}
                     onClick={() => {
@@ -116,10 +150,36 @@ export const PrefeituraLayout = ({
                   >
                     {React.createElement(item.icon, { className: "mr-2 h-4 w-4" })}
                     {item.name}
+                    {item.badge && item.badge > 0 && (
+                      <span className="ml-auto bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                        {item.badge}
+                      </span>
+                    )}
                   </Button>
                 );
               })}
             </nav>
+            <div className="p-4 border-t space-y-2">
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => {
+                  setModalSuporteOpen(true);
+                  setSidebarOpen(false);
+                }}
+              >
+                <Headphones className="mr-2 h-4 w-4" />
+                Suporte
+              </Button>
+              <Button
+                variant="ghost"
+                className="w-full justify-start text-destructive hover:text-destructive"
+                onClick={handleLogout}
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                Sair
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -145,18 +205,31 @@ export const PrefeituraLayout = ({
                     key={item.name}
                     variant={isActive ? "secondary" : "ghost"}
                     className={cn(
-                      "w-full justify-start",
+                      "w-full justify-start relative",
                       isActive && "bg-primary/10 text-primary font-medium"
                     )}
                     onClick={() => navigate(item.href)}
                   >
                     {React.createElement(item.icon, { className: "mr-2 h-4 w-4" })}
                     {item.name}
+                    {item.badge && item.badge > 0 && (
+                      <span className="ml-auto bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                        {item.badge}
+                      </span>
+                    )}
                   </Button>
                 );
               })}
             </nav>
-            <div className="p-4 border-t">
+            <div className="p-4 border-t space-y-2">
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => setModalSuporteOpen(true)}
+              >
+                <Headphones className="mr-2 h-4 w-4" />
+                Suporte
+              </Button>
               <Button
                 variant="ghost"
                 className="w-full justify-start text-destructive hover:text-destructive"
@@ -207,6 +280,12 @@ export const PrefeituraLayout = ({
           </PageContent>
         </div>
       </div>
+      
+      {/* Modal de Contato Suporte */}
+      <ModalContatoSuporte
+        open={modalSuporteOpen}
+        onClose={() => setModalSuporteOpen(false)}
+      />
     </BaseLayout>
   );
 };

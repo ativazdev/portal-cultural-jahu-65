@@ -186,5 +186,44 @@ export const avaliacaoService = {
       console.error('Erro ao buscar pareceristas:', error);
       return [];
     }
+  },
+
+  async getAvaliacaoFinal(projetoId: string): Promise<any | null> {
+    try {
+      const { data, error } = await supabase
+        .from('avaliacoes_final')
+        .select('*')
+        .eq('projeto_id', projetoId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') throw error;
+      return data || null;
+    } catch (error) {
+      console.error('Erro ao buscar avaliação final:', error);
+      return null;
+    }
+  },
+
+  async getAvaliacoesIndividuais(projetoId: string): Promise<Avaliacao[]> {
+    try {
+      const { data, error } = await supabase
+        .from('avaliacoes')
+        .select(`
+          *,
+          parecerista_nome:pareceristas(nome)
+        `)
+        .eq('projeto_id', projetoId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      
+      return data.map(item => ({
+        ...item,
+        parecerista_nome: item.parecerista_nome?.nome || 'Parecerista não encontrado'
+      }));
+    } catch (error) {
+      console.error('Erro ao buscar avaliações individuais:', error);
+      return [];
+    }
   }
 };

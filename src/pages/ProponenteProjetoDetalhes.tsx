@@ -409,6 +409,7 @@ export const ProponenteProjetoDetalhes = () => {
   const [showUploadDocModal, setShowUploadDocModal] = useState(false);
   const [documentoParaUpload, setDocumentoParaUpload] = useState<string | null>(null);
   const [arquivoDoc, setArquivoDoc] = useState<File | null>(null);
+  const [enviandoDocumento, setEnviandoDocumento] = useState(false);
 
   // Estados para OpenBanking
   const [contaSelecionada, setContaSelecionada] = useState<string | null>(null);
@@ -430,6 +431,7 @@ export const ProponenteProjetoDetalhes = () => {
 
   const {
     avaliacoes,
+    avaliacaoFinal,
     loading: loadingAvaliacoes,
     refresh: refreshAvaliacoes
   } = useAvaliacoes(projetoId || '', prefeitura?.id || '');
@@ -1224,6 +1226,7 @@ export const ProponenteProjetoDetalhes = () => {
     if (!documentoParaUpload || !arquivoDoc) return;
 
     try {
+      setEnviandoDocumento(true);
       // Buscar o documento atual para verificar se há arquivo antigo
       const documentoAtual = documentos.find(doc => doc.id === documentoParaUpload);
       
@@ -1289,6 +1292,8 @@ export const ProponenteProjetoDetalhes = () => {
         description: error.message || "Erro ao enviar documento",
         variant: "destructive",
       });
+    } finally {
+      setEnviandoDocumento(false);
     }
   };
 
@@ -1409,10 +1414,13 @@ export const ProponenteProjetoDetalhes = () => {
   const getStatusConfig = (status: string) => {
     const configs = {
       'rascunho': { label: 'Rascunho', color: 'bg-gray-100 text-gray-800', icon: <FileText className="h-4 w-4" /> },
+      'aguardando_parecerista': { label: 'Aguardando Parecerista', color: 'bg-orange-100 text-orange-800', icon: <Clock className="h-4 w-4" /> },
       'aguardando_avaliacao': { label: 'Aguardando Avaliação', color: 'bg-yellow-100 text-yellow-800', icon: <Clock className="h-4 w-4" /> },
       'recebido': { label: 'Recebido', color: 'bg-blue-100 text-blue-800', icon: <CheckCircle className="h-4 w-4" /> },
       'em_avaliacao': { label: 'Em Avaliação', color: 'bg-orange-100 text-orange-800', icon: <Search className="h-4 w-4" /> },
       'avaliado': { label: 'Avaliado', color: 'bg-purple-100 text-purple-800', icon: <CheckCircle className="h-4 w-4" /> },
+      'habilitado': { label: 'Habilitado', color: 'bg-green-100 text-green-800', icon: <CheckCircle className="h-4 w-4" /> },
+      'nao_habilitado': { label: 'Não Habilitado', color: 'bg-red-100 text-red-800', icon: <XCircle className="h-4 w-4" /> },
       'aprovado': { label: 'Aprovado', color: 'bg-green-100 text-green-800', icon: <CheckCircle className="h-4 w-4" /> },
       'rejeitado': { label: 'Rejeitado', color: 'bg-red-100 text-red-800', icon: <XCircle className="h-4 w-4" /> },
       'em_execucao': { label: 'Em Execução', color: 'bg-purple-100 text-purple-800', icon: <PlayCircle className="h-4 w-4" /> },
@@ -1423,7 +1431,7 @@ export const ProponenteProjetoDetalhes = () => {
 
   const getAbasPermitidas = (status: string) => {
     const abasPorStatus: { [key: string]: string[] } = {
-      'aprovado': ['informacoes', 'avaliacao', 'documentacao', 'pendencias', 'openbanking'],
+      'aprovado': ['informacoes', 'avaliacao', 'documentacao', 'pendencias','prestacao','openbanking'],
       'aguardando_avaliacao': ['informacoes', 'avaliacao'],
       'recebido': ['informacoes', 'avaliacao'],
       'em_avaliacao': ['informacoes', 'avaliacao'],
@@ -1855,7 +1863,7 @@ export const ProponenteProjetoDetalhes = () => {
               </Card>
 
               {/* Proponente */}
-              <Card className={projeto.proponente?.tipo === "PF" ? "border-l-4 border-l-blue-600" : "border-l-4 border-l-green-600"}>
+              <Card className={`col-span-1 lg:col-span-2 ${projeto.proponente?.tipo === "PF" ? "border-l-4 border-l-blue-600" : "border-l-4 border-l-green-600"}`}>
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle className="flex items-center gap-2">
@@ -1894,44 +1902,44 @@ export const ProponenteProjetoDetalhes = () => {
                   </div>
 
                   {/* Dados de Identificação */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 border-t">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t">
                     {projeto.proponente?.cpf && (
-                      <div>
-                        <span className="text-xs text-gray-500 font-medium">CPF:</span>
+                      <div className="space-y-1">
+                        <span className="text-xs text-gray-500 font-medium block">CPF:</span>
                         <p className="text-sm text-gray-700">{projeto.proponente.cpf}</p>
                       </div>
                     )}
                     {projeto.proponente?.cnpj && (
-                      <div>
-                        <span className="text-xs text-gray-500 font-medium">CNPJ:</span>
+                      <div className="space-y-1">
+                        <span className="text-xs text-gray-500 font-medium block">CNPJ:</span>
                         <p className="text-sm text-gray-700">{projeto.proponente.cnpj}</p>
                       </div>
                     )}
                     {projeto.proponente?.rg && (
-                      <div>
-                        <span className="text-xs text-gray-500 font-medium">RG:</span>
+                      <div className="space-y-1">
+                        <span className="text-xs text-gray-500 font-medium block">RG:</span>
                         <p className="text-sm text-gray-700">{projeto.proponente.rg}</p>
                       </div>
                     )}
                     {projeto.proponente?.data_nascimento && (
-                      <div>
-                        <span className="text-xs text-gray-500 font-medium">Data de Nascimento:</span>
+                      <div className="space-y-1">
+                        <span className="text-xs text-gray-500 font-medium block">Data de Nascimento:</span>
                         <p className="text-sm text-gray-700">{formatarData(projeto.proponente.data_nascimento)}</p>
                       </div>
                     )}
                   </div>
 
                   {/* Contato */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 border-t">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
                     {projeto.proponente?.telefone && (
-                      <div>
-                        <span className="text-xs text-gray-500 font-medium">Telefone:</span>
+                      <div className="space-y-1">
+                        <span className="text-xs text-gray-500 font-medium block">Telefone:</span>
                         <p className="text-sm text-gray-700">{projeto.proponente.telefone}</p>
                       </div>
                     )}
                     {projeto.proponente?.email && (
-                      <div>
-                        <span className="text-xs text-gray-500 font-medium">Email:</span>
+                      <div className="space-y-1">
+                        <span className="text-xs text-gray-500 font-medium block">Email:</span>
                         <p className="text-sm text-gray-700">{projeto.proponente.email}</p>
                       </div>
                     )}
@@ -1939,18 +1947,20 @@ export const ProponenteProjetoDetalhes = () => {
 
                   {/* Endereço */}
                   {projeto.proponente?.endereco && (
-                    <div className="pt-2 border-t">
-                      <h4 className="text-sm font-semibold text-gray-700 mb-2">Endereço</h4>
-                      <p className="text-sm text-gray-700">
-                        {projeto.proponente.endereco}
-                      </p>
-                      <p className="text-sm text-gray-700">
-                        {[
-                          projeto.proponente.cidade,
-                          projeto.proponente.estado,
-                          projeto.proponente.cep
-                        ].filter(Boolean).join(' - ')}
-                      </p>
+                    <div className="pt-4 border-t">
+                      <h4 className="text-sm font-semibold text-gray-700 mb-3">Endereço</h4>
+                      <div className="space-y-1">
+                        <p className="text-sm text-gray-700">
+                          {projeto.proponente.endereco}
+                        </p>
+                        <p className="text-sm text-gray-700">
+                          {[
+                            projeto.proponente.cidade,
+                            projeto.proponente.estado,
+                            projeto.proponente.cep
+                          ].filter(Boolean).join(' - ')}
+                        </p>
+                      </div>
                     </div>
                   )}
 
@@ -1958,54 +1968,54 @@ export const ProponenteProjetoDetalhes = () => {
                   {projeto.proponente?.tipo === "PF" && (
                     <>
                       {(projeto.proponente.comunidade_tradicional || projeto.proponente.genero || projeto.proponente.raca || projeto.proponente.escolaridade || projeto.proponente.renda_mensal) && (
-                        <div className="pt-2 border-t">
-                          <h4 className="text-sm font-semibold text-gray-700 mb-2">Dados Pessoais</h4>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="pt-4 border-t">
+                          <h4 className="text-sm font-semibold text-gray-700 mb-3">Dados Pessoais</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {projeto.proponente.comunidade_tradicional && (
-                              <div>
-                                <span className="text-xs text-gray-500 font-medium">Comunidade Tradicional:</span>
+                              <div className="space-y-1">
+                                <span className="text-xs text-gray-500 font-medium block">Comunidade Tradicional:</span>
                                 <p className="text-sm text-gray-700">{traduzirComunidade(projeto.proponente.comunidade_tradicional)}</p>
                               </div>
                             )}
                             {projeto.proponente.genero && (
-                              <div>
-                                <span className="text-xs text-gray-500 font-medium">Gênero:</span>
+                              <div className="space-y-1">
+                                <span className="text-xs text-gray-500 font-medium block">Gênero:</span>
                                 <p className="text-sm text-gray-700">{traduzirGenero(projeto.proponente.genero)}</p>
                               </div>
                             )}
                             {projeto.proponente.raca && (
-                              <div>
-                                <span className="text-xs text-gray-500 font-medium">Raça/Cor:</span>
+                              <div className="space-y-1">
+                                <span className="text-xs text-gray-500 font-medium block">Raça/Cor:</span>
                                 <p className="text-sm text-gray-700">{traduzirRaca(projeto.proponente.raca)}</p>
                               </div>
                             )}
                             {projeto.proponente.escolaridade && (
-                              <div>
-                                <span className="text-xs text-gray-500 font-medium">Escolaridade:</span>
+                              <div className="space-y-1">
+                                <span className="text-xs text-gray-500 font-medium block">Escolaridade:</span>
                                 <p className="text-sm text-gray-700">{traduzirEscolaridade(projeto.proponente.escolaridade)}</p>
                               </div>
                             )}
                             {projeto.proponente.renda_mensal && (
-                              <div>
-                                <span className="text-xs text-gray-500 font-medium">Renda Mensal:</span>
+                              <div className="space-y-1">
+                                <span className="text-xs text-gray-500 font-medium block">Renda Mensal:</span>
                                 <p className="text-sm text-gray-700">{traduzirRenda(projeto.proponente.renda_mensal)}</p>
                               </div>
                             )}
                             {projeto.proponente.pcd && (
-                              <div>
-                                <span className="text-xs text-gray-500 font-medium">PCD:</span>
+                              <div className="space-y-1">
+                                <span className="text-xs text-gray-500 font-medium block">PCD:</span>
                                 <p className="text-sm text-gray-700">Sim{projeto.proponente.tipo_deficiencia && ` - ${traduzirDeficiencia(projeto.proponente.tipo_deficiencia)}`}</p>
                               </div>
                             )}
                             {projeto.proponente.programa_social && (
-                              <div>
-                                <span className="text-xs text-gray-500 font-medium">Programa Social:</span>
+                              <div className="space-y-1">
+                                <span className="text-xs text-gray-500 font-medium block">Programa Social:</span>
                                 <p className="text-sm text-gray-700">{traduzirProgramaSocial(projeto.proponente.programa_social)}</p>
                               </div>
                             )}
                             {projeto.proponente.concorre_cotas && (
-                              <div>
-                                <span className="text-xs text-gray-500 font-medium">Concorre Cotas:</span>
+                              <div className="space-y-1">
+                                <span className="text-xs text-gray-500 font-medium block">Concorre Cotas:</span>
                                 <p className="text-sm text-gray-700">Sim{projeto.proponente.tipo_cotas && ` - ${traduzirCotas(projeto.proponente.tipo_cotas)}`}</p>
                               </div>
                             )}
@@ -2015,18 +2025,18 @@ export const ProponenteProjetoDetalhes = () => {
 
                       {/* Atividade Artística */}
                       {(projeto.proponente.funcao_artistica || projeto.proponente.representa_coletivo) && (
-                        <div className="pt-2 border-t">
-                          <h4 className="text-sm font-semibold text-gray-700 mb-2">Atividade Artística</h4>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="pt-4 border-t">
+                          <h4 className="text-sm font-semibold text-gray-700 mb-3">Atividade Artística</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {projeto.proponente.funcao_artistica && (
-                              <div>
-                                <span className="text-xs text-gray-500 font-medium">Função:</span>
+                              <div className="space-y-1">
+                                <span className="text-xs text-gray-500 font-medium block">Função:</span>
                                 <p className="text-sm text-gray-700">{traduzirFuncaoArtistica(projeto.proponente.funcao_artistica)}</p>
                               </div>
                             )}
                             {projeto.proponente.representa_coletivo && projeto.proponente.nome_coletivo && (
-                              <div>
-                                <span className="text-xs text-gray-500 font-medium">Coletivo:</span>
+                              <div className="space-y-1">
+                                <span className="text-xs text-gray-500 font-medium block">Coletivo:</span>
                                 <p className="text-sm text-gray-700">{projeto.proponente.nome_coletivo}</p>
                               </div>
                             )}
@@ -2036,9 +2046,9 @@ export const ProponenteProjetoDetalhes = () => {
 
                       {/* Currículo */}
                       {projeto.proponente.mini_curriculo && (
-                        <div className="pt-2 border-t">
-                          <span className="text-xs text-gray-500 font-medium">Mini Currículo:</span>
-                          <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">{projeto.proponente.mini_curriculo}</p>
+                        <div className="pt-4 border-t">
+                          <span className="text-xs text-gray-500 font-medium block mb-2">Mini Currículo:</span>
+                          <p className="text-sm text-gray-700 whitespace-pre-wrap">{projeto.proponente.mini_curriculo}</p>
                         </div>
                       )}
                     </>
@@ -2048,17 +2058,191 @@ export const ProponenteProjetoDetalhes = () => {
                   {projeto.proponente?.tipo === "PJ" && (
                     <>
                       {projeto.proponente.inscricao_estadual && (
-                        <div className="pt-2 border-t">
-                          <h4 className="text-sm font-semibold text-gray-700 mb-2">Inscrições</h4>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <div>
-                              <span className="text-xs text-gray-500 font-medium">Inscrição Estadual:</span>
+                        <div className="pt-4 border-t">
+                          <h4 className="text-sm font-semibold text-gray-700 mb-3">Inscrições</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                              <span className="text-xs text-gray-500 font-medium block">Inscrição Estadual:</span>
                               <p className="text-sm text-gray-700">{projeto.proponente.inscricao_estadual}</p>
                             </div>
+                            {projeto.proponente.inscricao_municipal && (
+                              <div className="space-y-1">
+                                <span className="text-xs text-gray-500 font-medium block">Inscrição Municipal:</span>
+                                <p className="text-sm text-gray-700">{projeto.proponente.inscricao_municipal}</p>
+                              </div>
+                            )}
                           </div>
                         </div>
                       )}
 
+                      {/* Representante Legal */}
+                      {(projeto.proponente.nome_responsavel || projeto.proponente.cpf_responsavel || projeto.proponente.cargo_responsavel) && (
+                        <div className="pt-4 border-t">
+                          <h4 className="text-sm font-semibold text-gray-700 mb-3">Representante Legal</h4>
+                          <div className="space-y-4">
+                            {/* Dados Básicos */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                              {projeto.proponente.nome_responsavel && (
+                                <div className="space-y-1">
+                                  <span className="text-xs text-gray-500 font-medium block">Nome:</span>
+                                  <p className="text-sm text-gray-700">{projeto.proponente.nome_responsavel}</p>
+                                </div>
+                              )}
+                              {projeto.proponente.cpf_responsavel && (
+                                <div className="space-y-1">
+                                  <span className="text-xs text-gray-500 font-medium block">CPF:</span>
+                                  <p className="text-sm text-gray-700">{projeto.proponente.cpf_responsavel}</p>
+                                </div>
+                              )}
+                              {projeto.proponente.rg_responsavel && (
+                                <div className="space-y-1">
+                                  <span className="text-xs text-gray-500 font-medium block">RG:</span>
+                                  <p className="text-sm text-gray-700">{projeto.proponente.rg_responsavel}</p>
+                                </div>
+                              )}
+                              {projeto.proponente.data_nascimento_responsavel && (
+                                <div className="space-y-1">
+                                  <span className="text-xs text-gray-500 font-medium block">Data de Nascimento:</span>
+                                  <p className="text-sm text-gray-700">{formatarData(projeto.proponente.data_nascimento_responsavel)}</p>
+                                </div>
+                              )}
+                              {projeto.proponente.cargo_responsavel && (
+                                <div className="space-y-1">
+                                  <span className="text-xs text-gray-500 font-medium block">Cargo:</span>
+                                  <p className="text-sm text-gray-700">{projeto.proponente.cargo_responsavel}</p>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Contato */}
+                            {(projeto.proponente.email_responsavel || projeto.proponente.telefone_responsavel) && (
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
+                                {projeto.proponente.email_responsavel && (
+                                  <div className="space-y-1">
+                                    <span className="text-xs text-gray-500 font-medium block">Email:</span>
+                                    <p className="text-sm text-gray-700">{projeto.proponente.email_responsavel}</p>
+                                  </div>
+                                )}
+                                {projeto.proponente.telefone_responsavel && (
+                                  <div className="space-y-1">
+                                    <span className="text-xs text-gray-500 font-medium block">Telefone:</span>
+                                    <p className="text-sm text-gray-700">{projeto.proponente.telefone_responsavel}</p>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Endereço */}
+                            {projeto.proponente.endereco_responsavel && (
+                              <div className="pt-4 border-t">
+                                <h5 className="text-xs font-semibold text-gray-600 mb-2">Endereço</h5>
+                                <div className="space-y-1">
+                                  <p className="text-sm text-gray-700">
+                                    {[
+                                      projeto.proponente.endereco_responsavel,
+                                      projeto.proponente.numero_responsavel,
+                                      projeto.proponente.complemento_responsavel
+                                    ].filter(Boolean).join(', ')}
+                                  </p>
+                                  <p className="text-sm text-gray-700">
+                                    {[
+                                      projeto.proponente.cidade_responsavel,
+                                      projeto.proponente.estado_responsavel,
+                                      projeto.proponente.cep_responsavel
+                                    ].filter(Boolean).join(' - ')}
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Dados Pessoais */}
+                            {(projeto.proponente.comunidade_tradicional_responsavel || projeto.proponente.genero_responsavel || projeto.proponente.raca_responsavel || projeto.proponente.escolaridade_responsavel || projeto.proponente.renda_mensal_responsavel) && (
+                              <div className="pt-4 border-t">
+                                <h5 className="text-xs font-semibold text-gray-600 mb-3">Dados Pessoais</h5>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                  {projeto.proponente.comunidade_tradicional_responsavel && (
+                                    <div className="space-y-1">
+                                      <span className="text-xs text-gray-500 font-medium block">Comunidade Tradicional:</span>
+                                      <p className="text-sm text-gray-700">{traduzirComunidade(projeto.proponente.comunidade_tradicional_responsavel)}</p>
+                                    </div>
+                                  )}
+                                  {projeto.proponente.genero_responsavel && (
+                                    <div className="space-y-1">
+                                      <span className="text-xs text-gray-500 font-medium block">Gênero:</span>
+                                      <p className="text-sm text-gray-700">{traduzirGenero(projeto.proponente.genero_responsavel)}</p>
+                                    </div>
+                                  )}
+                                  {projeto.proponente.raca_responsavel && (
+                                    <div className="space-y-1">
+                                      <span className="text-xs text-gray-500 font-medium block">Raça/Cor:</span>
+                                      <p className="text-sm text-gray-700">{traduzirRaca(projeto.proponente.raca_responsavel)}</p>
+                                    </div>
+                                  )}
+                                  {projeto.proponente.escolaridade_responsavel && (
+                                    <div className="space-y-1">
+                                      <span className="text-xs text-gray-500 font-medium block">Escolaridade:</span>
+                                      <p className="text-sm text-gray-700">{traduzirEscolaridade(projeto.proponente.escolaridade_responsavel)}</p>
+                                    </div>
+                                  )}
+                                  {projeto.proponente.renda_mensal_responsavel && (
+                                    <div className="space-y-1">
+                                      <span className="text-xs text-gray-500 font-medium block">Renda Mensal:</span>
+                                      <p className="text-sm text-gray-700">{traduzirRenda(projeto.proponente.renda_mensal_responsavel)}</p>
+                                    </div>
+                                  )}
+                                  {projeto.proponente.pcd_responsavel && (
+                                    <div className="space-y-1">
+                                      <span className="text-xs text-gray-500 font-medium block">PCD:</span>
+                                      <p className="text-sm text-gray-700">Sim{projeto.proponente.tipo_deficiencia_responsavel && ` - ${traduzirDeficiencia(projeto.proponente.tipo_deficiencia_responsavel)}`}</p>
+                                    </div>
+                                  )}
+                                  {projeto.proponente.programa_social_responsavel && (
+                                    <div className="space-y-1">
+                                      <span className="text-xs text-gray-500 font-medium block">Programa Social:</span>
+                                      <p className="text-sm text-gray-700">{traduzirProgramaSocial(projeto.proponente.programa_social_responsavel)}</p>
+                                    </div>
+                                  )}
+                                  {projeto.proponente.concorre_cotas_responsavel && (
+                                    <div className="space-y-1">
+                                      <span className="text-xs text-gray-500 font-medium block">Concorre Cotas:</span>
+                                      <p className="text-sm text-gray-700">Sim{projeto.proponente.tipo_cotas_responsavel && ` - ${traduzirCotas(projeto.proponente.tipo_cotas_responsavel)}`}</p>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Atividade Artística */}
+                            {(projeto.proponente.funcao_artistica_responsavel || projeto.proponente.profissao_responsavel) && (
+                              <div className="pt-4 border-t">
+                                <h5 className="text-xs font-semibold text-gray-600 mb-3">Atividade Profissional</h5>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  {projeto.proponente.funcao_artistica_responsavel && (
+                                    <div className="space-y-1">
+                                      <span className="text-xs text-gray-500 font-medium block">Função Artística:</span>
+                                      <p className="text-sm text-gray-700">{traduzirFuncaoArtistica(projeto.proponente.funcao_artistica_responsavel)}</p>
+                                    </div>
+                                  )}
+                                  {projeto.proponente.profissao_responsavel && (
+                                    <div className="space-y-1">
+                                      <span className="text-xs text-gray-500 font-medium block">Profissão:</span>
+                                      <p className="text-sm text-gray-700">{projeto.proponente.profissao_responsavel}</p>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Currículo */}
+                            {projeto.proponente.mini_curriculo_responsavel && (
+                              <div className="pt-4 border-t">
+                                <span className="text-xs text-gray-500 font-medium block mb-2">Mini Currículo:</span>
+                                <p className="text-sm text-gray-700 whitespace-pre-wrap">{projeto.proponente.mini_curriculo_responsavel}</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </>
                   )}
                 </CardContent>
@@ -2400,6 +2584,139 @@ export const ProponenteProjetoDetalhes = () => {
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
                     <p className="mt-2 text-gray-500">Carregando avaliações...</p>
                   </div>
+                ) : avaliacaoFinal && avaliacaoFinal.status === 'avaliado' ? (
+                  // Mostrar avaliação final quando o projeto estiver avaliado
+                  <div className="space-y-4">
+                    <div className="border rounded-lg p-4 bg-blue-50 border-blue-200">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <h4 className="font-semibold text-lg text-gray-900">
+                              Avaliação Final Consolidada
+                            </h4>
+                            <Badge className="bg-green-100 text-green-800">
+                              <CheckCircle className="h-4 w-4 mr-1" />
+                              Avaliado
+                            </Badge>
+                          </div>
+                          
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm text-gray-600 mb-4">
+                            <div>
+                              <span className="font-medium">Pareceristas:</span>
+                              <p>{avaliacaoFinal.quantidade_pareceristas || 0}</p>
+                            </div>
+                            {avaliacaoFinal.nota_final !== null && avaliacaoFinal.nota_final !== undefined && (
+                              <div>
+                                <span className="font-medium">Nota Final:</span>
+                                <p className="font-bold text-lg text-blue-600">{Number(avaliacaoFinal.nota_final).toFixed(1)}</p>
+                              </div>
+                            )}
+                            <div>
+                              <span className="font-medium">Status:</span>
+                              <p className="font-medium">Avaliado</p>
+                            </div>
+                          </div>
+
+                          {/* Notas detalhadas - Critérios Obrigatórios */}
+                          <div className="space-y-4 mb-4">
+                            <h4 className="font-semibold text-gray-900">Critérios Obrigatórios (Média)</h4>
+                            <div className="grid grid-cols-1 gap-3">
+                              {avaliacaoFinal.nota_criterio_a !== null && avaliacaoFinal.nota_criterio_a !== undefined && (
+                                <div className="border rounded p-3 bg-white">
+                                  <span className="font-medium text-sm">Critério A - Qualidade do Projeto:</span>
+                                  <p className="text-lg font-bold">{Number(avaliacaoFinal.nota_criterio_a).toFixed(1)}</p>
+                                  {avaliacaoFinal.obs_criterio_a && (
+                                    <p className="text-sm text-gray-600 mt-1">{avaliacaoFinal.obs_criterio_a}</p>
+                                  )}
+                                </div>
+                              )}
+                              {avaliacaoFinal.nota_criterio_b !== null && avaliacaoFinal.nota_criterio_b !== undefined && (
+                                <div className="border rounded p-3 bg-white">
+                                  <span className="font-medium text-sm">Critério B - Relevância Cultural:</span>
+                                  <p className="text-lg font-bold">{Number(avaliacaoFinal.nota_criterio_b).toFixed(1)}</p>
+                                  {avaliacaoFinal.obs_criterio_b && (
+                                    <p className="text-sm text-gray-600 mt-1">{avaliacaoFinal.obs_criterio_b}</p>
+                                  )}
+                                </div>
+                              )}
+                              {avaliacaoFinal.nota_criterio_c !== null && avaliacaoFinal.nota_criterio_c !== undefined && (
+                                <div className="border rounded p-3 bg-white">
+                                  <span className="font-medium text-sm">Critério C - Integração Comunitária:</span>
+                                  <p className="text-lg font-bold">{Number(avaliacaoFinal.nota_criterio_c).toFixed(1)}</p>
+                                  {avaliacaoFinal.obs_criterio_c && (
+                                    <p className="text-sm text-gray-600 mt-1">{avaliacaoFinal.obs_criterio_c}</p>
+                                  )}
+                                </div>
+                              )}
+                              {avaliacaoFinal.nota_criterio_d !== null && avaliacaoFinal.nota_criterio_d !== undefined && (
+                                <div className="border rounded p-3 bg-white">
+                                  <span className="font-medium text-sm">Critério D - Trajetória Artística:</span>
+                                  <p className="text-lg font-bold">{Number(avaliacaoFinal.nota_criterio_d).toFixed(1)}</p>
+                                  {avaliacaoFinal.obs_criterio_d && (
+                                    <p className="text-sm text-gray-600 mt-1">{avaliacaoFinal.obs_criterio_d}</p>
+                                  )}
+                                </div>
+                              )}
+                              {avaliacaoFinal.nota_criterio_e !== null && avaliacaoFinal.nota_criterio_e !== undefined && (
+                                <div className="border rounded p-3 bg-white">
+                                  <span className="font-medium text-sm">Critério E - Promoção de Diversidade:</span>
+                                  <p className="text-lg font-bold">{Number(avaliacaoFinal.nota_criterio_e).toFixed(1)}</p>
+                                  {avaliacaoFinal.obs_criterio_e && (
+                                    <p className="text-sm text-gray-600 mt-1">{avaliacaoFinal.obs_criterio_e}</p>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Critérios Bônus */}
+                          <div className="space-y-2 mt-4 mb-4">
+                            <h4 className="font-semibold text-gray-900">Critérios Bônus (Média)</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                              {avaliacaoFinal.bonus_criterio_f !== null && avaliacaoFinal.bonus_criterio_f !== undefined && (
+                                <div className="border rounded p-3 bg-blue-50">
+                                  <span className="font-medium text-sm">Critério F - Agente cultural do gênero feminino:</span>
+                                  <p className="text-lg font-bold text-blue-600">{Number(avaliacaoFinal.bonus_criterio_f).toFixed(1)}</p>
+                                </div>
+                              )}
+                              {avaliacaoFinal.bonus_criterio_g !== null && avaliacaoFinal.bonus_criterio_g !== undefined && (
+                                <div className="border rounded p-3 bg-blue-50">
+                                  <span className="font-medium text-sm">Critério G - Agente cultural negro ou indígena:</span>
+                                  <p className="text-lg font-bold text-blue-600">{Number(avaliacaoFinal.bonus_criterio_g).toFixed(1)}</p>
+                                </div>
+                              )}
+                              {avaliacaoFinal.bonus_criterio_h !== null && avaliacaoFinal.bonus_criterio_h !== undefined && (
+                                <div className="border rounded p-3 bg-blue-50">
+                                  <span className="font-medium text-sm">Critério H - Agente cultural com deficiência:</span>
+                                  <p className="text-lg font-bold text-blue-600">{Number(avaliacaoFinal.bonus_criterio_h).toFixed(1)}</p>
+                                </div>
+                              )}
+                              {avaliacaoFinal.bonus_criterio_i !== null && avaliacaoFinal.bonus_criterio_i !== undefined && (
+                                <div className="border rounded p-3 bg-blue-50">
+                                  <span className="font-medium text-sm">Critério I - Agente cultural de região de menor IDH:</span>
+                                  <p className="text-lg font-bold text-blue-600">{Number(avaliacaoFinal.bonus_criterio_i).toFixed(1)}</p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {avaliacaoFinal.parecer_tecnico && (
+                            <div className="mt-4">
+                              <span className="font-medium text-sm text-gray-700">Parecer Técnico:</span>
+                              <p className="text-sm text-gray-600 mt-1">{avaliacaoFinal.parecer_tecnico}</p>
+                            </div>
+                          )}
+
+                          {avaliacaoFinal.motivo_rejeicao && (
+                            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded">
+                              <span className="font-medium text-sm text-red-700">Motivo da Rejeição:</span>
+                              <p className="text-sm text-red-600 mt-1">{avaliacaoFinal.motivo_rejeicao}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 ) : avaliacoes.length === 0 ? (
                   <div className="text-center py-8 text-gray-500">
                     <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -2514,37 +2831,51 @@ export const ProponenteProjetoDetalhes = () => {
                               </div>
 
                               {/* Critérios Bônus */}
-                              {((avaliacao as any).bonus_criterio_f || (avaliacao as any).bonus_criterio_g || (avaliacao as any).bonus_criterio_h || (avaliacao as any).bonus_criterio_i) && (
-                                <div className="space-y-2 mt-4 mb-4">
-                                  <h4 className="font-semibold text-gray-900">Critérios Bônus</h4>
-                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                    {(avaliacao as any).bonus_criterio_f && (avaliacao as any).bonus_criterio_f > 0 && (
-                                      <div className="border rounded p-3 bg-blue-50">
-                                        <span className="font-medium text-sm">Critério F - Agente cultural do gênero feminino:</span>
-                                        <p className="text-lg font-bold text-blue-600">{(avaliacao as any).bonus_criterio_f?.toFixed(1)}</p>
-                                      </div>
-                                    )}
-                                    {(avaliacao as any).bonus_criterio_g && (avaliacao as any).bonus_criterio_g > 0 && (
-                                      <div className="border rounded p-3 bg-blue-50">
-                                        <span className="font-medium text-sm">Critério G - Agente cultural negro ou indígena:</span>
-                                        <p className="text-lg font-bold text-blue-600">{(avaliacao as any).bonus_criterio_g?.toFixed(1)}</p>
-                                      </div>
-                                    )}
-                                    {(avaliacao as any).bonus_criterio_h && (avaliacao as any).bonus_criterio_h > 0 && (
-                                      <div className="border rounded p-3 bg-blue-50">
-                                        <span className="font-medium text-sm">Critério H - Agente cultural com deficiência:</span>
-                                        <p className="text-lg font-bold text-blue-600">{(avaliacao as any).bonus_criterio_h?.toFixed(1)}</p>
-                                      </div>
-                                    )}
-                                    {(avaliacao as any).bonus_criterio_i && (avaliacao as any).bonus_criterio_i > 0 && (
-                                      <div className="border rounded p-3 bg-blue-50">
-                                        <span className="font-medium text-sm">Critério I - Agente cultural de região de menor IDH:</span>
-                                        <p className="text-lg font-bold text-blue-600">{(avaliacao as any).bonus_criterio_i?.toFixed(1)}</p>
-                                      </div>
-                                    )}
+                              {(() => {
+                                const bonusF = (avaliacao as any).bonus_criterio_f;
+                                const bonusG = (avaliacao as any).bonus_criterio_g;
+                                const bonusH = (avaliacao as any).bonus_criterio_h;
+                                const bonusI = (avaliacao as any).bonus_criterio_i;
+                                
+                                const temBonus = (bonusF && bonusF > 0) || 
+                                                 (bonusG && bonusG > 0) || 
+                                                 (bonusH && bonusH > 0) || 
+                                                 (bonusI && bonusI > 0);
+                                
+                                if (!temBonus) return null;
+                                
+                                return (
+                                  <div className="space-y-2 mt-4 mb-4">
+                                    <h4 className="font-semibold text-gray-900">Critérios Bônus</h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                      {bonusF && bonusF > 0 && (
+                                        <div className="border rounded p-3 bg-blue-50">
+                                          <span className="font-medium text-sm">Critério F - Agente cultural do gênero feminino:</span>
+                                          <p className="text-lg font-bold text-blue-600">{bonusF.toFixed(1)}</p>
+                                        </div>
+                                      )}
+                                      {bonusG && bonusG > 0 && (
+                                        <div className="border rounded p-3 bg-blue-50">
+                                          <span className="font-medium text-sm">Critério G - Agente cultural negro ou indígena:</span>
+                                          <p className="text-lg font-bold text-blue-600">{bonusG.toFixed(1)}</p>
+                                        </div>
+                                      )}
+                                      {bonusH && bonusH > 0 && (
+                                        <div className="border rounded p-3 bg-blue-50">
+                                          <span className="font-medium text-sm">Critério H - Agente cultural com deficiência:</span>
+                                          <p className="text-lg font-bold text-blue-600">{bonusH.toFixed(1)}</p>
+                                        </div>
+                                      )}
+                                      {bonusI && bonusI > 0 && (
+                                        <div className="border rounded p-3 bg-blue-50">
+                                          <span className="font-medium text-sm">Critério I - Agente cultural de região de menor IDH:</span>
+                                          <p className="text-lg font-bold text-blue-600">{bonusI.toFixed(1)}</p>
+                                        </div>
+                                      )}
+                                    </div>
                                   </div>
-                                </div>
-                              )}
+                                );
+                              })()}
 
                               {avaliacao.parecer_tecnico && (
                                 <div className="mt-2">
@@ -4946,11 +5277,25 @@ export const ProponenteProjetoDetalhes = () => {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowUploadDocModal(false)}>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowUploadDocModal(false)}
+              disabled={enviandoDocumento}
+            >
               Cancelar
             </Button>
-            <Button onClick={handleUploadDocumento}>
-              Enviar
+            <Button 
+              onClick={handleUploadDocumento}
+              disabled={enviandoDocumento || !arquivoDoc}
+            >
+              {enviandoDocumento ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Enviando...
+                </>
+              ) : (
+                'Enviar'
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

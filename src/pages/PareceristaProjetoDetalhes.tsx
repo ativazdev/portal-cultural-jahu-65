@@ -371,18 +371,19 @@ export const PareceristaProjetoDetalhes = () => {
 
       if (error) throw error;
 
-      // Atualizar o status do projeto se a nota final for >= 50 (aprovado) ou < 50 (rejeitado)
-      const { error: errorProjeto } = await supabase
-        .from('projetos')
-        .update({
-          status: notaFinal >= 50 ? 'aprovado' : 'rejeitado',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', projetoId);
+      // Verificar se todas as avaliações do projeto foram concluídas
+      const { data: todasAvaliacoes } = await supabase
+        .from('avaliacoes')
+        .select('id, status')
+        .eq('projeto_id', projetoId);
 
-      if (errorProjeto) {
-        console.error('Erro ao atualizar status do projeto:', errorProjeto);
-      }
+      const totalAvaliacoes = todasAvaliacoes?.length || 0;
+      const avaliacoesConcluidas = todasAvaliacoes?.filter(a => a.status === 'avaliado').length || 0;
+
+      // Se todas as avaliações foram concluídas, o trigger do banco já atualizará nota_media e status do projeto
+      // Não atualizamos o status do projeto aqui porque pode haver múltiplos pareceristas
+      // O status será "avaliado" quando todas as avaliações forem concluídas (via trigger)
+      // A decisão final (aprovado/rejeitado) será feita pela prefeitura após análise
 
       setAvaliacao(data);
       setEditando(false);
@@ -423,17 +424,14 @@ export const PareceristaProjetoDetalhes = () => {
     
     const notaFinal = somaObrigatorios + somaBonus;
 
-    // Se a nota final for < 50, mostrar modal de rejeição
-    if (notaFinal < 50) {
-      setShowRejeicaoModal(true);
-    } else {
-      await handleSalvarAvaliacao();
-    }
+   handleSalvarAvaliacao();
+
   };
 
   const getStatusConfig = (status: string) => {
     const configs: Record<string, { label: string; color: string }> = {
       rascunho: { label: 'Rascunho', color: 'bg-yellow-100 text-yellow-800' },
+      aguardando_parecerista: { label: 'Aguardando Parecerista', color: 'bg-orange-100 text-orange-800' },
       aguardando_avaliacao: { label: 'Aguardando', color: 'bg-orange-100 text-orange-800' },
       recebido: { label: 'Recebido', color: 'bg-blue-100 text-blue-800' },
       em_avaliacao: { label: 'Em Avaliação', color: 'bg-blue-100 text-blue-800' },
@@ -702,7 +700,7 @@ export const PareceristaProjetoDetalhes = () => {
               </Card>
 
               {/* Proponente - detalhado */}
-              <Card className={projeto.proponente?.tipo === "PF" ? "border-l-4 border-l-blue-600" : "border-l-4 border-l-green-600"}>
+              <Card className={`col-span-1 lg:col-span-2 ${projeto.proponente?.tipo === "PF" ? "border-l-4 border-l-blue-600" : "border-l-4 border-l-green-600"}`}>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <User className="h-5 w-5" />
@@ -730,44 +728,44 @@ export const PareceristaProjetoDetalhes = () => {
                   </div>
 
                   {/* Dados de Identificação */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 border-t">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t">
                     {projeto.proponente?.cpf && (
-                      <div>
-                        <span className="text-xs text-gray-500 font-medium">CPF:</span>
+                      <div className="space-y-1">
+                        <span className="text-xs text-gray-500 font-medium block">CPF:</span>
                         <p className="text-sm text-gray-700">{projeto.proponente.cpf}</p>
                       </div>
                     )}
                     {projeto.proponente?.cnpj && (
-                      <div>
-                        <span className="text-xs text-gray-500 font-medium">CNPJ:</span>
+                      <div className="space-y-1">
+                        <span className="text-xs text-gray-500 font-medium block">CNPJ:</span>
                         <p className="text-sm text-gray-700">{projeto.proponente.cnpj}</p>
                       </div>
                     )}
                     {projeto.proponente?.rg && (
-                      <div>
-                        <span className="text-xs text-gray-500 font-medium">RG:</span>
+                      <div className="space-y-1">
+                        <span className="text-xs text-gray-500 font-medium block">RG:</span>
                         <p className="text-sm text-gray-700">{projeto.proponente.rg}</p>
                       </div>
                     )}
                     {projeto.proponente?.data_nascimento && (
-                      <div>
-                        <span className="text-xs text-gray-500 font-medium">Data de Nascimento:</span>
+                      <div className="space-y-1">
+                        <span className="text-xs text-gray-500 font-medium block">Data de Nascimento:</span>
                         <p className="text-sm text-gray-700">{formatarData(projeto.proponente.data_nascimento)}</p>
                       </div>
                     )}
                   </div>
 
                   {/* Contato */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 border-t">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
                     {projeto.proponente?.telefone && (
-                      <div>
-                        <span className="text-xs text-gray-500 font-medium">Telefone:</span>
+                      <div className="space-y-1">
+                        <span className="text-xs text-gray-500 font-medium block">Telefone:</span>
                         <p className="text-sm text-gray-700">{projeto.proponente.telefone}</p>
                       </div>
                     )}
                     {projeto.proponente?.email && (
-                      <div>
-                        <span className="text-xs text-gray-500 font-medium">Email:</span>
+                      <div className="space-y-1">
+                        <span className="text-xs text-gray-500 font-medium block">Email:</span>
                         <p className="text-sm text-gray-700">{projeto.proponente.email}</p>
                       </div>
                     )}
@@ -775,18 +773,20 @@ export const PareceristaProjetoDetalhes = () => {
 
                   {/* Endereço */}
                   {projeto.proponente?.endereco && (
-                    <div className="pt-2 border-t">
-                      <h4 className="text-sm font-semibold text-gray-700 mb-2">Endereço</h4>
-                      <p className="text-sm text-gray-700">
-                        {projeto.proponente.endereco}
-                      </p>
-                      <p className="text-sm text-gray-700">
-                        {[
-                          projeto.proponente.cidade,
-                          projeto.proponente.estado,
-                          projeto.proponente.cep
-                        ].filter(Boolean).join(' - ')}
-                      </p>
+                    <div className="pt-4 border-t">
+                      <h4 className="text-sm font-semibold text-gray-700 mb-3">Endereço</h4>
+                      <div className="space-y-1">
+                        <p className="text-sm text-gray-700">
+                          {projeto.proponente.endereco}
+                        </p>
+                        <p className="text-sm text-gray-700">
+                          {[
+                            projeto.proponente.cidade,
+                            projeto.proponente.estado,
+                            projeto.proponente.cep
+                          ].filter(Boolean).join(' - ')}
+                        </p>
+                      </div>
                     </div>
                   )}
 
@@ -794,54 +794,54 @@ export const PareceristaProjetoDetalhes = () => {
                   {projeto.proponente?.tipo === "PF" && (
                     <>
                       {(projeto.proponente.comunidade_tradicional || projeto.proponente.genero || projeto.proponente.raca || projeto.proponente.escolaridade || projeto.proponente.renda_mensal) && (
-                        <div className="pt-2 border-t">
-                          <h4 className="text-sm font-semibold text-gray-700 mb-2">Dados Pessoais</h4>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="pt-4 border-t">
+                          <h4 className="text-sm font-semibold text-gray-700 mb-3">Dados Pessoais</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {projeto.proponente.comunidade_tradicional && (
-                              <div>
-                                <span className="text-xs text-gray-500 font-medium">Comunidade Tradicional:</span>
+                              <div className="space-y-1">
+                                <span className="text-xs text-gray-500 font-medium block">Comunidade Tradicional:</span>
                                 <p className="text-sm text-gray-700">{traduzirComunidade(projeto.proponente.comunidade_tradicional)}</p>
                               </div>
                             )}
                             {projeto.proponente.genero && (
-                              <div>
-                                <span className="text-xs text-gray-500 font-medium">Gênero:</span>
+                              <div className="space-y-1">
+                                <span className="text-xs text-gray-500 font-medium block">Gênero:</span>
                                 <p className="text-sm text-gray-700">{traduzirGenero(projeto.proponente.genero)}</p>
                               </div>
                             )}
                             {projeto.proponente.raca && (
-                              <div>
-                                <span className="text-xs text-gray-500 font-medium">Raça/Cor:</span>
+                              <div className="space-y-1">
+                                <span className="text-xs text-gray-500 font-medium block">Raça/Cor:</span>
                                 <p className="text-sm text-gray-700">{traduzirRaca(projeto.proponente.raca)}</p>
                               </div>
                             )}
                             {projeto.proponente.escolaridade && (
-                              <div>
-                                <span className="text-xs text-gray-500 font-medium">Escolaridade:</span>
+                              <div className="space-y-1">
+                                <span className="text-xs text-gray-500 font-medium block">Escolaridade:</span>
                                 <p className="text-sm text-gray-700">{traduzirEscolaridade(projeto.proponente.escolaridade)}</p>
                               </div>
                             )}
                             {projeto.proponente.renda_mensal && (
-                              <div>
-                                <span className="text-xs text-gray-500 font-medium">Renda Mensal:</span>
+                              <div className="space-y-1">
+                                <span className="text-xs text-gray-500 font-medium block">Renda Mensal:</span>
                                 <p className="text-sm text-gray-700">{traduzirRenda(projeto.proponente.renda_mensal)}</p>
                               </div>
                             )}
                             {projeto.proponente.pcd && (
-                              <div>
-                                <span className="text-xs text-gray-500 font-medium">PCD:</span>
+                              <div className="space-y-1">
+                                <span className="text-xs text-gray-500 font-medium block">PCD:</span>
                                 <p className="text-sm text-gray-700">Sim{projeto.proponente.tipo_deficiencia && ` - ${traduzirDeficiencia(projeto.proponente.tipo_deficiencia)}`}</p>
                               </div>
                             )}
                             {projeto.proponente.programa_social && (
-                              <div>
-                                <span className="text-xs text-gray-500 font-medium">Programa Social:</span>
+                              <div className="space-y-1">
+                                <span className="text-xs text-gray-500 font-medium block">Programa Social:</span>
                                 <p className="text-sm text-gray-700">{traduzirProgramaSocial(projeto.proponente.programa_social)}</p>
                               </div>
                             )}
                             {projeto.proponente.concorre_cotas && (
-                              <div>
-                                <span className="text-xs text-gray-500 font-medium">Concorre Cotas:</span>
+                              <div className="space-y-1">
+                                <span className="text-xs text-gray-500 font-medium block">Concorre Cotas:</span>
                                 <p className="text-sm text-gray-700">Sim{projeto.proponente.tipo_cotas && ` - ${traduzirCotas(projeto.proponente.tipo_cotas)}`}</p>
                               </div>
                             )}
@@ -851,18 +851,18 @@ export const PareceristaProjetoDetalhes = () => {
 
                       {/* Atividade Artística */}
                       {(projeto.proponente.funcao_artistica || projeto.proponente.representa_coletivo) && (
-                        <div className="pt-2 border-t">
-                          <h4 className="text-sm font-semibold text-gray-700 mb-2">Atividade Artística</h4>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="pt-4 border-t">
+                          <h4 className="text-sm font-semibold text-gray-700 mb-3">Atividade Artística</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {projeto.proponente.funcao_artistica && (
-                              <div>
-                                <span className="text-xs text-gray-500 font-medium">Função:</span>
+                              <div className="space-y-1">
+                                <span className="text-xs text-gray-500 font-medium block">Função:</span>
                                 <p className="text-sm text-gray-700">{traduzirFuncaoArtistica(projeto.proponente.funcao_artistica)}</p>
                               </div>
                             )}
                             {projeto.proponente.representa_coletivo && projeto.proponente.nome_coletivo && (
-                              <div>
-                                <span className="text-xs text-gray-500 font-medium">Coletivo:</span>
+                              <div className="space-y-1">
+                                <span className="text-xs text-gray-500 font-medium block">Coletivo:</span>
                                 <p className="text-sm text-gray-700">{projeto.proponente.nome_coletivo}</p>
                               </div>
                             )}
@@ -872,9 +872,9 @@ export const PareceristaProjetoDetalhes = () => {
 
                       {/* Currículo */}
                       {projeto.proponente.mini_curriculo && (
-                        <div className="pt-2 border-t">
-                          <span className="text-xs text-gray-500 font-medium">Mini Currículo:</span>
-                          <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">{projeto.proponente.mini_curriculo}</p>
+                        <div className="pt-4 border-t">
+                          <span className="text-xs text-gray-500 font-medium block mb-2">Mini Currículo:</span>
+                          <p className="text-sm text-gray-700 whitespace-pre-wrap">{projeto.proponente.mini_curriculo}</p>
                         </div>
                       )}
                     </>
@@ -884,17 +884,191 @@ export const PareceristaProjetoDetalhes = () => {
                   {projeto.proponente?.tipo === "PJ" && (
                     <>
                       {projeto.proponente.inscricao_estadual && (
-                        <div className="pt-2 border-t">
-                          <h4 className="text-sm font-semibold text-gray-700 mb-2">Inscrições</h4>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <div>
-                              <span className="text-xs text-gray-500 font-medium">Inscrição Estadual:</span>
+                        <div className="pt-4 border-t">
+                          <h4 className="text-sm font-semibold text-gray-700 mb-3">Inscrições</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                              <span className="text-xs text-gray-500 font-medium block">Inscrição Estadual:</span>
                               <p className="text-sm text-gray-700">{projeto.proponente.inscricao_estadual}</p>
                             </div>
+                            {(projeto.proponente as any).inscricao_municipal && (
+                              <div className="space-y-1">
+                                <span className="text-xs text-gray-500 font-medium block">Inscrição Municipal:</span>
+                                <p className="text-sm text-gray-700">{(projeto.proponente as any).inscricao_municipal}</p>
+                              </div>
+                            )}
                           </div>
                         </div>
                       )}
 
+                      {/* Representante Legal */}
+                      {((projeto.proponente as any).nome_responsavel || (projeto.proponente as any).cpf_responsavel || (projeto.proponente as any).cargo_responsavel) && (
+                        <div className="pt-4 border-t">
+                          <h4 className="text-sm font-semibold text-gray-700 mb-3">Representante Legal</h4>
+                          <div className="space-y-4">
+                            {/* Dados Básicos */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                              {(projeto.proponente as any).nome_responsavel && (
+                                <div className="space-y-1">
+                                  <span className="text-xs text-gray-500 font-medium block">Nome:</span>
+                                  <p className="text-sm text-gray-700">{(projeto.proponente as any).nome_responsavel}</p>
+                                </div>
+                              )}
+                              {(projeto.proponente as any).cpf_responsavel && (
+                                <div className="space-y-1">
+                                  <span className="text-xs text-gray-500 font-medium block">CPF:</span>
+                                  <p className="text-sm text-gray-700">{(projeto.proponente as any).cpf_responsavel}</p>
+                                </div>
+                              )}
+                              {(projeto.proponente as any).rg_responsavel && (
+                                <div className="space-y-1">
+                                  <span className="text-xs text-gray-500 font-medium block">RG:</span>
+                                  <p className="text-sm text-gray-700">{(projeto.proponente as any).rg_responsavel}</p>
+                                </div>
+                              )}
+                              {(projeto.proponente as any).data_nascimento_responsavel && (
+                                <div className="space-y-1">
+                                  <span className="text-xs text-gray-500 font-medium block">Data de Nascimento:</span>
+                                  <p className="text-sm text-gray-700">{formatarData((projeto.proponente as any).data_nascimento_responsavel)}</p>
+                                </div>
+                              )}
+                              {(projeto.proponente as any).cargo_responsavel && (
+                                <div className="space-y-1">
+                                  <span className="text-xs text-gray-500 font-medium block">Cargo:</span>
+                                  <p className="text-sm text-gray-700">{(projeto.proponente as any).cargo_responsavel}</p>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Contato */}
+                            {((projeto.proponente as any).email_responsavel || (projeto.proponente as any).telefone_responsavel) && (
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
+                                {(projeto.proponente as any).email_responsavel && (
+                                  <div className="space-y-1">
+                                    <span className="text-xs text-gray-500 font-medium block">Email:</span>
+                                    <p className="text-sm text-gray-700">{(projeto.proponente as any).email_responsavel}</p>
+                                  </div>
+                                )}
+                                {(projeto.proponente as any).telefone_responsavel && (
+                                  <div className="space-y-1">
+                                    <span className="text-xs text-gray-500 font-medium block">Telefone:</span>
+                                    <p className="text-sm text-gray-700">{(projeto.proponente as any).telefone_responsavel}</p>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Endereço */}
+                            {(projeto.proponente as any).endereco_responsavel && (
+                              <div className="pt-4 border-t">
+                                <h5 className="text-xs font-semibold text-gray-600 mb-2">Endereço</h5>
+                                <div className="space-y-1">
+                                  <p className="text-sm text-gray-700">
+                                    {[
+                                      (projeto.proponente as any).endereco_responsavel,
+                                      (projeto.proponente as any).numero_responsavel,
+                                      (projeto.proponente as any).complemento_responsavel
+                                    ].filter(Boolean).join(', ')}
+                                  </p>
+                                  <p className="text-sm text-gray-700">
+                                    {[
+                                      (projeto.proponente as any).cidade_responsavel,
+                                      (projeto.proponente as any).estado_responsavel,
+                                      (projeto.proponente as any).cep_responsavel
+                                    ].filter(Boolean).join(' - ')}
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Dados Pessoais */}
+                            {((projeto.proponente as any).comunidade_tradicional_responsavel || (projeto.proponente as any).genero_responsavel || (projeto.proponente as any).raca_responsavel || (projeto.proponente as any).escolaridade_responsavel || (projeto.proponente as any).renda_mensal_responsavel) && (
+                              <div className="pt-4 border-t">
+                                <h5 className="text-xs font-semibold text-gray-600 mb-3">Dados Pessoais</h5>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                  {(projeto.proponente as any).comunidade_tradicional_responsavel && (
+                                    <div className="space-y-1">
+                                      <span className="text-xs text-gray-500 font-medium block">Comunidade Tradicional:</span>
+                                      <p className="text-sm text-gray-700">{traduzirComunidade((projeto.proponente as any).comunidade_tradicional_responsavel)}</p>
+                                    </div>
+                                  )}
+                                  {(projeto.proponente as any).genero_responsavel && (
+                                    <div className="space-y-1">
+                                      <span className="text-xs text-gray-500 font-medium block">Gênero:</span>
+                                      <p className="text-sm text-gray-700">{traduzirGenero((projeto.proponente as any).genero_responsavel)}</p>
+                                    </div>
+                                  )}
+                                  {(projeto.proponente as any).raca_responsavel && (
+                                    <div className="space-y-1">
+                                      <span className="text-xs text-gray-500 font-medium block">Raça/Cor:</span>
+                                      <p className="text-sm text-gray-700">{traduzirRaca((projeto.proponente as any).raca_responsavel)}</p>
+                                    </div>
+                                  )}
+                                  {(projeto.proponente as any).escolaridade_responsavel && (
+                                    <div className="space-y-1">
+                                      <span className="text-xs text-gray-500 font-medium block">Escolaridade:</span>
+                                      <p className="text-sm text-gray-700">{traduzirEscolaridade((projeto.proponente as any).escolaridade_responsavel)}</p>
+                                    </div>
+                                  )}
+                                  {(projeto.proponente as any).renda_mensal_responsavel && (
+                                    <div className="space-y-1">
+                                      <span className="text-xs text-gray-500 font-medium block">Renda Mensal:</span>
+                                      <p className="text-sm text-gray-700">{traduzirRenda((projeto.proponente as any).renda_mensal_responsavel)}</p>
+                                    </div>
+                                  )}
+                                  {(projeto.proponente as any).pcd_responsavel && (
+                                    <div className="space-y-1">
+                                      <span className="text-xs text-gray-500 font-medium block">PCD:</span>
+                                      <p className="text-sm text-gray-700">Sim{(projeto.proponente as any).tipo_deficiencia_responsavel && ` - ${traduzirDeficiencia((projeto.proponente as any).tipo_deficiencia_responsavel)}`}</p>
+                                    </div>
+                                  )}
+                                  {(projeto.proponente as any).programa_social_responsavel && (
+                                    <div className="space-y-1">
+                                      <span className="text-xs text-gray-500 font-medium block">Programa Social:</span>
+                                      <p className="text-sm text-gray-700">{traduzirProgramaSocial((projeto.proponente as any).programa_social_responsavel)}</p>
+                                    </div>
+                                  )}
+                                  {(projeto.proponente as any).concorre_cotas_responsavel && (
+                                    <div className="space-y-1">
+                                      <span className="text-xs text-gray-500 font-medium block">Concorre Cotas:</span>
+                                      <p className="text-sm text-gray-700">Sim{(projeto.proponente as any).tipo_cotas_responsavel && ` - ${traduzirCotas((projeto.proponente as any).tipo_cotas_responsavel)}`}</p>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Atividade Artística */}
+                            {((projeto.proponente as any).funcao_artistica_responsavel || (projeto.proponente as any).profissao_responsavel) && (
+                              <div className="pt-4 border-t">
+                                <h5 className="text-xs font-semibold text-gray-600 mb-3">Atividade Profissional</h5>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  {(projeto.proponente as any).funcao_artistica_responsavel && (
+                                    <div className="space-y-1">
+                                      <span className="text-xs text-gray-500 font-medium block">Função Artística:</span>
+                                      <p className="text-sm text-gray-700">{traduzirFuncaoArtistica((projeto.proponente as any).funcao_artistica_responsavel)}</p>
+                                    </div>
+                                  )}
+                                  {(projeto.proponente as any).profissao_responsavel && (
+                                    <div className="space-y-1">
+                                      <span className="text-xs text-gray-500 font-medium block">Profissão:</span>
+                                      <p className="text-sm text-gray-700">{(projeto.proponente as any).profissao_responsavel}</p>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Currículo */}
+                            {(projeto.proponente as any).mini_curriculo_responsavel && (
+                              <div className="pt-4 border-t">
+                                <span className="text-xs text-gray-500 font-medium block mb-2">Mini Currículo:</span>
+                                <p className="text-sm text-gray-700 whitespace-pre-wrap">{(projeto.proponente as any).mini_curriculo_responsavel}</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </>
                   )}
                 </CardContent>
@@ -1395,46 +1569,7 @@ export const PareceristaProjetoDetalhes = () => {
                             })()} pts
                           </span>
                         </div>
-                        {(() => {
-                          const somaObrigatorios = formData.nota_criterio_a[0] + formData.nota_criterio_b[0] + formData.nota_criterio_c[0] + formData.nota_criterio_d[0] + formData.nota_criterio_e[0];
-                          const somaBonus = formData.bonus_criterio_f[0] + formData.bonus_criterio_g[0] + formData.bonus_criterio_h[0] + formData.bonus_criterio_i[0];
-                          const total = somaObrigatorios + somaBonus;
-                          
-                          // Verificar se alguma nota obrigatória está zerada
-                          const criteriosComZero = [
-                            { nota: formData.nota_criterio_a[0], nome: 'Critério A - Qualidade do Projeto' },
-                            { nota: formData.nota_criterio_b[0], nome: 'Critério B - Relevância Cultural' },
-                            { nota: formData.nota_criterio_c[0], nome: 'Critério C - Integração Comunitária' },
-                            { nota: formData.nota_criterio_d[0], nome: 'Critério D - Trajetória Artística' },
-                            { nota: formData.nota_criterio_e[0], nome: 'Critério E - Promoção de Diversidade' }
-                          ].filter(c => c.nota === 0);
-                          
-                          if (criteriosComZero.length > 0) {
-                            return (
-                              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                                <p className="text-sm font-medium text-red-900">
-                                  ⚠️ O projeto será rejeitado e desclassificado porque a nota <strong>{criteriosComZero[0].nome}</strong> está zerada.
-                                </p>
-                              </div>
-                            );
-                          } else if (total >= 50) {
-                            return (
-                              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                                <p className="text-sm font-medium text-green-900">
-                                  ✓ O projeto será aprovado.
-                                </p>
-                              </div>
-                            );
-                          } else {
-                            return (
-                              <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
-                                <p className="text-sm font-medium text-orange-900">
-                                  ⚠️ O projeto será rejeitado.
-                                </p>
-                              </div>
-                            );
-                          }
-                        })()}
+                        
                       </div>
                     </div>
 

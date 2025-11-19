@@ -9,6 +9,8 @@ export interface DashboardData {
     valorInvestido: number;
     prestacaoContasPendente: number;
     duvidasPendentes: number;
+    recursosPendentes: number;
+    contraRazoesPendentes: number;
   };
   graficos: {
     categoriaProjetos: Array<{
@@ -77,6 +79,21 @@ export const useDashboardPrefeitura = (prefeituraId: string) => {
           // Não falhar por causa disso, apenas logar
         }
 
+        // Buscar recursos e contra-razões pendentes (apenas status pendente)
+        const { data: recursos, error: recursosError } = await supabase
+          .from('recursos')
+          .select('id, tipo, status')
+          .eq('prefeitura_id', prefeituraId)
+          .eq('status', 'pendente');
+
+        if (recursosError) {
+          console.error('❌ Erro ao buscar recursos:', recursosError);
+          // Não falhar por causa disso, apenas logar
+        }
+
+        const recursosPendentes = (recursos || []).filter(r => r.tipo === 'recurso').length;
+        const contraRazoesPendentes = (recursos || []).filter(r => r.tipo === 'contra_razao').length;
+
         // Processar dados dos projetos
         const projetosData = projetos || [];
         const projetosSubmetidos = projetosData.length;
@@ -120,7 +137,9 @@ export const useDashboardPrefeitura = (prefeituraId: string) => {
             projetosAprovados,
             valorInvestido,
             prestacaoContasPendente: prestacoes?.length || 0,
-            duvidasPendentes: duvidas?.length || 0
+            duvidasPendentes: duvidas?.length || 0,
+            recursosPendentes,
+            contraRazoesPendentes
           },
           graficos: {
             categoriaProjetos,
@@ -143,7 +162,9 @@ export const useDashboardPrefeitura = (prefeituraId: string) => {
             projetosAprovados: 0,
             valorInvestido: 0,
             prestacaoContasPendente: 0,
-            duvidasPendentes: 0
+            duvidasPendentes: 0,
+            recursosPendentes: 0,
+            contraRazoesPendentes: 0
           },
           graficos: {
             categoriaProjetos: [],

@@ -14,6 +14,7 @@ import { PrefeituraPareceristas } from "./pages/PrefeituraPareceristas";
 import { PrefeituraEditais } from "./pages/PrefeituraEditais";
 import { PrefeituraProjetos } from "./pages/PrefeituraProjetos";
 import { PrefeituraProjetoDetalhes } from "./pages/PrefeituraProjetoDetalhes";
+import { PrefeituraExportarRanking } from "./pages/PrefeituraExportarRanking";
 import { PrefeituraDuvidas } from "./pages/PrefeituraDuvidas";
 import { ProponenteLogin } from "./pages/ProponenteLogin";
 import { ProponenteCadastro } from "./pages/ProponenteCadastro";
@@ -68,6 +69,11 @@ const App = () => (
           <Route path="/:nomePrefeitura/editais/:editalId/projetos/:projetoId" element={
             <AuthGuard>
               <PrefeituraProjetoDetalhes />
+            </AuthGuard>
+          } />
+          <Route path="/:nomePrefeitura/editais/:editalId/exportar-ranking" element={
+            <AuthGuard>
+              <PrefeituraExportarRanking />
             </AuthGuard>
           } />
           <Route path="/:nomePrefeitura/duvidas" element={

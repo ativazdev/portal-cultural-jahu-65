@@ -8,7 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Edital } from '@/services/editalService';
-import { Upload, X, FileText } from 'lucide-react';
+import { Upload, X, FileText, Loader2 } from 'lucide-react';
 
 interface EditalModalProps {
   open: boolean;
@@ -160,10 +160,92 @@ export const EditalModal = ({ open, onClose, onSave, edital, loading = false }: 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validação de todos os campos obrigatórios
+    if (!formData.codigo.trim()) {
+      toast({
+        title: "Erro",
+        description: "O código do edital é obrigatório.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.nome.trim()) {
+      toast({
+        title: "Erro",
+        description: "O nome do edital é obrigatório.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.descricao.trim()) {
+      toast({
+        title: "Erro",
+        description: "A descrição é obrigatória.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.data_abertura) {
+      toast({
+        title: "Erro",
+        description: "A data de abertura é obrigatória.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.data_final_envio_projeto) {
+      toast({
+        title: "Erro",
+        description: "A data final para envio é obrigatória.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.horario_final_envio_projeto) {
+      toast({
+        title: "Erro",
+        description: "O horário final é obrigatório.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.valor_maximo || formData.valor_maximo.trim() === '' || isNaN(parseFloat(formData.valor_maximo)) || parseFloat(formData.valor_maximo) <= 0) {
+      toast({
+        title: "Erro",
+        description: "O valor máximo é obrigatório e deve ser maior que zero.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.prazo_avaliacao || formData.prazo_avaliacao.trim() === '' || isNaN(parseInt(formData.prazo_avaliacao)) || parseInt(formData.prazo_avaliacao) <= 0) {
+      toast({
+        title: "Erro",
+        description: "O prazo de avaliação é obrigatório e deve ser maior que zero.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (formData.modalidades.length === 0) {
       toast({
         title: "Erro",
         description: "Selecione pelo menos uma modalidade.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (formData.regulamento.length === 0) {
+      toast({
+        title: "Erro",
+        description: "É necessário anexar pelo menos um arquivo PDF do regulamento.",
         variant: "destructive",
       });
       return;
@@ -174,8 +256,8 @@ export const EditalModal = ({ open, onClose, onSave, edital, loading = false }: 
     try {
       const dataToSave = {
         ...formData,
-        valor_maximo: formData.valor_maximo ? parseFloat(formData.valor_maximo) : 0,
-        prazo_avaliacao: formData.prazo_avaliacao ? parseInt(formData.prazo_avaliacao) : 0
+        valor_maximo: parseFloat(formData.valor_maximo),
+        prazo_avaliacao: parseInt(formData.prazo_avaliacao)
       };
       
       await onSave(dataToSave);
@@ -222,13 +304,14 @@ export const EditalModal = ({ open, onClose, onSave, edital, loading = false }: 
           </div>
 
           <div>
-            <Label htmlFor="descricao">Descrição</Label>
+            <Label htmlFor="descricao">Descrição *</Label>
             <Textarea
               id="descricao"
               value={formData.descricao}
               onChange={(e) => handleInputChange('descricao', e.target.value)}
               placeholder="Descrição detalhada do edital..."
               rows={3}
+              required
             />
           </div>
 
@@ -258,18 +341,19 @@ export const EditalModal = ({ open, onClose, onSave, edital, loading = false }: 
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="horario_final_envio_projeto">Horário Final</Label>
+              <Label htmlFor="horario_final_envio_projeto">Horário Final *</Label>
               <Input
                 id="horario_final_envio_projeto"
                 type="time"
                 value={formData.horario_final_envio_projeto}
                 onChange={(e) => handleInputChange('horario_final_envio_projeto', e.target.value)}
                 placeholder="23:59"
+                required
               />
             </div>
 
             <div>
-              <Label htmlFor="valor_maximo">Valor Máximo (R$)</Label>
+              <Label htmlFor="valor_maximo">Valor Máximo (R$) *</Label>
               <Input
                 id="valor_maximo"
                 type="number"
@@ -278,12 +362,13 @@ export const EditalModal = ({ open, onClose, onSave, edital, loading = false }: 
                 placeholder="50000"
                 min="0"
                 step="0.01"
+                required
               />
             </div>
           </div>
 
           <div>
-            <Label htmlFor="prazo_avaliacao">Prazo de Avaliação (dias)</Label>
+            <Label htmlFor="prazo_avaliacao">Prazo de Avaliação (dias) *</Label>
             <Input
               id="prazo_avaliacao"
               type="number"
@@ -291,6 +376,7 @@ export const EditalModal = ({ open, onClose, onSave, edital, loading = false }: 
               onChange={(e) => handleInputChange('prazo_avaliacao', e.target.value)}
               placeholder="30"
               min="1"
+              required
             />
           </div>
 
@@ -323,7 +409,7 @@ export const EditalModal = ({ open, onClose, onSave, edital, loading = false }: 
           </div>
 
           <div>
-            <Label>Regulamento (PDFs)</Label>
+            <Label>Regulamento (PDFs) *</Label>
             <div className="mt-2">
               <input
                 type="file"
@@ -342,6 +428,11 @@ export const EditalModal = ({ open, onClose, onSave, edital, loading = false }: 
                 {uploading ? 'Enviando...' : 'Selecionar PDFs'}
               </Label>
             </div>
+            {formData.regulamento.length === 0 && (
+              <p className="text-sm text-red-500 mt-1">
+                É necessário anexar pelo menos um arquivo PDF
+              </p>
+            )}
 
             {formData.regulamento.length > 0 && (
               <div className="mt-3 space-y-2">
@@ -380,10 +471,30 @@ export const EditalModal = ({ open, onClose, onSave, edital, loading = false }: 
             </Button>
             <Button
               type="submit"
-              disabled={isSubmitting || loading || formData.modalidades.length === 0}
+              disabled={
+                isSubmitting || 
+                loading || 
+                !formData.codigo.trim() ||
+                !formData.nome.trim() ||
+                !formData.descricao.trim() ||
+                !formData.data_abertura ||
+                !formData.data_final_envio_projeto ||
+                !formData.horario_final_envio_projeto ||
+                !formData.valor_maximo ||
+                !formData.prazo_avaliacao ||
+                formData.modalidades.length === 0 ||
+                formData.regulamento.length === 0
+              }
               className="bg-blue-600 hover:bg-blue-700"
             >
-              {isSubmitting ? 'Salvando...' : edital ? 'Atualizar' : 'Criar'}
+              {isSubmitting || loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Salvando...
+                </>
+              ) : (
+                edital ? 'Atualizar' : 'Criar'
+              )}
             </Button>
           </div>
         </form>

@@ -9,12 +9,14 @@ import {
   FolderOpen, 
   HelpCircle,
   LogOut,
-  Briefcase
+  Briefcase,
+  Headphones
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BaseLayout } from "./BaseLayout";
 import { useProponenteAuth } from "@/hooks/useProponenteAuth";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { ModalContatoSuporte } from "@/components/ModalContatoSuporte";
 
 interface ProponenteLayoutProps {
   children: ReactNode;
@@ -34,6 +36,7 @@ export const ProponenteLayout = ({
   const location = useLocation();
   const { logout, isAuthenticated, loading, proponente, prefeitura } = useProponenteAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [modalSuporteOpen, setModalSuporteOpen] = useState(false);
 
   // Verificar se está autenticado e tem proponente válido
   React.useEffect(() => {
@@ -46,7 +49,7 @@ export const ProponenteLayout = ({
     { name: "Editais", href: `/${nomePrefeitura}/proponente/editais`, icon: FileText },
     { name: "Meus Projetos", href: `/${nomePrefeitura}/proponente/projetos`, icon: FolderOpen },
     { name: "Proponentes", href: `/${nomePrefeitura}/proponente/proponentes`, icon: Briefcase },
-    { name: "Suporte", href: `/${nomePrefeitura}/proponente/suporte`, icon: HelpCircle },
+    { name: "Comunicação", href: `/${nomePrefeitura}/proponente/suporte`, icon: HelpCircle },
   ];
 
   const handleLogout = () => {
@@ -129,15 +132,29 @@ export const ProponenteLayout = ({
                     <p className="text-xs text-gray-500 truncate">{proponente.email}</p>
                   </div>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full"
-                  onClick={handleLogout}
-                >
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Sair
-                </Button>
+                <div className="space-y-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => {
+                      setModalSuporteOpen(true);
+                      setSidebarOpen(false);
+                    }}
+                  >
+                    <Headphones className="mr-2 h-4 w-4" />
+                    Suporte
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={handleLogout}
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sair
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
@@ -184,15 +201,26 @@ export const ProponenteLayout = ({
                 <p className="text-xs text-gray-500 truncate">{proponente.email}</p>
               </div>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full"
-              onClick={handleLogout}
-            >
-              <LogOut className="mr-2 h-4 w-4" />
-              Sair
-            </Button>
+            <div className="space-y-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={() => setModalSuporteOpen(true)}
+              >
+                <Headphones className="mr-2 h-4 w-4" />
+                Suporte
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={handleLogout}
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                Sair
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -247,6 +275,12 @@ export const ProponenteLayout = ({
           </main>
         </div>
       </div>
+      
+      {/* Modal de Contato Suporte */}
+      <ModalContatoSuporte
+        open={modalSuporteOpen}
+        onClose={() => setModalSuporteOpen(false)}
+      />
     </BaseLayout>
   );
 };

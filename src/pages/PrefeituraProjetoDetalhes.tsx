@@ -34,7 +34,8 @@ import {
   Trash2,
   ExternalLink,
   Check,
-  Search
+  Search,
+  Loader2
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { PrefeituraLayout } from "@/components/layout/PrefeituraLayout";
@@ -47,6 +48,8 @@ import { useMovimentacoesFinanceiras } from "@/hooks/useMovimentacoesFinanceiras
 import { useContasMonitoradas } from "@/hooks/useContasMonitoradas";
 import { useDocumentosHabilitacao } from "@/hooks/useDocumentosHabilitacao";
 import { ProjetoWithDetails } from "@/services/projetoService";
+import { Checkbox } from "@/components/ui/checkbox";
+import { supabase } from "@/integrations/supabase/client";
 
 // Helpers (datas e Gantt)
 const formatarData = (data: string | Date) => {
@@ -212,6 +215,8 @@ export const PrefeituraProjetoDetalhes = () => {
   const [showAtribuirPareceristaModal, setShowAtribuirPareceristaModal] = useState(false);
   const [avaliacaoSelecionadaId, setAvaliacaoSelecionadaId] = useState<string>('');
   const [pareceristaSelecionado, setPareceristaSelecionado] = useState('');
+  const [pareceristasSelecionados, setPareceristasSelecionados] = useState<string[]>([]);
+  const [criandoAvaliacao, setCriandoAvaliacao] = useState(false);
 
   // Estados para modais de prestação de contas
   const [showVinculacaoModal, setShowVinculacaoModal] = useState(false);
@@ -253,6 +258,7 @@ export const PrefeituraProjetoDetalhes = () => {
 
   const {
     avaliacoes,
+    avaliacaoFinal,
     pareceristas,
     loading: loadingAvaliacoes,
     error: errorAvaliacoes,
@@ -261,6 +267,117 @@ export const PrefeituraProjetoDetalhes = () => {
     deleteAvaliacao,
     refresh: refreshAvaliacoes
   } = useAvaliacoes(projetoId || '', prefeitura?.id || '');
+
+  // Criar uma função wrapper para atribuir pareceristas usando o hook useProjetos
+  // Como useProjetos precisa do contexto, vamos usar diretamente o supabase
+  const atribuirPareceristaWrapper = async (projetoId: string, pareceristaIds: string | string[]) => {
+    if (!prefeitura?.id || !projetoId) {
+      throw new Error('Prefeitura ou projeto não identificado');
+    }
+
+    const ids = Array.isArray(pareceristaIds) ? pareceristaIds : [pareceristaIds];
+
+    // Buscar projeto para obter prefeitura_id e status
+    const { data: projeto, error: projetoFetchError } = await supabase
+      .from('projetos')
+      .select('prefeitura_id, status')
+      .eq('id', projetoId)
+      .single();
+
+    if (projetoFetchError) throw projetoFetchError;
+
+    // Verificar se já existe uma avaliação final para este projeto
+    let avaliacaoFinalId: string | null = null;
+    const { data: avaliacaoFinalExistente } = await supabase
+      .from('avaliacoes_final')
+      .select('id')
+      .eq('projeto_id', projetoId)
+      .single();
+
+    if (avaliacaoFinalExistente) {
+      avaliacaoFinalId = avaliacaoFinalExistente.id;
+    } else {
+      // Criar avaliação final primeiro
+      const { data: novaAvaliacaoFinal, error: avaliacaoFinalError } = await supabase
+        .from('avaliacoes_final')
+        .insert({
+          prefeitura_id: projeto.prefeitura_id || prefeitura.id,
+          projeto_id: projetoId,
+          quantidade_pareceristas: ids.length,
+          status: 'pendente'
+        })
+        .select('id')
+        .single();
+
+      if (avaliacaoFinalError) throw avaliacaoFinalError;
+      avaliacaoFinalId = novaAvaliacaoFinal.id;
+    }
+
+    // Verificar quais pareceristas já têm avaliações
+    const { data: avaliacoesExistentes } = await supabase
+      .from('avaliacoes')
+      .select('parecerista_id')
+      .eq('projeto_id', projetoId);
+
+    const pareceristasJaAtribuidos = avaliacoesExistentes?.map(a => a.parecerista_id) || [];
+    const novosPareceristas = ids.filter(id => !pareceristasJaAtribuidos.includes(id));
+
+    // Criar avaliações para os novos pareceristas vinculadas à avaliação final
+    if (novosPareceristas.length > 0 && avaliacaoFinalId) {
+      const avaliacoesParaCriar = novosPareceristas.map(pareceristaId => ({
+        prefeitura_id: projeto.prefeitura_id || prefeitura.id,
+        projeto_id: projetoId,
+        parecerista_id: pareceristaId,
+        avaliacao_final_id: avaliacaoFinalId,
+        status: 'pendente',
+        data_atribuicao: new Date().toISOString()
+      }));
+
+      const { error: avaliacoesError } = await supabase
+        .from('avaliacoes')
+        .insert(avaliacoesParaCriar);
+
+      if (avaliacoesError) throw avaliacoesError;
+
+      // Atualizar quantidade de pareceristas na avaliação final
+      const totalPareceristas = (avaliacoesExistentes?.length || 0) + novosPareceristas.length;
+      await supabase
+        .from('avaliacoes_final')
+        .update({ quantidade_pareceristas: totalPareceristas })
+        .eq('id', avaliacaoFinalId);
+
+      // Atualizar contador de projetos dos pareceristas
+      for (const id of novosPareceristas) {
+        // Buscar valor atual
+        const { data: pareceristaAtual } = await supabase
+          .from('pareceristas')
+          .select('projetos_em_analise')
+          .eq('id', id)
+          .single();
+        
+        const novoValor = (pareceristaAtual?.projetos_em_analise || 0) + 1;
+        
+        await supabase
+          .from('pareceristas')
+          .update({ projetos_em_analise: novoValor })
+          .eq('id', id);
+      }
+    }
+
+    // Atualizar status do projeto para aguardando_avaliacao quando pareceristas são atribuídos
+    const totalAvaliacoes = (avaliacoesExistentes?.length || 0) + novosPareceristas.length;
+    if (totalAvaliacoes > 0 && projeto.status === 'aguardando_parecerista') {
+      const { error: projetoError } = await supabase
+        .from('projetos')
+        .update({
+          status: 'aguardando_avaliacao',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', projetoId);
+
+      if (projetoError) throw projetoError;
+    }
+  };
 
   const {
     prestacoes,
@@ -358,29 +475,53 @@ export const PrefeituraProjetoDetalhes = () => {
   };
 
   const handleCriarAvaliacao = async () => {
-    if (!pareceristaSelecionado || !projetoId || !prefeitura?.id) return;
+    if (pareceristasSelecionados.length === 0 || !projetoId || !prefeitura?.id) return;
 
-    const success = await createAvaliacao({
-      prefeitura_id: prefeitura.id,
-      projeto_id: projetoId,
-      parecerista_id: pareceristaSelecionado,
-      status: 'pendente'
-    });
-
-    if (success) {
+    try {
+      setCriandoAvaliacao(true);
+      await atribuirPareceristaWrapper(projetoId, pareceristasSelecionados);
+      
       toast({
-        title: "Avaliação criada",
-        description: "A avaliação foi atribuída ao parecerista com sucesso.",
+        title: "Avaliações criadas",
+        description: `${pareceristasSelecionados.length} parecerista(s) atribuído(s) com sucesso.`,
       });
       setShowAvaliacaoModal(false);
-      setPareceristaSelecionado('');
-    } else {
+      setPareceristasSelecionados([]);
+      refreshAvaliacoes();
+    } catch (error: any) {
       toast({
         title: "Erro",
-        description: "Não foi possível criar a avaliação.",
+        description: error.message || "Não foi possível criar as avaliações.",
         variant: "destructive",
       });
+    } finally {
+      setCriandoAvaliacao(false);
     }
+  };
+
+  const handleToggleParecerista = (pareceristaId: string) => {
+    setPareceristasSelecionados(prev => {
+      if (prev.includes(pareceristaId)) {
+        return prev.filter(id => id !== pareceristaId);
+      } else {
+        return [...prev, pareceristaId];
+      }
+    });
+  };
+
+  const getModalidadeLabel = (modalidade: string) => {
+    const labels: Record<string, string> = {
+      'musica': 'Música',
+      'teatro': 'Teatro',
+      'danca': 'Dança',
+      'artes_visuais': 'Artes Visuais',
+      'literatura': 'Literatura',
+      'cinema': 'Cinema',
+      'cultura_popular': 'Cultura Popular',
+      'circo': 'Circo',
+      'outros': 'Outros'
+    };
+    return labels[modalidade] || modalidade;
   };
 
   const handleDeletarAvaliacao = async (id: string) => {
@@ -437,10 +578,13 @@ export const PrefeituraProjetoDetalhes = () => {
   const getStatusConfig = (status: string) => {
     const configs = {
       'rascunho': { label: 'Rascunho', color: 'bg-gray-100 text-gray-800', icon: <FileText className="h-4 w-4" /> },
+      'aguardando_parecerista': { label: 'Aguardando Parecerista', color: 'bg-orange-100 text-orange-800', icon: <Clock className="h-4 w-4" /> },
       'aguardando_avaliacao': { label: 'Aguardando Avaliação', color: 'bg-yellow-100 text-yellow-800', icon: <Clock className="h-4 w-4" /> },
       'recebido': { label: 'Recebido', color: 'bg-blue-100 text-blue-800', icon: <CheckCircle className="h-4 w-4" /> },
       'em_avaliacao': { label: 'Em Avaliação', color: 'bg-orange-100 text-orange-800', icon: <Search className="h-4 w-4" /> },
       'avaliado': { label: 'Avaliado', color: 'bg-purple-100 text-purple-800', icon: <CheckCircle className="h-4 w-4" /> },
+      'habilitado': { label: 'Habilitado', color: 'bg-green-100 text-green-800', icon: <CheckCircle className="h-4 w-4" /> },
+      'nao_habilitado': { label: 'Não Habilitado', color: 'bg-red-100 text-red-800', icon: <XCircle className="h-4 w-4" /> },
       'aprovado': { label: 'Aprovado', color: 'bg-green-100 text-green-800', icon: <CheckCircle className="h-4 w-4" /> },
       'rejeitado': { label: 'Rejeitado', color: 'bg-red-100 text-red-800', icon: <XCircle className="h-4 w-4" /> },
       'em_execucao': { label: 'Em Execução', color: 'bg-purple-100 text-purple-800', icon: <PlayCircle className="h-4 w-4" /> },
@@ -900,7 +1044,7 @@ export const PrefeituraProjetoDetalhes = () => {
               </Card>
 
               {/* Proponente - detalhado */}
-              <Card className={projeto.proponente?.tipo === "PF" ? "border-l-4 border-l-blue-600" : "border-l-4 border-l-green-600"}>
+              <Card className={`col-span-1 lg:col-span-2 ${projeto.proponente?.tipo === "PF" ? "border-l-4 border-l-blue-600" : "border-l-4 border-l-green-600"}`}>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <User className="h-5 w-5" />
@@ -928,44 +1072,44 @@ export const PrefeituraProjetoDetalhes = () => {
                   </div>
 
                   {/* Dados de Identificação */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 border-t">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t">
                     {projeto.proponente?.cpf && (
-                      <div>
-                        <span className="text-xs text-gray-500 font-medium">CPF:</span>
+                      <div className="space-y-1">
+                        <span className="text-xs text-gray-500 font-medium block">CPF:</span>
                         <p className="text-sm text-gray-700">{projeto.proponente.cpf}</p>
                       </div>
                     )}
                     {projeto.proponente?.cnpj && (
-                      <div>
-                        <span className="text-xs text-gray-500 font-medium">CNPJ:</span>
+                      <div className="space-y-1">
+                        <span className="text-xs text-gray-500 font-medium block">CNPJ:</span>
                         <p className="text-sm text-gray-700">{projeto.proponente.cnpj}</p>
                       </div>
                     )}
                     {projeto.proponente?.rg && (
-                      <div>
-                        <span className="text-xs text-gray-500 font-medium">RG:</span>
+                      <div className="space-y-1">
+                        <span className="text-xs text-gray-500 font-medium block">RG:</span>
                         <p className="text-sm text-gray-700">{projeto.proponente.rg}</p>
                       </div>
                     )}
                     {projeto.proponente?.data_nascimento && (
-                      <div>
-                        <span className="text-xs text-gray-500 font-medium">Data de Nascimento:</span>
+                      <div className="space-y-1">
+                        <span className="text-xs text-gray-500 font-medium block">Data de Nascimento:</span>
                         <p className="text-sm text-gray-700">{formatarData(projeto.proponente.data_nascimento)}</p>
                       </div>
                     )}
                   </div>
 
                   {/* Contato */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 border-t">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
                     {projeto.proponente?.telefone && (
-                      <div>
-                        <span className="text-xs text-gray-500 font-medium">Telefone:</span>
+                      <div className="space-y-1">
+                        <span className="text-xs text-gray-500 font-medium block">Telefone:</span>
                         <p className="text-sm text-gray-700">{projeto.proponente.telefone}</p>
                       </div>
                     )}
                     {projeto.proponente?.email && (
-                      <div>
-                        <span className="text-xs text-gray-500 font-medium">Email:</span>
+                      <div className="space-y-1">
+                        <span className="text-xs text-gray-500 font-medium block">Email:</span>
                         <p className="text-sm text-gray-700">{projeto.proponente.email}</p>
                       </div>
                     )}
@@ -973,18 +1117,20 @@ export const PrefeituraProjetoDetalhes = () => {
 
                   {/* Endereço */}
                   {projeto.proponente?.endereco && (
-                    <div className="pt-2 border-t">
-                      <h4 className="text-sm font-semibold text-gray-700 mb-2">Endereço</h4>
-                      <p className="text-sm text-gray-700">
-                        {projeto.proponente.endereco}
-                      </p>
-                      <p className="text-sm text-gray-700">
-                        {[
-                          projeto.proponente.cidade,
-                          projeto.proponente.estado,
-                          projeto.proponente.cep
-                        ].filter(Boolean).join(' - ')}
-                      </p>
+                    <div className="pt-4 border-t">
+                      <h4 className="text-sm font-semibold text-gray-700 mb-3">Endereço</h4>
+                      <div className="space-y-1">
+                        <p className="text-sm text-gray-700">
+                          {projeto.proponente.endereco}
+                        </p>
+                        <p className="text-sm text-gray-700">
+                          {[
+                            projeto.proponente.cidade,
+                            projeto.proponente.estado,
+                            projeto.proponente.cep
+                          ].filter(Boolean).join(' - ')}
+                        </p>
+                      </div>
                     </div>
                   )}
 
@@ -992,54 +1138,54 @@ export const PrefeituraProjetoDetalhes = () => {
                   {projeto.proponente?.tipo === "PF" && (
                     <>
                       {(projeto.proponente.comunidade_tradicional || projeto.proponente.genero || projeto.proponente.raca || projeto.proponente.escolaridade || projeto.proponente.renda_mensal) && (
-                        <div className="pt-2 border-t">
-                          <h4 className="text-sm font-semibold text-gray-700 mb-2">Dados Pessoais</h4>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="pt-4 border-t">
+                          <h4 className="text-sm font-semibold text-gray-700 mb-3">Dados Pessoais</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {projeto.proponente.comunidade_tradicional && (
-                              <div>
-                                <span className="text-xs text-gray-500 font-medium">Comunidade Tradicional:</span>
+                              <div className="space-y-1">
+                                <span className="text-xs text-gray-500 font-medium block">Comunidade Tradicional:</span>
                                 <p className="text-sm text-gray-700">{traduzirComunidade(projeto.proponente.comunidade_tradicional)}</p>
                               </div>
                             )}
                             {projeto.proponente.genero && (
-                              <div>
-                                <span className="text-xs text-gray-500 font-medium">Gênero:</span>
+                              <div className="space-y-1">
+                                <span className="text-xs text-gray-500 font-medium block">Gênero:</span>
                                 <p className="text-sm text-gray-700">{traduzirGenero(projeto.proponente.genero)}</p>
                               </div>
                             )}
                             {projeto.proponente.raca && (
-                              <div>
-                                <span className="text-xs text-gray-500 font-medium">Raça/Cor:</span>
+                              <div className="space-y-1">
+                                <span className="text-xs text-gray-500 font-medium block">Raça/Cor:</span>
                                 <p className="text-sm text-gray-700">{traduzirRaca(projeto.proponente.raca)}</p>
                               </div>
                             )}
                             {projeto.proponente.escolaridade && (
-                              <div>
-                                <span className="text-xs text-gray-500 font-medium">Escolaridade:</span>
+                              <div className="space-y-1">
+                                <span className="text-xs text-gray-500 font-medium block">Escolaridade:</span>
                                 <p className="text-sm text-gray-700">{traduzirEscolaridade(projeto.proponente.escolaridade)}</p>
                               </div>
                             )}
                             {projeto.proponente.renda_mensal && (
-                              <div>
-                                <span className="text-xs text-gray-500 font-medium">Renda Mensal:</span>
+                              <div className="space-y-1">
+                                <span className="text-xs text-gray-500 font-medium block">Renda Mensal:</span>
                                 <p className="text-sm text-gray-700">{traduzirRenda(projeto.proponente.renda_mensal)}</p>
                               </div>
                             )}
                             {projeto.proponente.pcd && (
-                              <div>
-                                <span className="text-xs text-gray-500 font-medium">PCD:</span>
+                              <div className="space-y-1">
+                                <span className="text-xs text-gray-500 font-medium block">PCD:</span>
                                 <p className="text-sm text-gray-700">Sim{projeto.proponente.tipo_deficiencia && ` - ${traduzirDeficiencia(projeto.proponente.tipo_deficiencia)}`}</p>
                               </div>
                             )}
                             {projeto.proponente.programa_social && (
-                              <div>
-                                <span className="text-xs text-gray-500 font-medium">Programa Social:</span>
+                              <div className="space-y-1">
+                                <span className="text-xs text-gray-500 font-medium block">Programa Social:</span>
                                 <p className="text-sm text-gray-700">{traduzirProgramaSocial(projeto.proponente.programa_social)}</p>
                               </div>
                             )}
                             {projeto.proponente.concorre_cotas && (
-                              <div>
-                                <span className="text-xs text-gray-500 font-medium">Concorre Cotas:</span>
+                              <div className="space-y-1">
+                                <span className="text-xs text-gray-500 font-medium block">Concorre Cotas:</span>
                                 <p className="text-sm text-gray-700">Sim{projeto.proponente.tipo_cotas && ` - ${traduzirCotas(projeto.proponente.tipo_cotas)}`}</p>
                               </div>
                             )}
@@ -1049,18 +1195,18 @@ export const PrefeituraProjetoDetalhes = () => {
 
                       {/* Atividade Artística */}
                       {(projeto.proponente.funcao_artistica || projeto.proponente.representa_coletivo) && (
-                        <div className="pt-2 border-t">
-                          <h4 className="text-sm font-semibold text-gray-700 mb-2">Atividade Artística</h4>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="pt-4 border-t">
+                          <h4 className="text-sm font-semibold text-gray-700 mb-3">Atividade Artística</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {projeto.proponente.funcao_artistica && (
-                              <div>
-                                <span className="text-xs text-gray-500 font-medium">Função:</span>
+                              <div className="space-y-1">
+                                <span className="text-xs text-gray-500 font-medium block">Função:</span>
                                 <p className="text-sm text-gray-700">{traduzirFuncaoArtistica(projeto.proponente.funcao_artistica)}</p>
                               </div>
                             )}
                             {projeto.proponente.representa_coletivo && projeto.proponente.nome_coletivo && (
-                              <div>
-                                <span className="text-xs text-gray-500 font-medium">Coletivo:</span>
+                              <div className="space-y-1">
+                                <span className="text-xs text-gray-500 font-medium block">Coletivo:</span>
                                 <p className="text-sm text-gray-700">{projeto.proponente.nome_coletivo}</p>
                               </div>
                             )}
@@ -1070,9 +1216,9 @@ export const PrefeituraProjetoDetalhes = () => {
 
                       {/* Currículo */}
                       {projeto.proponente.mini_curriculo && (
-                        <div className="pt-2 border-t">
-                          <span className="text-xs text-gray-500 font-medium">Mini Currículo:</span>
-                          <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">{projeto.proponente.mini_curriculo}</p>
+                        <div className="pt-4 border-t">
+                          <span className="text-xs text-gray-500 font-medium block mb-2">Mini Currículo:</span>
+                          <p className="text-sm text-gray-700 whitespace-pre-wrap">{projeto.proponente.mini_curriculo}</p>
                         </div>
                       )}
                     </>
@@ -1082,17 +1228,191 @@ export const PrefeituraProjetoDetalhes = () => {
                   {projeto.proponente?.tipo === "PJ" && (
                     <>
                       {projeto.proponente.inscricao_estadual && (
-                        <div className="pt-2 border-t">
-                          <h4 className="text-sm font-semibold text-gray-700 mb-2">Inscrições</h4>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <div>
-                              <span className="text-xs text-gray-500 font-medium">Inscrição Estadual:</span>
+                        <div className="pt-4 border-t">
+                          <h4 className="text-sm font-semibold text-gray-700 mb-3">Inscrições</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                              <span className="text-xs text-gray-500 font-medium block">Inscrição Estadual:</span>
                               <p className="text-sm text-gray-700">{projeto.proponente.inscricao_estadual}</p>
                             </div>
+                            {projeto.proponente.inscricao_municipal && (
+                              <div className="space-y-1">
+                                <span className="text-xs text-gray-500 font-medium block">Inscrição Municipal:</span>
+                                <p className="text-sm text-gray-700">{projeto.proponente.inscricao_municipal}</p>
+                              </div>
+                            )}
                           </div>
                         </div>
                       )}
 
+                      {/* Representante Legal */}
+                      {(projeto.proponente.nome_responsavel || projeto.proponente.cpf_responsavel || projeto.proponente.cargo_responsavel) && (
+                        <div className="pt-4 border-t">
+                          <h4 className="text-sm font-semibold text-gray-700 mb-3">Representante Legal</h4>
+                          <div className="space-y-4">
+                            {/* Dados Básicos */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                              {projeto.proponente.nome_responsavel && (
+                                <div className="space-y-1">
+                                  <span className="text-xs text-gray-500 font-medium block">Nome:</span>
+                                  <p className="text-sm text-gray-700">{projeto.proponente.nome_responsavel}</p>
+                                </div>
+                              )}
+                              {projeto.proponente.cpf_responsavel && (
+                                <div className="space-y-1">
+                                  <span className="text-xs text-gray-500 font-medium block">CPF:</span>
+                                  <p className="text-sm text-gray-700">{projeto.proponente.cpf_responsavel}</p>
+                                </div>
+                              )}
+                              {projeto.proponente.rg_responsavel && (
+                                <div className="space-y-1">
+                                  <span className="text-xs text-gray-500 font-medium block">RG:</span>
+                                  <p className="text-sm text-gray-700">{projeto.proponente.rg_responsavel}</p>
+                                </div>
+                              )}
+                              {projeto.proponente.data_nascimento_responsavel && (
+                                <div className="space-y-1">
+                                  <span className="text-xs text-gray-500 font-medium block">Data de Nascimento:</span>
+                                  <p className="text-sm text-gray-700">{formatarData(projeto.proponente.data_nascimento_responsavel)}</p>
+                                </div>
+                              )}
+                              {projeto.proponente.cargo_responsavel && (
+                                <div className="space-y-1">
+                                  <span className="text-xs text-gray-500 font-medium block">Cargo:</span>
+                                  <p className="text-sm text-gray-700">{projeto.proponente.cargo_responsavel}</p>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Contato */}
+                            {(projeto.proponente.email_responsavel || projeto.proponente.telefone_responsavel) && (
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
+                                {projeto.proponente.email_responsavel && (
+                                  <div className="space-y-1">
+                                    <span className="text-xs text-gray-500 font-medium block">Email:</span>
+                                    <p className="text-sm text-gray-700">{projeto.proponente.email_responsavel}</p>
+                                  </div>
+                                )}
+                                {projeto.proponente.telefone_responsavel && (
+                                  <div className="space-y-1">
+                                    <span className="text-xs text-gray-500 font-medium block">Telefone:</span>
+                                    <p className="text-sm text-gray-700">{projeto.proponente.telefone_responsavel}</p>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Endereço */}
+                            {projeto.proponente.endereco_responsavel && (
+                              <div className="pt-4 border-t">
+                                <h5 className="text-xs font-semibold text-gray-600 mb-2">Endereço</h5>
+                                <div className="space-y-1">
+                                  <p className="text-sm text-gray-700">
+                                    {[
+                                      projeto.proponente.endereco_responsavel,
+                                      projeto.proponente.numero_responsavel,
+                                      projeto.proponente.complemento_responsavel
+                                    ].filter(Boolean).join(', ')}
+                                  </p>
+                                  <p className="text-sm text-gray-700">
+                                    {[
+                                      projeto.proponente.cidade_responsavel,
+                                      projeto.proponente.estado_responsavel,
+                                      projeto.proponente.cep_responsavel
+                                    ].filter(Boolean).join(' - ')}
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Dados Pessoais */}
+                            {(projeto.proponente.comunidade_tradicional_responsavel || projeto.proponente.genero_responsavel || projeto.proponente.raca_responsavel || projeto.proponente.escolaridade_responsavel || projeto.proponente.renda_mensal_responsavel) && (
+                              <div className="pt-4 border-t">
+                                <h5 className="text-xs font-semibold text-gray-600 mb-3">Dados Pessoais</h5>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                  {projeto.proponente.comunidade_tradicional_responsavel && (
+                                    <div className="space-y-1">
+                                      <span className="text-xs text-gray-500 font-medium block">Comunidade Tradicional:</span>
+                                      <p className="text-sm text-gray-700">{traduzirComunidade(projeto.proponente.comunidade_tradicional_responsavel)}</p>
+                                    </div>
+                                  )}
+                                  {projeto.proponente.genero_responsavel && (
+                                    <div className="space-y-1">
+                                      <span className="text-xs text-gray-500 font-medium block">Gênero:</span>
+                                      <p className="text-sm text-gray-700">{traduzirGenero(projeto.proponente.genero_responsavel)}</p>
+                                    </div>
+                                  )}
+                                  {projeto.proponente.raca_responsavel && (
+                                    <div className="space-y-1">
+                                      <span className="text-xs text-gray-500 font-medium block">Raça/Cor:</span>
+                                      <p className="text-sm text-gray-700">{traduzirRaca(projeto.proponente.raca_responsavel)}</p>
+                                    </div>
+                                  )}
+                                  {projeto.proponente.escolaridade_responsavel && (
+                                    <div className="space-y-1">
+                                      <span className="text-xs text-gray-500 font-medium block">Escolaridade:</span>
+                                      <p className="text-sm text-gray-700">{traduzirEscolaridade(projeto.proponente.escolaridade_responsavel)}</p>
+                                    </div>
+                                  )}
+                                  {projeto.proponente.renda_mensal_responsavel && (
+                                    <div className="space-y-1">
+                                      <span className="text-xs text-gray-500 font-medium block">Renda Mensal:</span>
+                                      <p className="text-sm text-gray-700">{traduzirRenda(projeto.proponente.renda_mensal_responsavel)}</p>
+                                    </div>
+                                  )}
+                                  {projeto.proponente.pcd_responsavel && (
+                                    <div className="space-y-1">
+                                      <span className="text-xs text-gray-500 font-medium block">PCD:</span>
+                                      <p className="text-sm text-gray-700">Sim{projeto.proponente.tipo_deficiencia_responsavel && ` - ${traduzirDeficiencia(projeto.proponente.tipo_deficiencia_responsavel)}`}</p>
+                                    </div>
+                                  )}
+                                  {projeto.proponente.programa_social_responsavel && (
+                                    <div className="space-y-1">
+                                      <span className="text-xs text-gray-500 font-medium block">Programa Social:</span>
+                                      <p className="text-sm text-gray-700">{traduzirProgramaSocial(projeto.proponente.programa_social_responsavel)}</p>
+                                    </div>
+                                  )}
+                                  {projeto.proponente.concorre_cotas_responsavel && (
+                                    <div className="space-y-1">
+                                      <span className="text-xs text-gray-500 font-medium block">Concorre Cotas:</span>
+                                      <p className="text-sm text-gray-700">Sim{projeto.proponente.tipo_cotas_responsavel && ` - ${traduzirCotas(projeto.proponente.tipo_cotas_responsavel)}`}</p>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Atividade Artística */}
+                            {(projeto.proponente.funcao_artistica_responsavel || projeto.proponente.profissao_responsavel) && (
+                              <div className="pt-4 border-t">
+                                <h5 className="text-xs font-semibold text-gray-600 mb-3">Atividade Profissional</h5>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  {projeto.proponente.funcao_artistica_responsavel && (
+                                    <div className="space-y-1">
+                                      <span className="text-xs text-gray-500 font-medium block">Função Artística:</span>
+                                      <p className="text-sm text-gray-700">{traduzirFuncaoArtistica(projeto.proponente.funcao_artistica_responsavel)}</p>
+                                    </div>
+                                  )}
+                                  {projeto.proponente.profissao_responsavel && (
+                                    <div className="space-y-1">
+                                      <span className="text-xs text-gray-500 font-medium block">Profissão:</span>
+                                      <p className="text-sm text-gray-700">{projeto.proponente.profissao_responsavel}</p>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Currículo */}
+                            {projeto.proponente.mini_curriculo_responsavel && (
+                              <div className="pt-4 border-t">
+                                <span className="text-xs text-gray-500 font-medium block mb-2">Mini Currículo:</span>
+                                <p className="text-sm text-gray-700 whitespace-pre-wrap">{projeto.proponente.mini_curriculo_responsavel}</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </>
                   )}
                 </CardContent>
@@ -1387,7 +1707,7 @@ export const PrefeituraProjetoDetalhes = () => {
                       Tentar Novamente
                     </Button>
                   </div>
-                ) : avaliacoes.length === 0 ? (
+                ) : avaliacoes.length === 0 && !avaliacaoFinal ? (
                   <div className="text-center py-8 text-gray-500">
                     <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
                     <p>Nenhuma avaliação no momento.</p>
@@ -1395,7 +1715,12 @@ export const PrefeituraProjetoDetalhes = () => {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {avaliacoes.map((avaliacao) => {
+                    {/* Avaliações Individuais dos Pareceristas */}
+                    {avaliacoes.length > 0 && (
+                      <div className="mb-6">
+                        <h3 className="text-lg font-semibold mb-4 text-gray-900">Avaliações Individuais</h3>
+                        <div className="space-y-4">
+                          {avaliacoes.map((avaliacao) => {
                       const statusConfig = getAvaliacaoStatusConfig(avaliacao.status);
                       return (
                         <div key={avaliacao.id} className="border rounded-lg p-4 bg-gray-50">
@@ -1448,12 +1773,25 @@ export const PrefeituraProjetoDetalhes = () => {
                                   <p className="font-medium">{statusConfig.label}</p>
                                 </div>
                               </div>
+                              
 
                               {/* Notas detalhadas - Critérios Obrigatórios */}
-                              <div className="space-y-4 mb-4">
-                                <h4 className="font-semibold text-gray-900">Critérios Obrigatórios</h4>
-                                <div className="grid grid-cols-1 gap-3">
-                                  {(avaliacao as any).nota_criterio_a !== null && (avaliacao as any).nota_criterio_a !== undefined && (
+                              {(() => {
+                                const temCriteriosPreenchidos = [
+                                  (avaliacao as any).nota_criterio_a,
+                                  (avaliacao as any).nota_criterio_b,
+                                  (avaliacao as any).nota_criterio_c,
+                                  (avaliacao as any).nota_criterio_d,
+                                  (avaliacao as any).nota_criterio_e
+                                ].some(nota => nota !== null && nota !== undefined);
+                                
+                                if (!temCriteriosPreenchidos) return null;
+                                
+                                return (
+                                  <div className="space-y-4 mb-4">
+                                    <h4 className="font-semibold text-gray-900">Critérios Obrigatórios</h4>
+                                    <div className="grid grid-cols-1 gap-3">
+                                      {(avaliacao as any).nota_criterio_a !== null && (avaliacao as any).nota_criterio_a !== undefined && (
                                     <div className="border rounded p-3">
                                       <span className="font-medium text-sm">Critério A - Qualidade do Projeto:</span>
                                       <p className="text-lg font-bold">{(avaliacao as any).nota_criterio_a?.toFixed(1)}</p>
@@ -1498,41 +1836,57 @@ export const PrefeituraProjetoDetalhes = () => {
                                       )}
                                     </div>
                                   )}
-                                </div>
-                              </div>
+                                    </div>
+                                  </div>
+                                );
+                              })()}
 
                               {/* Critérios Bônus */}
-                              {((avaliacao as any).bonus_criterio_f || (avaliacao as any).bonus_criterio_g || (avaliacao as any).bonus_criterio_h || (avaliacao as any).bonus_criterio_i) && (
-                                <div className="space-y-2 mt-4 mb-4">
-                                  <h4 className="font-semibold text-gray-900">Critérios Bônus</h4>
-                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                    {(avaliacao as any).bonus_criterio_f && (avaliacao as any).bonus_criterio_f > 0 && (
-                                      <div className="border rounded p-3 bg-blue-50">
-                                        <span className="font-medium text-sm">Critério F - Agente cultural do gênero feminino:</span>
-                                        <p className="text-lg font-bold text-blue-600">{(avaliacao as any).bonus_criterio_f?.toFixed(1)}</p>
-                                      </div>
-                                    )}
-                                    {(avaliacao as any).bonus_criterio_g && (avaliacao as any).bonus_criterio_g > 0 && (
-                                      <div className="border rounded p-3 bg-blue-50">
-                                        <span className="font-medium text-sm">Critério G - Agente cultural negro ou indígena:</span>
-                                        <p className="text-lg font-bold text-blue-600">{(avaliacao as any).bonus_criterio_g?.toFixed(1)}</p>
-                                      </div>
-                                    )}
-                                    {(avaliacao as any).bonus_criterio_h && (avaliacao as any).bonus_criterio_h > 0 && (
-                                      <div className="border rounded p-3 bg-blue-50">
-                                        <span className="font-medium text-sm">Critério H - Agente cultural com deficiência:</span>
-                                        <p className="text-lg font-bold text-blue-600">{(avaliacao as any).bonus_criterio_h?.toFixed(1)}</p>
-                                      </div>
-                                    )}
-                                    {(avaliacao as any).bonus_criterio_i && (avaliacao as any).bonus_criterio_i > 0 && (
-                                      <div className="border rounded p-3 bg-blue-50">
-                                        <span className="font-medium text-sm">Critério I - Agente cultural de região de menor IDH:</span>
-                                        <p className="text-lg font-bold text-blue-600">{(avaliacao as any).bonus_criterio_i?.toFixed(1)}</p>
-                                      </div>
-                                    )}
+                              {(() => {
+                                const bonusF = (avaliacao as any).bonus_criterio_f;
+                                const bonusG = (avaliacao as any).bonus_criterio_g;
+                                const bonusH = (avaliacao as any).bonus_criterio_h;
+                                const bonusI = (avaliacao as any).bonus_criterio_i;
+                                
+                                const temBonus = (bonusF && bonusF > 0) || 
+                                                 (bonusG && bonusG > 0) || 
+                                                 (bonusH && bonusH > 0) || 
+                                                 (bonusI && bonusI > 0);
+                                
+                                if (!temBonus) return null;
+                                
+                                return (
+                                  <div className="space-y-2 mt-4 mb-4">
+                                    <h4 className="font-semibold text-gray-900">Critérios Bônus</h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                      {bonusF && bonusF > 0 && (
+                                        <div className="border rounded p-3 bg-blue-50">
+                                          <span className="font-medium text-sm">Critério F - Agente cultural do gênero feminino:</span>
+                                          <p className="text-lg font-bold text-blue-600">{bonusF.toFixed(1)}</p>
+                                        </div>
+                                      )}
+                                      {bonusG && bonusG > 0 && (
+                                        <div className="border rounded p-3 bg-blue-50">
+                                          <span className="font-medium text-sm">Critério G - Agente cultural negro ou indígena:</span>
+                                          <p className="text-lg font-bold text-blue-600">{bonusG.toFixed(1)}</p>
+                                        </div>
+                                      )}
+                                      {bonusH && bonusH > 0 && (
+                                        <div className="border rounded p-3 bg-blue-50">
+                                          <span className="font-medium text-sm">Critério H - Agente cultural com deficiência:</span>
+                                          <p className="text-lg font-bold text-blue-600">{bonusH.toFixed(1)}</p>
+                                        </div>
+                                      )}
+                                      {bonusI && bonusI > 0 && (
+                                        <div className="border rounded p-3 bg-blue-50">
+                                          <span className="font-medium text-sm">Critério I - Agente cultural de região de menor IDH:</span>
+                                          <p className="text-lg font-bold text-blue-600">{bonusI.toFixed(1)}</p>
+                                        </div>
+                                      )}
+                                    </div>
                                   </div>
-                                </div>
-                              )}
+                                );
+                              })()}
 
                               {avaliacao.parecer_tecnico && (
                                 <div className="mt-2">
@@ -1580,7 +1934,146 @@ export const PrefeituraProjetoDetalhes = () => {
                           </div>
                         </div>
                       );
-                    })}
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Avaliação Final Consolidada */}
+                    {avaliacaoFinal && (
+                      <div className="mt-6 pt-6 border-t-2 border-blue-300">
+                        <h3 className="text-lg font-semibold mb-4 text-gray-900">Avaliação Final Consolidada</h3>
+                        <div className="border rounded-lg p-4 bg-blue-50 border-blue-200">
+                          <div className="flex items-start justify-between mb-4">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <h4 className="font-semibold text-lg text-gray-900">
+                                  Média das Avaliações
+                                </h4>
+                                <Badge className="bg-green-100 text-green-800">
+                                  <CheckCircle className="h-4 w-4 mr-1" />
+                                  {avaliacaoFinal.status === 'avaliado' ? 'Avaliado' : 'Em Avaliação'}
+                                </Badge>
+                              </div>
+                              
+                              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm text-gray-600 mb-4">
+                                <div>
+                                  <span className="font-medium">Pareceristas:</span>
+                                  <p>{avaliacaoFinal.quantidade_pareceristas || 0}</p>
+                                </div>
+                                <div>
+                                  <span className="font-medium">Avaliações Concluídas:</span>
+                                  <p>{avaliacaoFinal.quantidade_avaliacoes_concluidas || 0} / {avaliacaoFinal.quantidade_pareceristas || 0}</p>
+                                </div>
+                                {avaliacaoFinal.nota_final !== null && avaliacaoFinal.nota_final !== undefined && (
+                                  <div>
+                                    <span className="font-medium">Nota Final:</span>
+                                    <p className="font-bold text-lg text-blue-600">{Number(avaliacaoFinal.nota_final).toFixed(1)}</p>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Notas detalhadas - Critérios Obrigatórios */}
+                              <div className="space-y-4 mb-4">
+                                <h4 className="font-semibold text-gray-900">Critérios Obrigatórios (Média)</h4>
+                                <div className="grid grid-cols-1 gap-3">
+                                  {avaliacaoFinal.nota_criterio_a !== null && avaliacaoFinal.nota_criterio_a !== undefined && (
+                                    <div className="border rounded p-3 bg-white">
+                                      <span className="font-medium text-sm">Critério A - Qualidade do Projeto:</span>
+                                      <p className="text-lg font-bold">{Number(avaliacaoFinal.nota_criterio_a).toFixed(1)}</p>
+                                      {avaliacaoFinal.obs_criterio_a && (
+                                        <p className="text-sm text-gray-600 mt-1">{avaliacaoFinal.obs_criterio_a}</p>
+                                      )}
+                                    </div>
+                                  )}
+                                  {avaliacaoFinal.nota_criterio_b !== null && avaliacaoFinal.nota_criterio_b !== undefined && (
+                                    <div className="border rounded p-3 bg-white">
+                                      <span className="font-medium text-sm">Critério B - Relevância Cultural:</span>
+                                      <p className="text-lg font-bold">{Number(avaliacaoFinal.nota_criterio_b).toFixed(1)}</p>
+                                      {avaliacaoFinal.obs_criterio_b && (
+                                        <p className="text-sm text-gray-600 mt-1">{avaliacaoFinal.obs_criterio_b}</p>
+                                      )}
+                                    </div>
+                                  )}
+                                  {avaliacaoFinal.nota_criterio_c !== null && avaliacaoFinal.nota_criterio_c !== undefined && (
+                                    <div className="border rounded p-3 bg-white">
+                                      <span className="font-medium text-sm">Critério C - Integração Comunitária:</span>
+                                      <p className="text-lg font-bold">{Number(avaliacaoFinal.nota_criterio_c).toFixed(1)}</p>
+                                      {avaliacaoFinal.obs_criterio_c && (
+                                        <p className="text-sm text-gray-600 mt-1">{avaliacaoFinal.obs_criterio_c}</p>
+                                      )}
+                                    </div>
+                                  )}
+                                  {avaliacaoFinal.nota_criterio_d !== null && avaliacaoFinal.nota_criterio_d !== undefined && (
+                                    <div className="border rounded p-3 bg-white">
+                                      <span className="font-medium text-sm">Critério D - Trajetória Artística:</span>
+                                      <p className="text-lg font-bold">{Number(avaliacaoFinal.nota_criterio_d).toFixed(1)}</p>
+                                      {avaliacaoFinal.obs_criterio_d && (
+                                        <p className="text-sm text-gray-600 mt-1">{avaliacaoFinal.obs_criterio_d}</p>
+                                      )}
+                                    </div>
+                                  )}
+                                  {avaliacaoFinal.nota_criterio_e !== null && avaliacaoFinal.nota_criterio_e !== undefined && (
+                                    <div className="border rounded p-3 bg-white">
+                                      <span className="font-medium text-sm">Critério E - Promoção de Diversidade:</span>
+                                      <p className="text-lg font-bold">{Number(avaliacaoFinal.nota_criterio_e).toFixed(1)}</p>
+                                      {avaliacaoFinal.obs_criterio_e && (
+                                        <p className="text-sm text-gray-600 mt-1">{avaliacaoFinal.obs_criterio_e}</p>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Critérios Bônus */}
+                              <div className="space-y-2 mt-4 mb-4">
+                                <h4 className="font-semibold text-gray-900">Critérios Bônus (Média)</h4>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                  {avaliacaoFinal.bonus_criterio_f !== null && avaliacaoFinal.bonus_criterio_f !== undefined && (
+                                    <div className="border rounded p-3 bg-blue-50">
+                                      <span className="font-medium text-sm">Critério F - Agente cultural do gênero feminino:</span>
+                                      <p className="text-lg font-bold text-blue-600">{Number(avaliacaoFinal.bonus_criterio_f).toFixed(1)}</p>
+                                    </div>
+                                  )}
+                                  {avaliacaoFinal.bonus_criterio_g !== null && avaliacaoFinal.bonus_criterio_g !== undefined && (
+                                    <div className="border rounded p-3 bg-blue-50">
+                                      <span className="font-medium text-sm">Critério G - Agente cultural negro ou indígena:</span>
+                                      <p className="text-lg font-bold text-blue-600">{Number(avaliacaoFinal.bonus_criterio_g).toFixed(1)}</p>
+                                    </div>
+                                  )}
+                                  {avaliacaoFinal.bonus_criterio_h !== null && avaliacaoFinal.bonus_criterio_h !== undefined && (
+                                    <div className="border rounded p-3 bg-blue-50">
+                                      <span className="font-medium text-sm">Critério H - Agente cultural com deficiência:</span>
+                                      <p className="text-lg font-bold text-blue-600">{Number(avaliacaoFinal.bonus_criterio_h).toFixed(1)}</p>
+                                    </div>
+                                  )}
+                                  {avaliacaoFinal.bonus_criterio_i !== null && avaliacaoFinal.bonus_criterio_i !== undefined && (
+                                    <div className="border rounded p-3 bg-blue-50">
+                                      <span className="font-medium text-sm">Critério I - Agente cultural de região de menor IDH:</span>
+                                      <p className="text-lg font-bold text-blue-600">{Number(avaliacaoFinal.bonus_criterio_i).toFixed(1)}</p>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              {avaliacaoFinal.parecer_tecnico && (
+                                <div className="mt-4">
+                                  <span className="font-medium text-sm text-gray-700">Parecer Técnico:</span>
+                                  <p className="text-sm text-gray-600 mt-1">{avaliacaoFinal.parecer_tecnico}</p>
+                                </div>
+                              )}
+
+                              {avaliacaoFinal.motivo_rejeicao && (
+                                <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded">
+                                  <span className="font-medium text-sm text-red-700">Motivo da Rejeição:</span>
+                                  <p className="text-sm text-red-600 mt-1">{avaliacaoFinal.motivo_rejeicao}</p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </CardContent>
@@ -1601,7 +2094,7 @@ export const PrefeituraProjetoDetalhes = () => {
                       Documentos necessários para habilitação do projeto
                     </CardDescription>
                   </div>
-                  {documentos.length === 0 && projeto?.proponente?.tipo && (
+                  {documentos.length === 0 && getStatusConfig(projeto.status).label == 'Habilitado' &&projeto?.proponente?.tipo && (
                     <Button 
                       onClick={() => {
                         if (projeto?.proponente?.tipo) {
@@ -2158,13 +2651,6 @@ export const PrefeituraProjetoDetalhes = () => {
                   <div className="text-center py-8">
                     <Banknote className="h-12 w-12 mx-auto mb-4 text-gray-400" />
                     <p className="text-gray-500 mb-4">Nenhuma conta bancária vinculada ao projeto</p>
-                    <Button
-                      onClick={() => setShowConectarContaModal(true)}
-                      className="flex items-center gap-2"
-                    >
-                      <Plus className="h-4 w-4" />
-                      Conectar Conta
-                    </Button>
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -2391,51 +2877,188 @@ export const PrefeituraProjetoDetalhes = () => {
       </Dialog>
 
       {/* Modal para criar avaliação */}
-      <Dialog open={showAvaliacaoModal} onOpenChange={setShowAvaliacaoModal}>
-        <DialogContent className="sm:max-w-md">
+      <Dialog open={showAvaliacaoModal} onOpenChange={(open) => {
+        setShowAvaliacaoModal(open);
+        if (!open) {
+          setPareceristasSelecionados([]);
+        }
+      }}>
+        <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Nova Avaliação</DialogTitle>
             <DialogDescription>
-              Selecione um parecerista para avaliar este projeto.
+              Selecione um ou mais pareceristas para avaliar este projeto.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="parecerista-select">Parecerista</Label>
-              <Select value={pareceristaSelecionado} onValueChange={setPareceristaSelecionado}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Selecione um parecerista" />
-                </SelectTrigger>
-                <SelectContent>
-                  {pareceristas.map((parecerista) => (
-                    <SelectItem key={parecerista.id} value={parecerista.id}>
-                      {parecerista.nome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {pareceristas.length === 0 && (
-                <p className="text-sm text-gray-500 mt-1">
-                  Nenhum parecerista disponível. Cadastre pareceristas primeiro.
-                </p>
-              )}
+          
+          {/* Informações do Projeto */}
+          {projeto && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h4 className="font-semibold text-sm text-blue-900 mb-2">Projeto para Avaliação</h4>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div>
+                  <span className="font-medium text-gray-700">Nome:</span>
+                  <p className="text-gray-900">{projeto.nome}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-700">Modalidade:</span>
+                  <p className="text-gray-900">
+                    <Badge className="bg-blue-100 text-blue-800">
+                      {getModalidadeLabel(projeto.modalidade)}
+                    </Badge>
+                  </p>
+                </div>
+              </div>
             </div>
+          )}
+
+          <div className="space-y-4">
+            {(() => {
+              const pareceristasJaAtribuidos = avaliacoes
+                .map(a => a.parecerista_id)
+                .filter(id => id !== null) as string[];
+              
+              const pareceristasDisponiveis = pareceristas
+                .filter(p => !pareceristasJaAtribuidos.includes(p.id))
+                .sort((a, b) => {
+                  // Ordenar: compatíveis primeiro, depois por nome
+                  const aCompativel = a.especialidades && a.especialidades.length > 0 
+                    ? a.especialidades.includes(projeto?.modalidade || '')
+                    : false;
+                  const bCompativel = b.especialidades && b.especialidades.length > 0 
+                    ? b.especialidades.includes(projeto?.modalidade || '')
+                    : false;
+                  
+                  if (aCompativel && !bCompativel) return -1;
+                  if (!aCompativel && bCompativel) return 1;
+                  return a.nome.localeCompare(b.nome);
+                });
+
+              if (pareceristas.length === 0) {
+                return (
+                  <p className="text-sm text-gray-500 text-center py-4">
+                    Nenhum parecerista disponível. Cadastre pareceristas primeiro.
+                  </p>
+                );
+              }
+
+              if (pareceristasDisponiveis.length === 0) {
+                return (
+                  <p className="text-sm text-gray-500 text-center py-4">
+                    Todos os pareceristas disponíveis já foram atribuídos a este projeto.
+                  </p>
+                );
+              }
+
+              return (
+                <div className="space-y-3">
+                  <Label>Selecione os Pareceristas:</Label>
+                  {pareceristasDisponiveis.map((parecerista) => {
+                  const temEspecialidadeCombinada = parecerista.especialidades && parecerista.especialidades.length > 0 
+                    ? parecerista.especialidades.includes(projeto?.modalidade || '')
+                    : false;
+                  
+                  const estaSelecionado = pareceristasSelecionados.includes(parecerista.id);
+                  
+                  return (
+                    <div
+                      key={parecerista.id}
+                      className={`p-4 border rounded-lg transition-colors ${
+                        estaSelecionado
+                          ? 'border-blue-500 bg-blue-50'
+                          : temEspecialidadeCombinada
+                          ? 'border-green-300 bg-green-50/50 hover:bg-green-50'
+                          : 'border-gray-200 hover:bg-gray-50'
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <Checkbox
+                          checked={estaSelecionado}
+                          onCheckedChange={() => handleToggleParecerista(parecerista.id)}
+                          className="mt-1"
+                        />
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-medium text-gray-900">{parecerista.nome}</span>
+                            {temEspecialidadeCombinada && (
+                              <Badge className="bg-green-100 text-green-800 text-xs">
+                                ✓ Compatível
+                              </Badge>
+                            )}
+                          </div>
+                          
+                          {parecerista.especialidades && parecerista.especialidades.length > 0 && (
+                            <div className="mb-2">
+                              <span className="text-xs font-medium text-gray-600">Especialidades: </span>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {parecerista.especialidades.map((esp, idx) => (
+                                  <Badge
+                                    key={idx}
+                                    variant="outline"
+                                    className={`text-xs ${
+                                      esp === projeto?.modalidade
+                                        ? 'bg-green-100 text-green-700 border-green-300 font-medium'
+                                        : 'bg-gray-100 text-gray-600'
+                                    }`}
+                                  >
+                                    {getModalidadeLabel(esp)}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {parecerista.area_atuacao && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              Área: {parecerista.area_atuacao}
+                            </p>
+                          )}
+                          
+                          {parecerista.experiencia_anos && (
+                            <p className="text-xs text-gray-500">
+                              Experiência: {parecerista.experiencia_anos} anos
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                  })}
+                </div>
+              );
+            })()}
+            
+            {pareceristasSelecionados.length > 0 && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-sm font-medium text-blue-900">
+                  {pareceristasSelecionados.length} parecerista(s) selecionado(s)
+                </p>
+              </div>
+            )}
           </div>
+          
           <DialogFooter>
             <Button
               variant="outline"
               onClick={() => {
                 setShowAvaliacaoModal(false);
-                setPareceristaSelecionado('');
+                setPareceristasSelecionados([]);
               }}
             >
               Cancelar
             </Button>
             <Button
               onClick={handleCriarAvaliacao}
-              disabled={!pareceristaSelecionado || pareceristas.length === 0}
+              disabled={pareceristasSelecionados.length === 0 || criandoAvaliacao}
             >
-              Criar Avaliação
+              {criandoAvaliacao ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Criando...
+                </>
+              ) : (
+                `Criar ${pareceristasSelecionados.length > 0 ? `${pareceristasSelecionados.length} ` : ''}Avaliação(ões)`
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

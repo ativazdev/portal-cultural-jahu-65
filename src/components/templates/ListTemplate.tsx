@@ -54,6 +54,8 @@ export interface ListAction {
   variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
   onClick: (item: any) => void;
   show?: (item: any) => boolean;
+  className?: string;
+  loading?: (item: any) => boolean;
 }
 
 export interface StatusCard {
@@ -249,7 +251,7 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
   }
 
   return (
-    <div className={`space-y-6 p-6 ${className}`}>
+    <div className={`space-y-6 p-6 w-full overflow-hidden ${className}`}>
       {/* Cabeçalho */}
       <div className="flex flex-col space-y-4">
         <div className="flex items-center justify-between">
@@ -379,17 +381,30 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
                 {selectedItems.length} item(s) selecionado(s)
               </span>
               <div className="flex gap-2">
-                {bulkActions.map((action) => (
-                  <Button
-                    key={action.key}
-                    variant={action.variant || 'outline'}
-                    size="sm"
-                    onClick={() => handleBulkAction(action)}
-                  >
-                    {action.icon}
-                    {action.label}
-                  </Button>
-                ))}
+                {bulkActions.map((action) => {
+                  const isLoading = action.loading ? action.loading(selectedItems[0] || {}) : false;
+                  return (
+                    <Button
+                      key={action.key}
+                      variant={action.variant || 'outline'}
+                      size="sm"
+                      onClick={() => handleBulkAction(action)}
+                      disabled={isLoading}
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Processando...
+                        </>
+                      ) : (
+                        <>
+                          {action.icon}
+                          {action.label}
+                        </>
+                      )}
+                    </Button>
+                  );
+                })}
               </div>
             </div>
           </CardContent>
@@ -401,8 +416,8 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
         <CardHeader>
           <CardTitle>{title} ({data.length})</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
+        <CardContent className="p-0">
+          <div className="w-full overflow-hidden">
             {data.length === 0 ? (
               <div className="text-center py-12">
                 {customEmptyState || (
@@ -414,7 +429,7 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
                 )}
               </div>
             ) : (
-              <Table>
+              <Table className="w-full">
                 <TableHeader>
                   <TableRow>
                     {selectable && (
@@ -428,7 +443,7 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
                     {columns.map((column) => (
                       <TableHead 
                         key={column.key}
-                        className={column.width}
+                        className={column.width || 'min-w-0'}
                         onClick={() => handleSort(column.key)}
                       >
                         <div className="flex items-center gap-2">
@@ -464,17 +479,36 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
                         <TableCell>
                           <div className="flex gap-2">
                             {actions
-                              .filter(action => !action.show || action.show(item))
-                              .map((action) => (
-                                <Button
-                                  key={action.key}
-                                  variant={action.variant || 'ghost'}
-                                  size="sm"
-                                  onClick={() => action.onClick(item)}
-                                >
-                                  {action.icon}
-                                </Button>
-                              ))}
+                              .filter(action => {
+                                const shouldShow = !action.show || action.show(item);
+                                if (process.env.NODE_ENV === 'development' && !shouldShow) {
+                                  console.log('Ação filtrada:', action.key, 'show result:', action.show?.(item));
+                                }
+                                return shouldShow;
+                              })
+                              .map((action) => {
+                                if (process.env.NODE_ENV === 'development') {
+                                  console.log('Renderizando ação:', action.key, action.label);
+                                }
+                                const isLoading = action.loading ? action.loading(item) : false;
+                                return (
+                                  <Button
+                                    key={action.key}
+                                    variant={action.variant || 'ghost'}
+                                    size="sm"
+                                    onClick={() => action.onClick(item)}
+                                    title={action.label}
+                                    className={action.className}
+                                    disabled={isLoading}
+                                  >
+                                    {isLoading ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      action.icon
+                                    )}
+                                  </Button>
+                                );
+                              })}
                           </div>
                         </TableCell>
                       )}
