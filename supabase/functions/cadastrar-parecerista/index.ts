@@ -232,7 +232,7 @@ async function enviarEmailParecerista(parecerista, credenciais, prefeituraNome) 
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      from: 'Portal Cultural <noreply@portalcultural.com.br>',
+      from: 'Portal Cultural <noreply@notifications.pnabjau.com.br>',
       to: [
         parecerista.email
       ],
@@ -343,26 +343,26 @@ Deno.serve(async (req)=>{
       });
     }*/ // Inserir parecerista
     const { data: parecerista, error: insertError } = await supabaseClient.from('pareceristas').insert({
-          prefeitura_id,
-          email: email.toLowerCase(),
+      prefeitura_id,
+      email: email.toLowerCase(),
       senha_hash: senhaAleatoria,
-          nome,
-          cpf,
-          rg,
-          telefone,
-          endereco,
-          cidade,
-          estado,
-          cep,
-          data_nascimento,
-          area_atuacao,
+      nome,
+      cpf,
+      rg,
+      telefone,
+      endereco,
+      cidade,
+      estado,
+      cep,
+      data_nascimento,
+      area_atuacao,
       especialidades: especialidades || [],
-          experiencia_anos,
-          formacao_academica,
-          mini_curriculo,
-          status: 'ativo'
+      experiencia_anos,
+      formacao_academica,
+      mini_curriculo,
+      status: 'ativo'
     }).select().single();
-      if (insertError) {
+    if (insertError) {
       console.error('Erro ao inserir parecerista:', insertError);
       return new Response(JSON.stringify({
         error: 'Erro ao cadastrar parecerista: ' + insertError.message
@@ -381,13 +381,13 @@ Deno.serve(async (req)=>{
         senha: senhaAleatoria
       }, prefeitura.nome);
       return new Response(JSON.stringify({
-          success: true, 
+        success: true,
         message: 'Parecerista cadastrado com sucesso e email enviado',
-          parecerista: {
-            id: parecerista.id,
-            nome: parecerista.nome,
-            email: parecerista.email,
-            cpf: parecerista.cpf
+        parecerista: {
+          id: parecerista.id,
+          nome: parecerista.nome,
+          email: parecerista.email,
+          cpf: parecerista.cpf
         },
         emailId: emailResult.id
       }), {
@@ -401,7 +401,7 @@ Deno.serve(async (req)=>{
       console.error('Erro ao enviar email:', emailError);
       // Mesmo com erro no email, o parecerista foi criado
       return new Response(JSON.stringify({
-        success: true, 
+        success: true,
         message: 'Parecerista cadastrado com sucesso, mas houve erro ao enviar email',
         parecerista: {
           id: parecerista.id,

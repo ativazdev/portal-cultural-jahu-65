@@ -103,6 +103,15 @@ export const PareceristaLogin = () => {
               </div>
             </div>
 
+            <div className="flex items-center justify-between">
+              <Link
+                to={`/${nomePrefeitura}/parecerista/solicitar-redefinicao-senha`}
+                className="text-sm text-green-600 hover:text-green-700 hover:underline"
+              >
+                Esqueceu a senha?
+              </Link>
+            </div>
+
             <Button
               type="submit"
               className="w-full"

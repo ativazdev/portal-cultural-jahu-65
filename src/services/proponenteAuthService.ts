@@ -100,13 +100,6 @@ export const proponenteAuthService = {
         return null;
       }
 
-      // Configurar o token JWT nas requisições do Supabase
-      // Isso será usado pelas políticas RLS
-      supabase.rest.headers = {
-        ...supabase.rest.headers,
-        Authorization: `Bearer ${token}`,
-      };
-
       const userData = JSON.parse(storedUser);
       return userData;
     } catch (error) {
@@ -169,13 +162,20 @@ export const proponenteAuthService = {
     try {
       console.log('📧 Solicitando redefinição de senha para:', email);
       
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/redefinir-senha`,
+      // Chamar a edge function customizada
+      const { data, error } = await supabase.functions.invoke('solicitar-redefinicao-senha-proponente', {
+        body: {
+          email: email
+        }
       });
 
       if (error) {
         console.error('❌ Erro ao solicitar redefinição:', error);
-        throw error;
+        throw new Error(error.message || 'Erro ao solicitar redefinição de senha');
+      }
+
+      if (!data || !data.success) {
+        throw new Error(data?.error || 'Erro ao solicitar redefinição de senha');
       }
 
       console.log('✅ Email de redefinição enviado');
@@ -185,17 +185,25 @@ export const proponenteAuthService = {
     }
   },
 
-  async redefinirSenha(newPassword: string): Promise<void> {
+  async redefinirSenha(token: string, newPassword: string): Promise<void> {
     try {
       console.log('🔑 Redefinindo senha...');
       
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword
+      // Chamar a edge function customizada
+      const { data, error } = await supabase.functions.invoke('redefinir-senha-proponente', {
+        body: {
+          token: token,
+          nova_senha: newPassword
+        }
       });
 
       if (error) {
         console.error('❌ Erro ao redefinir senha:', error);
-        throw error;
+        throw new Error(error.message || 'Erro ao redefinir senha');
+      }
+
+      if (!data || !data.success) {
+        throw new Error(data?.error || 'Token inválido ou expirado');
       }
 
       console.log('✅ Senha redefinida com sucesso');

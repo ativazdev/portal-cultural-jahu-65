@@ -27,6 +27,8 @@ import { ProponenteSuporte } from "./pages/ProponenteSuporte";
 import { ProponenteProponentes } from "./pages/ProponenteProponentes";
 import { ProponenteCadastrarProjeto } from "./pages/ProponenteCadastrarProjeto";
 import { PareceristaLogin } from "./pages/PareceristaLogin";
+import { PareceristaSolicitarRedefinicaoSenha } from "./pages/PareceristaSolicitarRedefinicaoSenha";
+import { PareceristaRedefinicaoSenha } from "./pages/PareceristaRedefinicaoSenha";
 import { PareceristaSelecionarEdital } from "./pages/PareceristaSelecionarEdital";
 import { PareceristaDashboard } from "./pages/PareceristaDashboard";
 import { PareceristaProjetos } from "./pages/PareceristaProjetos";
@@ -120,6 +122,8 @@ const App = () => (
           
           {/* Rotas do Parecerista */}
           <Route path="/:nomePrefeitura/parecerista/login" element={<PareceristaLogin />} />
+          <Route path="/:nomePrefeitura/parecerista/solicitar-redefinicao-senha" element={<PareceristaSolicitarRedefinicaoSenha />} />
+          <Route path="/:nomePrefeitura/parecerista/redefinicao-senha" element={<PareceristaRedefinicaoSenha />} />
           <Route path="/:nomePrefeitura/parecerista/selecionar-edital" element={
             <AuthGuard>
               <PareceristaSelecionarEdital />

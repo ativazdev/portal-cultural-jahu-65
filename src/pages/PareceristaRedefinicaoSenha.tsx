@@ -6,12 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Key, Eye, EyeOff, CheckCircle } from "lucide-react";
-import { useProponenteAuth } from "@/hooks/useProponenteAuth";
+import { usePareceristaAuth } from "@/hooks/usePareceristaAuth";
 
-export const ProponenteRedefinicaoSenha = () => {
+export const PareceristaRedefinicaoSenha = () => {
   const { nomePrefeitura } = useParams<{ nomePrefeitura: string }>();
   const [searchParams] = useSearchParams();
-  const { redefinirSenha, loading } = useProponenteAuth();
+  const { redefinirSenha, loading } = usePareceristaAuth();
   const navigate = useNavigate();
   
   const [formData, setFormData] = useState({
@@ -67,19 +67,19 @@ export const ProponenteRedefinicaoSenha = () => {
     if (result) {
       setSuccess(true);
       setTimeout(() => {
-        navigate(`/${nomePrefeitura}/proponente/login`);
+        navigate(`/${nomePrefeitura}/parecerista/login`);
       }, 2000);
     }
   };
 
   if (success) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
-              <div className="p-3 bg-green-100 rounded-full">
-                <CheckCircle className="h-8 w-8 text-green-600" />
+              <div className="p-3 bg-blue-100 rounded-full">
+                <CheckCircle className="h-8 w-8 text-blue-600" />
               </div>
             </div>
             <CardTitle className="text-2xl font-bold">Senha Redefinida!</CardTitle>
@@ -100,12 +100,12 @@ export const ProponenteRedefinicaoSenha = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <div className="p-3 bg-green-100 rounded-full">
-              <Key className="h-8 w-8 text-green-600" />
+            <div className="p-3 bg-blue-100 rounded-full">
+              <Key className="h-8 w-8 text-blue-600" />
             </div>
           </div>
           <CardTitle className="text-2xl font-bold">Nova Senha</CardTitle>
@@ -130,7 +130,7 @@ export const ProponenteRedefinicaoSenha = () => {
                   placeholder="Mínimo 6 caracteres"
                   value={formData.password}
                   onChange={(e) => handleInputChange('password', e.target.value)}
-                  disabled={loading}
+                  disabled={loading || !token}
                 />
                 <Button
                   type="button"
@@ -138,7 +138,7 @@ export const ProponenteRedefinicaoSenha = () => {
                   size="sm"
                   className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                   onClick={() => setShowPassword(!showPassword)}
-                  disabled={loading}
+                  disabled={loading || !token}
                 >
                   {showPassword ? (
                     <EyeOff className="h-4 w-4 text-gray-500" />
@@ -158,7 +158,7 @@ export const ProponenteRedefinicaoSenha = () => {
                   placeholder="Digite a senha novamente"
                   value={formData.confirmPassword}
                   onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                  disabled={loading}
+                  disabled={loading || !token}
                 />
                 <Button
                   type="button"
@@ -166,7 +166,7 @@ export const ProponenteRedefinicaoSenha = () => {
                   size="sm"
                   className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  disabled={loading}
+                  disabled={loading || !token}
                 >
                   {showConfirmPassword ? (
                     <EyeOff className="h-4 w-4 text-gray-500" />

@@ -171,9 +171,9 @@ export const useProponenteAuth = () => {
     }
   };
 
-  const redefinirSenha = async (newPassword: string) => {
+  const redefinirSenha = async (token: string, newPassword: string) => {
     try {
-      await proponenteAuthService.redefinirSenha(newPassword);
+      await proponenteAuthService.redefinirSenha(token, newPassword);
       toast({
         title: "Senha redefinida",
         description: "Sua senha foi redefinida com sucesso!",

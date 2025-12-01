@@ -75,12 +75,6 @@ export const pareceristaAuthService = {
         return null;
       }
 
-      // Configurar o token JWT nas requisições do Supabase
-      supabase.rest.headers = {
-        ...supabase.rest.headers,
-        Authorization: `Bearer ${token}`,
-      };
-
       const userData = JSON.parse(storedUser);
       return userData;
     } catch (error) {
@@ -103,6 +97,61 @@ export const pareceristaAuthService = {
   isAuthenticated(): boolean {
     const token = localStorage.getItem('parecerista_token');
     return !!token;
+  },
+
+  async solicitarRedefinicaoSenha(email: string): Promise<void> {
+    try {
+      console.log('📧 Solicitando redefinição de senha para:', email);
+      
+      // Chamar a edge function customizada
+      const { data, error } = await supabase.functions.invoke('solicitar-redefinicao-senha-parecerista', {
+        body: {
+          email: email
+        }
+      });
+
+      if (error) {
+        console.error('❌ Erro ao solicitar redefinição:', error);
+        throw new Error(error.message || 'Erro ao solicitar redefinição de senha');
+      }
+
+      if (!data || !data.success) {
+        throw new Error(data?.error || 'Erro ao solicitar redefinição de senha');
+      }
+
+      console.log('✅ Email de redefinição enviado');
+    } catch (error) {
+      console.error('❌ Erro ao solicitar redefinição de senha:', error);
+      throw error;
+    }
+  },
+
+  async redefinirSenha(token: string, newPassword: string): Promise<void> {
+    try {
+      console.log('🔑 Redefinindo senha...');
+      
+      // Chamar a edge function customizada
+      const { data, error } = await supabase.functions.invoke('redefinir-senha-parecerista', {
+        body: {
+          token: token,
+          nova_senha: newPassword
+        }
+      });
+
+      if (error) {
+        console.error('❌ Erro ao redefinir senha:', error);
+        throw new Error(error.message || 'Erro ao redefinir senha');
+      }
+
+      if (!data || !data.success) {
+        throw new Error(data?.error || 'Token inválido ou expirado');
+      }
+
+      console.log('✅ Senha redefinida com sucesso');
+    } catch (error) {
+      console.error('❌ Erro ao redefinir senha:', error);
+      throw error;
+    }
   }
 };
 

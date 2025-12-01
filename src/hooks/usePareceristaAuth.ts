@@ -18,11 +18,13 @@ export const usePareceristaAuth = () => {
         
         // Verificar se estamos em uma página de autenticação
         const path = window.location.pathname;
-        const isLoginPage = path.includes('/parecerista/login');
+        const isAuthPage = path.includes('/parecerista/login') || 
+                          path.includes('/parecerista/solicitar-redefinicao-senha') || 
+                          path.includes('/parecerista/redefinicao-senha');
         
-        // Se estiver na página de login, não verificar login
-        if (isLoginPage) {
-          console.log('🔄 Página de login detectada, pulando verificação');
+        // Se estiver em uma página de autenticação, não verificar login
+        if (isAuthPage) {
+          console.log('🔄 Página de autenticação detectada, pulando verificação');
           setLoading(false);
           return;
         }
@@ -113,6 +115,44 @@ export const usePareceristaAuth = () => {
     }
   };
 
+  const solicitarRedefinicaoSenha = async (email: string) => {
+    try {
+      await pareceristaAuthService.solicitarRedefinicaoSenha(email);
+      toast({
+        title: "Email enviado",
+        description: "Verifique sua caixa de entrada para redefinir sua senha.",
+      });
+      return true;
+    } catch (error: any) {
+      console.error('❌ Erro ao solicitar redefinição:', error);
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao solicitar redefinição de senha",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
+  const redefinirSenha = async (token: string, newPassword: string) => {
+    try {
+      await pareceristaAuthService.redefinirSenha(token, newPassword);
+      toast({
+        title: "Senha redefinida",
+        description: "Sua senha foi redefinida com sucesso!",
+      });
+      return true;
+    } catch (error: any) {
+      console.error('❌ Erro ao redefinir senha:', error);
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao redefinir senha",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
   const isAuthenticated = !!authUser;
 
   return {
@@ -121,7 +161,9 @@ export const usePareceristaAuth = () => {
     loading,
     isAuthenticated,
     login,
-    logout
+    logout,
+    solicitarRedefinicaoSenha,
+    redefinirSenha
   };
 };
 
