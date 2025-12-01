@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { 
   ListTemplate, 
@@ -75,23 +75,107 @@ export const PrefeituraEditais = () => {
   const [activeFilters, setActiveFilters] = useState<Record<string, string>>({});
   const [filteredData, setFilteredData] = useState<Edital[]>([]);
   const [recursosPendentesPorEdital, setRecursosPendentesPorEdital] = useState<Record<string, number>>({});
+  const ultimaAtualizacaoRecursos = useRef<number>(0);
+  const editalIdsAnterior = useRef<string>('');
 
-  // Buscar recursos pendentes por edital
-  useEffect(() => {
-    const carregarRecursosPendentes = async () => {
-      const recursos: Record<string, number> = {};
-      for (const edital of editais) {
-        const dados = await recursosService.getPendentesByEdital(edital.id);
-        if (dados.total > 0) {
-          recursos[edital.id] = dados.total;
-        }
+  // Função para carregar recursos pendentes
+  const carregarRecursosPendentes = useCallback(async () => {
+    if (editais.length === 0) {
+      setRecursosPendentesPorEdital({});
+      return;
+    }
+
+    const agora = Date.now();
+    const editalIdsAtual = editais.map(e => e.id).sort().join(',');
+    
+    // Evitar chamadas muito frequentes (mínimo 5 minutos entre chamadas, exceto se os editais mudaram)
+    if (editalIdsAtual === editalIdsAnterior.current && agora - ultimaAtualizacaoRecursos.current < 5 * 60 * 1000) {
+      return;
+    }
+
+    ultimaAtualizacaoRecursos.current = agora;
+    editalIdsAnterior.current = editalIdsAtual;
+
+    try {
+      // Buscar todos os projetos de todos os editais de uma vez
+      const editalIds = editais.map(e => e.id);
+      
+      const { data: projetos, error: projetosError } = await supabase
+        .from('projetos')
+        .select('id, edital_id')
+        .in('edital_id', editalIds);
+
+      if (projetosError) throw projetosError;
+
+      if (!projetos || projetos.length === 0) {
+        setRecursosPendentesPorEdital({});
+        return;
       }
-      setRecursosPendentesPorEdital(recursos);
-    };
+
+      // Agrupar projetos por edital
+      const projetosPorEdital: Record<string, string[]> = {};
+      const projetosData = (projetos || []) as Array<{ id: string; edital_id: string }>;
+      projetosData.forEach((projeto) => {
+        if (!projetosPorEdital[projeto.edital_id]) {
+          projetosPorEdital[projeto.edital_id] = [];
+        }
+        projetosPorEdital[projeto.edital_id].push(projeto.id);
+      });
+
+      // Buscar todos os recursos pendentes de uma vez
+      const todosProjetoIds = projetosData.map((p) => p.id);
+      
+      if (todosProjetoIds.length === 0) {
+        setRecursosPendentesPorEdital({});
+        return;
+      }
+
+      const { data: recursos, error: recursosError } = await supabase
+        .from('recursos')
+        .select('id, tipo, status, projeto_id')
+        .in('projeto_id', todosProjetoIds)
+        .eq('status', 'pendente');
+
+      if (recursosError) throw recursosError;
+
+      // Contar recursos por edital
+      const recursosPorEdital: Record<string, number> = {};
+      const recursosData = (recursos || []) as Array<{ id: string; tipo: string; status: string; projeto_id: string }>;
+      
+      editais.forEach(edital => {
+        const projetoIds = projetosPorEdital[edital.id] || [];
+        const recursosDoEdital = recursosData.filter(r => projetoIds.includes(r.projeto_id));
+        const total = recursosDoEdital.length;
+        
+        if (total > 0) {
+          recursosPorEdital[edital.id] = total;
+        }
+      });
+
+      setRecursosPendentesPorEdital(recursosPorEdital);
+    } catch (error) {
+      console.error('Erro ao carregar recursos pendentes:', error);
+      setRecursosPendentesPorEdital({});
+    }
+  }, [editais]);
+
+  // Carregar recursos apenas quando os editais mudarem (carregamento inicial)
+  useEffect(() => {
     if (editais.length > 0) {
       carregarRecursosPendentes();
     }
-  }, [editais]);
+  }, [editais.length]); // Só quando a quantidade de editais mudar
+
+  // Atualizar recursos a cada 5 minutos
+  useEffect(() => {
+    if (editais.length === 0) return;
+
+    const intervalId = setInterval(() => {
+      carregarRecursosPendentes();
+    }, 5 * 60 * 1000); // 5 minutos
+
+    return () => clearInterval(intervalId);
+  }, [editais.length, carregarRecursosPendentes]);
 
   // Aplicar filtros e busca
   useEffect(() => {
@@ -126,76 +210,71 @@ export const PrefeituraEditais = () => {
   // Configuração das colunas
   const columns: ListColumn[] = [
     {
-      key: 'codigo',
-      label: 'Código',
+      key: 'edital',
+      label: 'Edital',
       sortable: true,
-      render: (item) => (
-        <div className="font-mono text-sm font-medium text-blue-600">
-          {item.codigo}
-        </div>
-      )
-    },
-    {
-      key: 'nome',
-      label: 'Nome do Edital',
-      sortable: true,
+      width: 'w-64 md:w-60',
       render: (item) => {
         const temRecursosPendentes = recursosPendentesPorEdital[item.id] && recursosPendentesPorEdital[item.id] > 0;
         return (
-          <div className="max-w-xs">
-            <div className="flex items-center gap-2">
-              <p className="font-medium text-gray-900 truncate">{item.nome}</p>
+          <div className="max-w-[16rem] md:max-w-[20rem]">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="font-mono text-xs font-medium text-blue-600 truncate flex-shrink-0">
+                {item.codigo}
+              </div>
               {temRecursosPendentes && (
-                <div className="flex items-center gap-1" title={`${recursosPendentesPorEdital[item.id]} recursos/contra-razões pendentes`}>
-                  <AlertCircle className="h-4 w-4 text-red-500" />
+                <div className="flex items-center gap-0.5 flex-shrink-0" title={`${recursosPendentesPorEdital[item.id]} recursos/contra-razões pendentes`}>
+                  <AlertCircle className="h-3 w-3 text-red-500" />
                   <span className="text-xs font-bold text-red-500">{recursosPendentesPorEdital[item.id]}</span>
                 </div>
               )}
             </div>
-            <p className="text-sm text-gray-500 mt-1 line-clamp-2">{item.descricao}</p>
+            <p className="font-medium text-gray-900 truncate text-xs">{item.nome}</p>
+            <p className="text-xs text-gray-500 mt-0.5 line-clamp-1 hidden md:block">{item.descricao}</p>
           </div>
         );
       }
     },
     {
-      key: 'data_abertura',
-      label: 'Data de Abertura',
+      key: 'periodo',
+      label: 'Período',
+      width: 'w-40 md:w-48',
       render: (item) => (
-        <div className="text-sm text-gray-600">
-          {new Date(item.data_abertura).toLocaleDateString('pt-BR')}
-        </div>
-      )
-    },
-    {
-      key: 'data_final_envio_projeto',
-      label: 'Prazo Final',
-      render: (item) => (
-        <div className="text-sm text-gray-600">
-          {new Date(item.data_final_envio_projeto).toLocaleDateString('pt-BR')}
-        </div>
-      )
-    },
-    {
-      key: 'total_projetos',
-      label: 'Projetos',
-      render: (item) => (
-        <div className="text-sm font-medium text-gray-900">
-          {item.total_projetos}
+        <div className="text-xs text-gray-600 space-y-0.5">
+          <div className="flex items-center gap-1">
+            <span className="text-gray-500">Abertura:</span>
+            <span className="whitespace-nowrap">{new Date(item.data_abertura).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' })}</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="text-gray-500">Prazo:</span>
+            <span className="whitespace-nowrap">{new Date(item.data_final_envio_projeto).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' })}</span>
+          </div>
         </div>
       )
     },
     {
       key: 'valor_maximo',
-      label: 'Valor Máximo',
-      render: (item) => (
-        <div className="text-sm font-medium text-gray-900">
-          R$ {item.valor_maximo?.toLocaleString('pt-BR') || 'N/A'}
-        </div>
-      )
+      label: 'Valor',
+      width: 'w-20 md:w-28',
+      render: (item) => {
+        const valor = item.valor_maximo || 0;
+        const valorEmMilhares = valor / 1000;
+        return (
+          <div className="text-xs font-medium text-gray-900 whitespace-nowrap">
+            {valorEmMilhares >= 1000 
+              ? `R$ ${(valorEmMilhares / 1000).toFixed(1)}M`
+              : valorEmMilhares >= 1
+              ? `R$ ${valorEmMilhares.toFixed(0)}k`
+              : `R$ ${valor.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`
+            }
+          </div>
+        );
+      }
     },
     {
       key: 'status',
       label: 'Status',
+      width: 'w-28 md:w-32',
       render: (item) => {
         const currentStatus = String(item.status || 'rascunho').trim();
         return (
@@ -203,13 +282,13 @@ export const PrefeituraEditais = () => {
             value={currentStatus} 
             onValueChange={(newStatus) => handleAlterarStatusInline(item, newStatus)}
           >
-            <SelectTrigger className="w-auto min-w-[120px] max-w-[200px] h-auto border-0 bg-transparent hover:bg-transparent focus:ring-0 p-0 shadow-none [&>span:first-child]:hidden [&>svg]:hidden">
+            <SelectTrigger className="w-auto min-w-[80px] md:min-w-[100px] max-w-[110px] md:max-w-[130px] h-auto border-0 bg-transparent hover:bg-transparent focus:ring-0 p-0 shadow-none [&>span:first-child]:hidden [&>svg]:hidden">
               <SelectValue />
               <div className="flex items-center gap-1 pointer-events-none">
-                <Badge className={getStatusColor(currentStatus)}>
-                  {getStatusLabel(currentStatus)}
+                <Badge className={`${getStatusColor(currentStatus)} text-xs px-1 py-0.5 md:px-1.5`}>
+                  <span className="truncate max-w-[70px] md:max-w-[90px]">{getStatusLabel(currentStatus)}</span>
                 </Badge>
-                <ChevronDown className="h-3 w-3 opacity-50" />
+                <ChevronDown className="h-3 w-3 opacity-50 flex-shrink-0 hidden md:block" />
               </div>
             </SelectTrigger>
             <SelectContent>
@@ -393,8 +472,6 @@ export const PrefeituraEditais = () => {
     }
   ];
 
-  // Ações em lote
-  const bulkActions: ListAction[] = [];
 
   // Cards de status
   const statusCards: StatusCard[] = [
@@ -434,7 +511,7 @@ export const PrefeituraEditais = () => {
     setModalAberto(true);
   };
 
-  const handleSalvarEdital = async (dados: any) => {
+  const handleSalvarEdital = async (dados: any): Promise<void> => {
     try {
       if (editalEditando) {
         const success = await updateEdital(editalEditando.id, dados);
@@ -445,12 +522,14 @@ export const PrefeituraEditais = () => {
           });
           setModalAberto(false);
           setEditalEditando(null);
+          await refreshPrefeitura();
         } else {
           toast({
             title: "Erro",
             description: "Erro ao atualizar edital. Tente novamente.",
             variant: "destructive",
           });
+          throw new Error('Erro ao atualizar edital');
         }
       } else {
         const success = await createEdital(dados, user?.id || '');
@@ -461,12 +540,14 @@ export const PrefeituraEditais = () => {
           });
           setModalAberto(false);
           setEditalEditando(null);
+          await refreshPrefeitura();
         } else {
           toast({
             title: "Erro",
             description: "Erro ao criar edital. Tente novamente.",
             variant: "destructive",
           });
+          throw new Error('Erro ao criar edital');
         }
       }
     } catch (error) {
@@ -476,6 +557,7 @@ export const PrefeituraEditais = () => {
         description: "Erro ao salvar edital. Tente novamente.",
         variant: "destructive",
       });
+      throw error; // Re-throw para que o modal possa tratar o erro
     }
   };
 
@@ -509,13 +591,11 @@ export const PrefeituraEditais = () => {
         title="Editais" 
         description="Gerencie os editais da prefeitura"
       >
-        <div className="p-6">
-          <div className="text-center text-red-600">
-            <p>Erro ao carregar editais: {error}</p>
-            <Button onClick={refreshPrefeitura} className="mt-4">
-              Tentar Novamente
-            </Button>
-          </div>
+        <div className="p-4 md:p-6 text-center text-red-600">
+          <p>Erro ao carregar editais: {error}</p>
+          <Button onClick={refreshPrefeitura} className="mt-4">
+            Tentar Novamente
+          </Button>
         </div>
       </PrefeituraLayout>
     );
@@ -526,100 +606,98 @@ export const PrefeituraEditais = () => {
       title="Editais" 
       description="Gerencie os editais da prefeitura"
     >
-      <div className="p-6 w-full overflow-hidden">
-        <ListTemplate
-          data={filteredData}
-          title="Gerenciar Editais"
-          subtitle="Cadastre e gerencie os editais de projetos culturais"
-          columns={columns}
-          filters={filters}
-          actions={actions}
-          bulkActions={bulkActions}
-          statusCards={statusCards}
-          searchable={true}
-          selectable={true}
-          sortable={true}
-          loading={loading}
-          onSearch={handleSearch}
-          onFilterChange={handleFilterChange}
-          onSort={(column, direction) => console.log('Ordenação:', column, direction)}
-          onSelect={(items) => console.log('Selecionados:', items)}
-          onRefresh={refreshPrefeitura}
-          headerActions={
-            <Button onClick={handleNovoEdital} className="bg-blue-600 hover:bg-blue-700">
-              <Plus className="h-4 w-4 mr-2" />
-              Novo Edital
+      <ListTemplate
+        data={filteredData}
+        title="Gerenciar Editais"
+        subtitle="Cadastre e gerencie os editais de projetos culturais"
+        columns={columns}
+        filters={filters}
+        actions={actions}
+        statusCards={statusCards}
+        searchable={true}
+        selectable={false}
+        sortable={true}
+        loading={loading}
+        onSearch={handleSearch}
+        onFilterChange={handleFilterChange}
+        onSort={(column, direction) => console.log('Ordenação:', column, direction)}
+        onRefresh={async () => {
+          await refreshPrefeitura();
+          await carregarRecursosPendentes();
+        }}
+        headerActions={
+          <Button onClick={handleNovoEdital} className="bg-blue-600 hover:bg-blue-700">
+            <Plus className="h-4 w-4 mr-2" />
+            Novo Edital
+          </Button>
+        }
+      />
+
+      {/* Modal de Cadastro/Edição */}
+      <EditalModal
+        open={modalAberto}
+        onClose={() => {
+          setModalAberto(false);
+          setEditalEditando(null);
+        }}
+        onSave={handleSalvarEdital}
+        edital={editalEditando}
+        loading={loading}
+      />
+
+      {/* Modal de Confirmação - Excluir */}
+      <ConfirmationModal
+        open={modalConfirmacao.aberto}
+        onClose={() => setModalConfirmacao({ aberto: false, edital: null, acao: null })}
+        onConfirm={handleExecutarAcao}
+        title="Excluir Edital"
+        description={`Tem certeza que deseja excluir o edital "${modalConfirmacao.edital?.nome}"?`}
+        confirmText="Excluir"
+        cancelText="Cancelar"
+        variant="destructive"
+        loading={loading}
+      />
+
+      {/* Modal de Confirmação - Mudança de Status de Rascunho */}
+      <Dialog open={modalConfirmacaoStatus.aberto} onOpenChange={(open) => {
+        if (!open) {
+          setModalConfirmacaoStatus({ aberto: false, edital: null, novoStatus: null });
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmar Alteração de Status</DialogTitle>
+            <DialogDescription className="space-y-3">
+              <p>
+                Você está prestes a alterar o status do edital <strong>"{modalConfirmacaoStatus.edital?.nome}"</strong> de <strong>"Rascunho"</strong> para <strong>"{getStatusLabel(modalConfirmacaoStatus.novoStatus || '')}"</strong>.
+              </p>
+              <div className="bg-red-50 border border-red-200 rounded-md p-3">
+                <p className="text-red-800 font-semibold">
+                  ⚠️ ATENÇÃO: Após esta alteração, não será mais possível editar este edital ou voltar o status para "Rascunho".
+                </p>
+              </div>
+              <p>
+                Tem certeza que deseja continuar?
+              </p>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setModalConfirmacaoStatus({ aberto: false, edital: null, novoStatus: null })}
+              disabled={loading}
+            >
+              Cancelar
             </Button>
-          }
-        />
-
-        {/* Modal de Cadastro/Edição */}
-        <EditalModal
-          open={modalAberto}
-          onClose={() => {
-            setModalAberto(false);
-            setEditalEditando(null);
-          }}
-          onSave={handleSalvarEdital}
-          edital={editalEditando}
-          loading={loading}
-        />
-
-        {/* Modal de Confirmação - Excluir */}
-        <ConfirmationModal
-          open={modalConfirmacao.aberto}
-          onClose={() => setModalConfirmacao({ aberto: false, edital: null, acao: null })}
-          onConfirm={handleExecutarAcao}
-          title="Excluir Edital"
-          description={`Tem certeza que deseja excluir o edital "${modalConfirmacao.edital?.nome}"?`}
-          confirmText="Excluir"
-          cancelText="Cancelar"
-          variant="destructive"
-          loading={loading}
-        />
-
-        {/* Modal de Confirmação - Mudança de Status de Rascunho */}
-        <Dialog open={modalConfirmacaoStatus.aberto} onOpenChange={(open) => {
-          if (!open) {
-            setModalConfirmacaoStatus({ aberto: false, edital: null, novoStatus: null });
-          }
-        }}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Confirmar Alteração de Status</DialogTitle>
-              <DialogDescription className="space-y-3">
-                <p>
-                  Você está prestes a alterar o status do edital <strong>"{modalConfirmacaoStatus.edital?.nome}"</strong> de <strong>"Rascunho"</strong> para <strong>"{getStatusLabel(modalConfirmacaoStatus.novoStatus || '')}"</strong>.
-                </p>
-                <div className="bg-red-50 border border-red-200 rounded-md p-3">
-                  <p className="text-red-800 font-semibold">
-                    ⚠️ ATENÇÃO: Após esta alteração, não será mais possível editar este edital ou voltar o status para "Rascunho".
-                  </p>
-                </div>
-                <p>
-                  Tem certeza que deseja continuar?
-                </p>
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setModalConfirmacaoStatus({ aberto: false, edital: null, novoStatus: null })}
-                disabled={loading}
-              >
-                Cancelar
-              </Button>
-              <Button
-                onClick={() => confirmarAlteracaoStatus(modalConfirmacaoStatus.edital, modalConfirmacaoStatus.novoStatus)}
-                disabled={loading}
-              >
-                {loading ? 'Confirmando...' : 'Confirmar'}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-      </div>
+            <Button
+              onClick={() => confirmarAlteracaoStatus(modalConfirmacaoStatus.edital, modalConfirmacaoStatus.novoStatus)}
+              disabled={loading}
+            >
+              {loading ? 'Confirmando...' : 'Confirmar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </PrefeituraLayout>
   );
 };

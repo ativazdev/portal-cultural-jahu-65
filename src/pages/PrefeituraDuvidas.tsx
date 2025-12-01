@@ -281,13 +281,11 @@ export const PrefeituraDuvidas = () => {
         title="Dúvidas" 
         description="Gerencie as dúvidas dos usuários"
       >
-        <div className="p-6">
-          <div className="text-center text-red-600">
-            <p>Erro ao carregar dúvidas: {error}</p>
-            <Button onClick={refresh} className="mt-4">
-              Tentar Novamente
-            </Button>
-          </div>
+        <div className="p-4 md:p-6 text-center text-red-600">
+          <p>Erro ao carregar dúvidas: {error}</p>
+          <Button onClick={refresh} className="mt-4">
+            Tentar Novamente
+          </Button>
         </div>
       </PrefeituraLayout>
     );
@@ -298,8 +296,7 @@ export const PrefeituraDuvidas = () => {
       title="Dúvidas" 
       description="Gerencie as dúvidas dos usuários"
     >
-      <div className="p-6">
-        <ListTemplate
+      <ListTemplate
           data={filteredData}
           title="Gerenciar Dúvidas"
           subtitle="Responda às dúvidas de proponentes e pareceristas"
@@ -417,7 +414,6 @@ export const PrefeituraDuvidas = () => {
             </div>
           )}
         </ModalTemplate>
-      </div>
     </PrefeituraLayout>
   );
 };

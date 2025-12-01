@@ -13,17 +13,7 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     storage: localStorage,
     persistSession: true,
     autoRefreshToken: true,
-  },
-  global: {
-    headers: {
-      // Configurar token customizado se disponível
-      get Authorization() {
-        const proponenteToken = localStorage.getItem('proponente_token');
-        const pareceristaToken = localStorage.getItem('parecerista_token');
-        const token = proponenteToken || pareceristaToken;
-        return token ? `Bearer ${token}` : undefined;
-      }
-    }
+    detectSessionInUrl: true,
   }
 });
 

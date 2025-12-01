@@ -78,6 +78,8 @@ export const EditalModal = ({ open, onClose, onSave, edital, loading = false }: 
       });
     }
     setUploadedFiles([]);
+    // Resetar estado de submissão quando o modal abrir/fechar
+    setIsSubmitting(false);
   }, [edital, open]);
 
   const handleInputChange = (key: string, value: any) => {
@@ -261,8 +263,12 @@ export const EditalModal = ({ open, onClose, onSave, edital, loading = false }: 
       };
       
       await onSave(dataToSave);
-    } finally {
+      // Resetar estado após sucesso
       setIsSubmitting(false);
+    } catch (error) {
+      // Em caso de erro, também resetar o estado
+      setIsSubmitting(false);
+      console.error('Erro ao salvar edital:', error);
     }
   };
 

@@ -52,12 +52,38 @@ export const authService = {
 
       console.log('🔐 Resultado do auth:', { authData, authError });
 
-      if (authError || !authData.user) {
+      if (authError || !authData.user || !authData.session) {
         console.error('❌ Erro no auth:', authError);
         throw new Error('Credenciais inválidas');
       }
 
+      // Garantir que a sessão está ativa
+      // O Supabase Auth já atualizou a sessão automaticamente no cliente
+      console.log('✅ Sessão ativa:', authData.session.access_token ? 'Token presente' : 'Token ausente');
+      console.log('✅ User ID:', authData.user.id);
+      console.log('✅ Access Token:', authData.session.access_token ? 'Presente' : 'Ausente');
+      
+      // Verificar se a sessão foi persistida no cliente
+      // O Supabase client deve usar automaticamente o token da sessão
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      console.log('🔍 Sessão atual do cliente:', currentSession ? 'Presente' : 'Ausente');
+      
+      if (!currentSession || currentSession.access_token !== authData.session.access_token) {
+        console.warn('⚠️ Sessão não sincronizada, aguardando...');
+        // Aguardar um pouco mais para garantir que a sessão foi persistida
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        // Verificar novamente
+        const { data: { session: retrySession } } = await supabase.auth.getSession();
+        if (!retrySession) {
+          console.error('❌ Sessão ainda não disponível após retry');
+          throw new Error('Erro ao sincronizar sessão');
+        }
+        console.log('✅ Sessão sincronizada após retry');
+      }
+      
       // Buscar profile do usuário
+      // O cliente Supabase deve usar automaticamente o token da sessão nas requisições
       console.log('👤 Buscando profile para user_id:', authData.user.id);
       
       const { data: profile, error: profileError } = await supabase

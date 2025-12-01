@@ -251,20 +251,21 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
   }
 
   return (
-    <div className={`space-y-6 p-6 w-full overflow-hidden ${className}`}>
+    <div className={`space-y-4 md:space-y-6 w-full overflow-hidden ${className}`}>
       {/* Cabeçalho */}
       <div className="flex flex-col space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">{title}</h1>
-            {subtitle && <p className="text-gray-600 mt-1">{subtitle}</p>}
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">{title}</h1>
+            {subtitle && <p className="text-sm md:text-base text-gray-600 mt-1">{subtitle}</p>}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
             {headerActions}
             {onRefresh && (
-              <Button variant="outline" onClick={onRefresh}>
+              <Button variant="outline" onClick={onRefresh} className="w-full sm:w-auto">
                 <Clock className="h-4 w-4 mr-2" />
-                Atualizar
+                <span className="hidden sm:inline">Atualizar</span>
+                <span className="sm:hidden">Atualizar</span>
               </Button>
             )}
           </div>
@@ -272,17 +273,17 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
 
         {/* Cards de Status */}
         {statusCards.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-2">
             {statusCards.map((card, index) => (
               <Card key={index} className={getStatusCardColor(card.color)}>
-                <CardContent className="p-6">
+                <CardContent className="p-4 md:p-6">
                   <div className="flex items-center justify-between">
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium text-muted-foreground">
+                    <div className="space-y-1 md:space-y-2 flex-1 min-w-0">
+                      <p className="text-xs md:text-sm font-medium text-muted-foreground truncate">
                         {card.title}
                       </p>
-                      <p className="text-2xl font-bold">{card.value}</p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xl md:text-2xl font-bold truncate">{card.value}</p>
+                      <p className="text-xs text-muted-foreground truncate">
                         {card.subtitle}
                       </p>
                       {card.trend && (
@@ -291,8 +292,10 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
                         </p>
                       )}
                     </div>
-                    <div className={getStatusCardIconColor(card.color)}>
-                      {card.icon}
+                    <div className={`${getStatusCardIconColor(card.color)} flex-shrink-0 ml-2`}>
+                      <div className="h-5 w-5 md:h-6 md:w-6">
+                        {card.icon}
+                      </div>
                     </div>
                   </div>
                 </CardContent>
@@ -364,6 +367,7 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
                   setFilterValues({});
                   onFilterChange?.({});
                 }}
+                className="w-full sm:w-auto"
               >
                 Limpar Filtros
               </Button>
@@ -376,11 +380,11 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
       {selectable && selectedItems.length > 0 && bulkActions.length > 0 && (
         <Card>
           <CardContent className="p-4">
-            <div className="flex items-center gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
               <span className="text-sm font-medium">
                 {selectedItems.length} item(s) selecionado(s)
               </span>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 {bulkActions.map((action) => {
                   const isLoading = action.loading ? action.loading(selectedItems[0] || {}) : false;
                   return (
@@ -390,16 +394,17 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
                       size="sm"
                       onClick={() => handleBulkAction(action)}
                       disabled={isLoading}
+                      className="flex-1 sm:flex-initial"
                     >
                       {isLoading ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Processando...
+                          <span className="hidden sm:inline">Processando...</span>
                         </>
                       ) : (
                         <>
                           {action.icon}
-                          {action.label}
+                          <span className="hidden sm:inline ml-2">{action.label}</span>
                         </>
                       )}
                     </Button>
@@ -411,13 +416,13 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
         </Card>
       )}
 
-      {/* Tabela */}
+      {/* Tabela / Cards */}
       <Card>
-        <CardHeader>
-          <CardTitle>{title} ({data.length})</CardTitle>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg md:text-xl">{title} ({data.length})</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="w-full overflow-hidden">
+          <div className="w-full overflow-hidden max-w-full">
             {data.length === 0 ? (
               <div className="text-center py-12">
                 {customEmptyState || (
@@ -429,72 +434,41 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
                 )}
               </div>
             ) : (
-              <Table className="w-full">
-                <TableHeader>
-                  <TableRow>
-                    {selectable && (
-                      <TableHead className="w-12">
-                        <Checkbox
-                          checked={selectedItems.length === data.length && data.length > 0}
-                          onCheckedChange={handleSelectAll}
-                        />
-                      </TableHead>
-                    )}
-                    {columns.map((column) => (
-                      <TableHead 
-                        key={column.key}
-                        className={column.width || 'min-w-0'}
-                        onClick={() => handleSort(column.key)}
-                      >
-                        <div className="flex items-center gap-2">
-                          {column.label}
-                          {sortable && column.sortable && (
-                            <span className="text-xs text-gray-400">
-                              {sortColumn === column.key ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'}
-                            </span>
-                          )}
-                        </div>
-                      </TableHead>
-                    ))}
-                    {actions.length > 0 && <TableHead className="w-20">Ações</TableHead>}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+              <>
+                {/* Visualização em Cards (Mobile/Tablet) */}
+                <div className="lg:hidden space-y-4">
                   {data.map((item, index) => (
-                    <TableRow key={item.id || index}>
-                      {selectable && (
-                        <TableCell>
-                          <Checkbox
-                            checked={selectedItems.includes(item)}
-                            onCheckedChange={(checked) => handleSelectItem(item, checked as boolean)}
-                          />
-                        </TableCell>
-                      )}
-                      {columns.map((column) => (
-                        <TableCell key={column.key}>
-                          {column.render ? column.render(item, index) : item[column.key]}
-                        </TableCell>
-                      ))}
-                      {actions.length > 0 && (
-                        <TableCell>
-                          <div className="flex gap-2">
+                    <Card key={item.id || index} className="border">
+                      <CardContent className="p-4 space-y-3">
+                        {selectable && (
+                          <div className="flex items-center justify-between pb-2 border-b">
+                            <Checkbox
+                              checked={selectedItems.includes(item)}
+                              onCheckedChange={(checked) => handleSelectItem(item, checked as boolean)}
+                            />
+                            <span className="text-xs text-gray-500">#{index + 1}</span>
+                          </div>
+                        )}
+                        {columns.map((column) => (
+                          <div key={column.key} className="space-y-1">
+                            <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                              {column.label}
+                            </div>
+                            <div className="text-sm text-gray-900">
+                              {column.render ? column.render(item, index) : item[column.key]}
+                            </div>
+                          </div>
+                        ))}
+                        {actions.length > 0 && (
+                          <div className="flex flex-wrap gap-2 pt-2 border-t">
                             {actions
-                              .filter(action => {
-                                const shouldShow = !action.show || action.show(item);
-                                if (process.env.NODE_ENV === 'development' && !shouldShow) {
-                                  console.log('Ação filtrada:', action.key, 'show result:', action.show?.(item));
-                                }
-                                return shouldShow;
-                              })
+                              .filter(action => !action.show || action.show(item))
                               .map((action) => {
-                                if (process.env.NODE_ENV === 'development') {
-                                  console.log('Renderizando ação:', action.key, action.label);
-                                }
                                 const isLoading = action.loading ? action.loading(item) : false;
                                 return (
                                   <Button
                                     key={action.key}
-                                    variant={action.variant || 'ghost'}
+                                    variant={action.variant || 'outline'}
                                     size="sm"
                                     onClick={() => action.onClick(item)}
                                     title={action.label}
@@ -504,18 +478,108 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
                                     {isLoading ? (
                                       <Loader2 className="h-4 w-4 animate-spin" />
                                     ) : (
-                                      action.icon
+                                      <>
+                                        {action.icon}
+                                        <span className="ml-2">{action.label}</span>
+                                      </>
                                     )}
                                   </Button>
                                 );
                               })}
                           </div>
-                        </TableCell>
-                      )}
-                    </TableRow>
+                        )}
+                      </CardContent>
+                    </Card>
                   ))}
-                </TableBody>
-              </Table>
+                </div>
+
+                {/* Visualização em Tabela (Desktop) */}
+                <div className="hidden lg:block w-full overflow-hidden">
+                  <div className="overflow-x-auto max-w-full">
+                    <Table className="w-full table-fixed min-w-full">
+                    <TableHeader>
+                      <TableRow>
+                        {selectable && (
+                          <TableHead className="w-12">
+                            <Checkbox
+                              checked={selectedItems.length === data.length && data.length > 0}
+                              onCheckedChange={handleSelectAll}
+                            />
+                          </TableHead>
+                        )}
+                        {columns.map((column) => (
+                          <TableHead 
+                            key={column.key}
+                            className={`${column.width || ''} text-xs font-medium`}
+                            onClick={() => handleSort(column.key)}
+                          >
+                            <div className="flex items-center gap-1">
+                              <span className="truncate">{column.label}</span>
+                              {sortable && column.sortable && (
+                                <span className="text-xs text-gray-400 flex-shrink-0">
+                                  {sortColumn === column.key ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'}
+                                </span>
+                              )}
+                            </div>
+                          </TableHead>
+                        ))}
+                        {actions.length > 0 && <TableHead className="w-16 text-xs">Ações</TableHead>}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {data.map((item, index) => (
+                        <TableRow key={item.id || index}>
+                          {selectable && (
+                            <TableCell className="w-12">
+                              <Checkbox
+                                checked={selectedItems.includes(item)}
+                                onCheckedChange={(checked) => handleSelectItem(item, checked as boolean)}
+                              />
+                            </TableCell>
+                          )}
+                          {columns.map((column) => (
+                            <TableCell key={column.key} className={`${column.width || ''} overflow-hidden`}>
+                              {column.render ? column.render(item, index) : item[column.key]}
+                            </TableCell>
+                          ))}
+                          {actions.length > 0 && (
+                            <TableCell className="w-16">
+                              <div className="flex gap-1">
+                                {actions
+                              .filter(action => {
+                                const shouldShow = !action.show || action.show(item);
+                                return shouldShow;
+                              })
+                              .map((action) => {
+                                const isLoading = action.loading ? action.loading(item) : false;
+                                    return (
+                                      <Button
+                                        key={action.key}
+                                        variant={action.variant || 'ghost'}
+                                        size="sm"
+                                        onClick={() => action.onClick(item)}
+                                        title={action.label}
+                                        className={`${action.className || ''} h-7 w-7 p-0`}
+                                        disabled={isLoading}
+                                      >
+                                        {isLoading ? (
+                                          <Loader2 className="h-3 w-3 animate-spin" />
+                                        ) : (
+                                          <div className="h-3 w-3">{action.icon}</div>
+                                        )}
+                                      </Button>
+                                    );
+                                  })}
+                              </div>
+                            </TableCell>
+                          )}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  </div>
+                </div>
+              </>
             )}
           </div>
         </CardContent>

@@ -339,8 +339,7 @@ export const PrefeituraPareceristas = () => {
       title="Pareceristas" 
       description="Gerencie os pareceristas da prefeitura"
     >
-      <div className="p-6">
-        <ListTemplate
+      <ListTemplate
           data={filteredData}
           title="Gerenciar Pareceristas"
           subtitle="Cadastre e gerencie os pareceristas da prefeitura"
@@ -390,7 +389,6 @@ export const PrefeituraPareceristas = () => {
         variant={modalConfirmacao.acao === 'excluir' ? 'destructive' : 'default'}
         loading={loading}
       />
-      </div>
     </PrefeituraLayout>
   );
 };
