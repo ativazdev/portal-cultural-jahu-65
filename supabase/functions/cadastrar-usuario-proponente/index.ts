@@ -19,6 +19,7 @@ serve(async (req) => {
 
     // Validações básicas
     if (!prefeitura_id || !nome || !email || !senha) {
+      console.log('❌ Campos obrigatórios faltando:', { prefeitura_id: !!prefeitura_id, nome: !!nome, email: !!email, senha: !!senha })
       return new Response(
         JSON.stringify({ error: 'Todos os campos são obrigatórios' }),
         { 
@@ -28,9 +29,14 @@ serve(async (req) => {
       )
     }
 
+    // Normalizar email para lowercase
+    const emailNormalizado = email.toLowerCase().trim()
+    const nomeNormalizado = nome.trim()
+
     // Validar email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(email)) {
+    if (!emailRegex.test(emailNormalizado)) {
+      console.log('❌ Email inválido:', emailNormalizado)
       return new Response(
         JSON.stringify({ error: 'Email inválido' }),
         { 
@@ -42,6 +48,7 @@ serve(async (req) => {
 
     // Validar senha
     if (senha.length < 6) {
+      console.log('❌ Senha muito curta:', senha.length)
       return new Response(
         JSON.stringify({ error: 'A senha deve ter no mínimo 6 caracteres' }),
         { 
@@ -76,13 +83,24 @@ serve(async (req) => {
     }
     console.log('✅ Prefeitura encontrada:', prefeitura.id)
 
-    // Verificar se o email já existe
-    console.log('🔍 Verificando se email já existe:', email)
-    const { data: usuarioExistente } = await supabase
+    // Verificar se o email já existe (usando email normalizado)
+    console.log('🔍 Verificando se email já existe:', emailNormalizado)
+    const { data: usuarioExistente, error: checkError } = await supabase
       .from('usuarios_proponentes')
       .select('id')
-      .eq('email', email)
-      .single()
+      .eq('email', emailNormalizado)
+      .maybeSingle()
+
+    if (checkError) {
+      console.error('❌ Erro ao verificar email:', checkError)
+      return new Response(
+        JSON.stringify({ error: 'Erro ao verificar email', details: checkError.message }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500 
+        }
+      )
+    }
 
     if (usuarioExistente) {
       console.log('⚠️ Email já cadastrado')
@@ -102,9 +120,11 @@ serve(async (req) => {
       .from('usuarios_proponentes')
       .insert({
         prefeitura_id,
-        nome,
-        email,
-        senha_hash: senha // Será criptografada pelo trigger
+        nome: nomeNormalizado,
+        email: emailNormalizado,
+        senha_hash: senha, // Será criptografada pelo trigger
+        ativo: true,
+        email_verificado: false
       })
       .select()
       .single()

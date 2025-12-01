@@ -116,8 +116,10 @@ export function useDashboardProponente() {
     }
 
     try {
-      // Buscar usuário proponente
-      const { data: usuarioProponente, error: usuarioError } = await supabase
+      // Buscar usuário proponente usando cliente autenticado
+      const { getAuthenticatedSupabaseClient } = await import('@/integrations/supabase/client');
+      const authClient = getAuthenticatedSupabaseClient();
+      const { data: usuarioProponente, error: usuarioError } = await authClient
         .from('usuarios_proponentes')
         .select('id')
         .eq('id', user.id)

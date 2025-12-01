@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ProponenteLayout } from "@/components/layout/ProponenteLayout";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, getAuthenticatedSupabaseClient } from "@/integrations/supabase/client";
 import { useProponenteAuth } from "@/hooks/useProponenteAuth";
 import JSZip from 'jszip';
 
@@ -73,8 +73,9 @@ export const ProponenteEditais = () => {
     try {
       setLoading(true);
 
-      // Buscar o ID da prefeitura do proponente
-      const { data: proponenteData, error: proponenteError } = await (supabase as any)
+      // Buscar o ID da prefeitura do proponente usando cliente autenticado
+      const authClient = getAuthenticatedSupabaseClient();
+      const { data: proponenteData, error: proponenteError } = await authClient
         .from('usuarios_proponentes')
         .select('prefeitura_id')
         .eq('id', proponente.id)

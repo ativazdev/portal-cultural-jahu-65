@@ -24,47 +24,84 @@ export const ProponenteCadastro = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [prefeituraId, setPrefeituraId] = useState<string | null>(null);
+  const [loadingPrefeitura, setLoadingPrefeitura] = useState(true);
 
   // Buscar o ID da prefeitura pelo municipio
   useEffect(() => {
     const buscarPrefeitura = async () => {
-      if (!nomePrefeitura) return;
+      if (!nomePrefeitura) {
+        setLoadingPrefeitura(false);
+        return;
+      }
       
       try {
+        setLoadingPrefeitura(true);
+        console.log('🔍 Buscando prefeitura para slug:', nomePrefeitura);
+        
         // Buscar todas as prefeituras e comparar o slug
         const { data, error } = await supabase
           .from('prefeituras')
-          .select('id, municipio');
+          .select('id, municipio, nome');
         
         if (error) {
-          console.error('Erro ao buscar prefeitura:', error);
+          console.error('❌ Erro ao buscar prefeitura:', error);
+          setLoadingPrefeitura(false);
           return;
         }
         
         if (!data || data.length === 0) {
-          console.error('Nenhuma prefeitura encontrada');
+          console.error('❌ Nenhuma prefeitura encontrada');
+          setLoadingPrefeitura(false);
           return;
         }
         
-        // Encontrar a prefeitura cujo slug corresponde ao nomePrefeitura
-        const prefeitura = data.find(p => {
-          const slugDoMunicipio = p.municipio
+        console.log('📋 Prefeituras encontradas:', data.map(p => ({ municipio: p.municipio, id: p.id })));
+        
+        // Função para criar slug (mesma lógica usada nas edge functions)
+        const criarSlug = (texto: string) => {
+          if (!texto) return '';
+          return texto
             .toLowerCase()
+            .trim()
             .normalize('NFD')
             .replace(/[\u0300-\u036f]/g, '') // Remove acentos
-            .replace(/[^a-z0-9]+/g, '-')      // Substitui especiais por hífen
-            .replace(/^-+|-+$/g, '');         // Remove hífens das pontas
-          
-          return slugDoMunicipio === nomePrefeitura.toLowerCase();
-        });
+            .replace(/\s+/g, '-')            // Substitui espaços por hífen
+            .replace(/[^a-z0-9-]/g, '')      // Remove caracteres especiais
+            .replace(/-+/g, '-')             // Remove hífens duplicados
+            .replace(/^-+|-+$/g, '');        // Remove hífens das pontas
+        };
         
-        if (prefeitura) {
-          setPrefeituraId(prefeitura.id);
+        const slugBuscado = criarSlug(nomePrefeitura || '');
+        console.log('🔍 Slug buscado da URL:', slugBuscado);
+        console.log('🔍 nomePrefeitura original:', nomePrefeitura);
+        
+        // Encontrar a prefeitura cujo slug corresponde ao nomePrefeitura
+        let prefeituraEncontrada = null;
+        for (const p of data) {
+          const slugDoMunicipio = criarSlug(p.municipio || '');
+          const match = slugDoMunicipio === slugBuscado;
+          console.log(`  Comparando: "${slugDoMunicipio}" (de "${p.municipio}") === "${slugBuscado}" → ${match ? '✅ MATCH' : '❌'}`);
+          if (match) {
+            prefeituraEncontrada = p;
+            break;
+          }
+        }
+        
+        if (prefeituraEncontrada) {
+          console.log('✅ Prefeitura encontrada:', prefeituraEncontrada.id, prefeituraEncontrada.nome);
+          setPrefeituraId(prefeituraEncontrada.id);
         } else {
-          console.error('Prefeitura não encontrada para o slug:', nomePrefeitura);
+          console.error('❌ Prefeitura não encontrada para o slug:', nomePrefeitura);
+          console.log('📋 Slugs disponíveis no banco:');
+          data.forEach(p => {
+            const slug = criarSlug(p.municipio || '');
+            console.log(`  - "${p.municipio}" → "${slug}"`);
+          });
         }
       } catch (error) {
-        console.error('Erro ao buscar prefeitura:', error);
+        console.error('❌ Erro ao buscar prefeitura:', error);
+      } finally {
+        setLoadingPrefeitura(false);
       }
     };
 
@@ -79,31 +116,41 @@ export const ProponenteCadastro = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.nome || !formData.email || !formData.password) {
+    // Validar campos obrigatórios
+    if (!formData.nome?.trim() || !formData.email?.trim() || !formData.password || !formData.confirmPassword) {
       setError("Por favor, preencha todos os campos obrigatórios");
       return;
     }
 
-    if (formData.password !== formData.confirmPassword) {
-      setError("As senhas não coincidem");
+    // Validar email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(formData.email.trim())) {
+      setError("Por favor, informe um email válido");
       return;
     }
 
+    // Validar senha
     if (formData.password.length < 6) {
       setError("A senha deve ter no mínimo 6 caracteres");
       return;
     }
 
+    // Validar confirmação de senha
+    if (formData.password !== formData.confirmPassword) {
+      setError("As senhas não coincidem");
+      return;
+    }
+
     if (!prefeituraId) {
-      setError("Prefeitura não encontrada");
+      setError("Prefeitura não encontrada. Por favor, recarregue a página.");
       return;
     }
 
     setError("");
     try {
       const success = await signUp({
-        email: formData.email,
-        nome: formData.nome,
+        email: formData.email.trim(),
+        nome: formData.nome.trim(),
         password: formData.password,
         prefeitura_id: prefeituraId
       });
@@ -112,6 +159,9 @@ export const ProponenteCadastro = () => {
     } catch (error: any) {
       // Erro já foi tratado no hook
       console.error('Erro no cadastro:', error);
+      if (error?.message) {
+        setError(error.message);
+      }
     }
   };
 
@@ -220,12 +270,17 @@ export const ProponenteCadastro = () => {
             <Button
               type="submit"
               className="w-full"
-              disabled={loading || !prefeituraId}
+              disabled={loading || loadingPrefeitura || !prefeituraId || !formData.nome?.trim() || !formData.email?.trim() || !formData.password || !formData.confirmPassword}
             >
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Criando conta...
+                </>
+              ) : loadingPrefeitura ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Carregando...
                 </>
               ) : (
                 "Criar Conta"
