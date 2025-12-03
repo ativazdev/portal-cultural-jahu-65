@@ -21,6 +21,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import JSZip from 'jszip';
 import { ModalContatoSuporte } from "@/components/ModalContatoSuporte";
+import { APP_VERSION } from "@/config/version";
 
 interface PareceristaLayoutProps {
   children: ReactNode;
@@ -314,7 +315,7 @@ export const PareceristaLayout = ({
 
             {/* User Info */}
             <div className="p-4 border-t">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 mb-3">
                 <Avatar>
                   <AvatarFallback className="bg-green-600 text-white">
                     {parecerista.nome.charAt(0).toUpperCase()}
@@ -324,6 +325,9 @@ export const PareceristaLayout = ({
                   <p className="text-sm font-medium truncate">{parecerista.nome}</p>
                   <p className="text-xs text-gray-500 truncate">{parecerista.email}</p>
                 </div>
+              </div>
+              <div className="text-center">
+                <p className="text-xs text-muted-foreground">versão {APP_VERSION}</p>
               </div>
             </div>
           </div>

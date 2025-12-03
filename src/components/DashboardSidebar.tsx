@@ -29,6 +29,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { ModalContatoSuporte } from "@/components/ModalContatoSuporte";
+import { APP_VERSION } from "@/config/version";
 
 const menuItemsBase = [
   { title: "Início", icon: Home, path: "dashboard" },
@@ -143,6 +144,11 @@ export const DashboardSidebar = () => {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+        {open && (
+          <div className="p-4 border-t text-center">
+            <p className="text-xs text-muted-foreground">versão {APP_VERSION}</p>
+          </div>
+        )}
       </SidebarContent>
       
       {/* Modal de Contato Suporte */}

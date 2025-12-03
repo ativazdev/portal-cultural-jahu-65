@@ -17,6 +17,7 @@ import { BaseLayout } from "./BaseLayout";
 import { useProponenteAuth } from "@/hooks/useProponenteAuth";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ModalContatoSuporte } from "@/components/ModalContatoSuporte";
+import { APP_VERSION } from "@/config/version";
 
 interface ProponenteLayoutProps {
   children: ReactNode;
@@ -155,6 +156,9 @@ export const ProponenteLayout = ({
                     Sair
                   </Button>
                 </div>
+                <div className="pt-2 text-center">
+                  <p className="text-xs text-muted-foreground">versão {APP_VERSION}</p>
+                </div>
               </div>
             </div>
           </div>
@@ -220,6 +224,9 @@ export const ProponenteLayout = ({
                 <LogOut className="mr-2 h-4 w-4" />
                 Sair
               </Button>
+            </div>
+            <div className="pt-2 text-center">
+              <p className="text-xs text-muted-foreground">versão {APP_VERSION}</p>
             </div>
           </div>
         </div>

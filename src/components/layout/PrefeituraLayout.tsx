@@ -22,6 +22,7 @@ import { UserProfile } from "@/components/auth/UserProfile";
 import { usePrefeituraAuth } from "@/hooks/usePrefeituraAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { ModalContatoSuporte } from "@/components/ModalContatoSuporte";
+import { APP_VERSION } from "@/config/version";
 
 interface PrefeituraLayoutProps {
   children: ReactNode;
@@ -179,6 +180,9 @@ export const PrefeituraLayout = ({
                 <LogOut className="mr-2 h-4 w-4" />
                 Sair
               </Button>
+              <div className="pt-2 text-center">
+                <p className="text-xs text-muted-foreground">versão {APP_VERSION}</p>
+              </div>
             </div>
           </div>
         </div>
@@ -238,6 +242,9 @@ export const PrefeituraLayout = ({
                 <LogOut className="mr-2 h-4 w-4" />
                 Sair
               </Button>
+              <div className="pt-2 text-center">
+                <p className="text-xs text-muted-foreground">versão {APP_VERSION}</p>
+              </div>
             </div>
           </div>
         </div>
