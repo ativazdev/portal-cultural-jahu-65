@@ -117,7 +117,7 @@ export const ProponenteSuporte = () => {
   const editaisPermitemRecursos = editais.filter(e => e.status === 'recurso');
   const editaisPermitemContraRazao = editais.filter(e => e.status === 'contra_razao');
 
-  // Verificar se deve mostrar opção de recursos ou contra-razão
+  // Verificar se deve mostrar opção de recursos ou contrarrazão
   const permiteRecursos = editaisPermitemRecursos.length > 0;
   const permiteContraRazao = editaisPermitemContraRazao.length > 0;
 
@@ -376,7 +376,7 @@ export const ProponenteSuporte = () => {
     if (tipoRecurso === 'contra_razao' && editalStatus !== 'contra_razao') {
       toast({
         title: "Erro",
-        description: "O edital não está na fase de contra-razão.",
+        description: "O edital não está na fase de contrarrazão.",
         variant: "destructive",
       });
       return;
@@ -757,7 +757,7 @@ export const ProponenteSuporte = () => {
                   <CardContent className="flex flex-col items-center justify-center py-12">
                     <AlertTriangle className="h-16 w-16 text-yellow-300 mb-4" />
                     <p className="text-gray-600 text-center">
-                      Você não possui projetos elegíveis para recursos/contra-razão no momento.
+                      Você não possui projetos elegíveis para recursos/contrarrazão no momento.
                       <br />
                       Recursos e contra-razões só podem ser criados para projetos de editais nas fases correspondentes.
                     </p>
@@ -875,9 +875,9 @@ export const ProponenteSuporte = () => {
                   <CardContent className="flex flex-col items-center justify-center py-12">
                     <AlertTriangle className="h-16 w-16 text-yellow-300 mb-4" />
                     <p className="text-gray-600 text-center">
-                      Você não possui projetos elegíveis para contra-razão no momento.
+                      Você não possui projetos elegíveis para contrarrazão no momento.
                       <br />
-                      Contra-razões só podem ser criadas para projetos de editais na fase de contra-razão.
+                      Contra-razões só podem ser criadas para projetos de editais na fase de contrarrazão.
                     </p>
                   </CardContent>
                 </Card>
@@ -897,7 +897,7 @@ export const ProponenteSuporte = () => {
                     <p className="text-gray-600 text-center">
                       {recursos.filter(r => r.tipo === 'contra_razao').length === 0 
                         ? "Você ainda não possui contra-razões cadastradas."
-                        : "Nenhuma contra-razão encontrada com os filtros aplicados."}
+                        : "Nenhuma contrarrazão encontrada com os filtros aplicados."}
                     </p>
                   </CardContent>
                 </Card>
@@ -966,7 +966,7 @@ export const ProponenteSuporte = () => {
               <DialogDescription>
                 {tipoRecurso === 'recurso' 
                   ? 'Envie um recurso sobre a avaliação do seu projeto ou de outro projeto.'
-                  : 'Envie uma contra-razão sobre a avaliação do seu projeto ou de outro projeto.'}
+                  : 'Envie uma contrarrazão sobre a avaliação do seu projeto ou de outro projeto.'}
               </DialogDescription>
             </DialogHeader>
             
@@ -992,7 +992,7 @@ export const ProponenteSuporte = () => {
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-gray-500 mt-1">
-                  Selecione o edital que está na fase de {tipoRecurso === 'recurso' ? 'recursos' : 'contra-razão'}
+                  Selecione o edital que está na fase de {tipoRecurso === 'recurso' ? 'recursos' : 'contrarrazão'}
                 </p>
               </div>
 
@@ -1027,7 +1027,7 @@ export const ProponenteSuporte = () => {
                 <Label htmlFor="justificativa-recurso">Justificativa *</Label>
                 <Textarea
                   id="justificativa-recurso"
-                  placeholder={`Descreva a justificativa do ${tipoRecurso === 'recurso' ? 'recurso' : 'contra-razão'}...`}
+                  placeholder={`Descreva a justificativa do ${tipoRecurso === 'recurso' ? 'recurso' : 'contrarrazão'}...`}
                   value={justificativaRecurso}
                   onChange={(e) => setJustificativaRecurso(e.target.value)}
                   rows={8}

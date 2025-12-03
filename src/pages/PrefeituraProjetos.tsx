@@ -557,7 +557,7 @@ export const PrefeituraProjetos = () => {
             <div className="bg-white rounded-lg border p-6">
               <h3 className="text-lg font-semibold mb-4">Contra-razões</h3>
               {projetosComContraRazoes.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">Nenhuma contra-razão encontrada</p>
+                <p className="text-gray-500 text-center py-8">Nenhuma contrarrazão encontrada</p>
               ) : (
                 <div className="space-y-4">
                   {projetosComContraRazoes.map((item) => (
@@ -633,13 +633,13 @@ export const PrefeituraProjetos = () => {
               Responder {recursoParaResponder?.tipo === 'recurso' ? 'Recurso' : 'Contra-razão'}
             </DialogTitle>
             <DialogDescription>
-              Forneça uma resposta para o {recursoParaResponder?.tipo === 'recurso' ? 'recurso' : 'contra-razão'} e defina o status.
+              Forneça uma resposta para o {recursoParaResponder?.tipo === 'recurso' ? 'recurso' : 'contrarrazão'} e defina o status.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             {recursoParaResponder && (
               <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-sm font-medium text-gray-700 mb-2">Justificativa do {recursoParaResponder.tipo === 'recurso' ? 'recurso' : 'contra-razão'}:</p>
+                <p className="text-sm font-medium text-gray-700 mb-2">Justificativa do {recursoParaResponder.tipo === 'recurso' ? 'recurso' : 'contrarrazão'}:</p>
                 <p className="text-sm text-gray-600">{recursoParaResponder.justificativa}</p>
               </div>
             )}

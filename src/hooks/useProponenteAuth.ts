@@ -194,6 +194,17 @@ export const useProponenteAuth = () => {
     }
   };
 
+  const refresh = async () => {
+    try {
+      const userData = await proponenteAuthService.getCurrentProponente();
+      if (userData && userData.proponente) {
+        setAuthUser(userData);
+      }
+    } catch (error) {
+      console.error('❌ Erro ao atualizar dados do proponente:', error);
+    }
+  };
+
   const isAuthenticated = !!authUser;
 
   return {
@@ -205,7 +216,8 @@ export const useProponenteAuth = () => {
     logout,
     signUp,
     solicitarRedefinicaoSenha,
-    redefinirSenha
+    redefinirSenha,
+    refresh
   };
 };
 

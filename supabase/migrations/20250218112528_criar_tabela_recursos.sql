@@ -1,4 +1,4 @@
--- Criar tabela de recursos e contra-razão
+-- Criar tabela de recursos e contrarrazão
 
 CREATE TABLE IF NOT EXISTS recursos (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

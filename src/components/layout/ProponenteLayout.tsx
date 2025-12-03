@@ -10,7 +10,8 @@ import {
   HelpCircle,
   LogOut,
   Briefcase,
-  Headphones
+  Headphones,
+  Settings
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BaseLayout } from "./BaseLayout";
@@ -51,6 +52,7 @@ export const ProponenteLayout = ({
     { name: "Meus Projetos", href: `/${nomePrefeitura}/proponente/projetos`, icon: FolderOpen },
     { name: "Proponentes", href: `/${nomePrefeitura}/proponente/proponentes`, icon: Briefcase },
     { name: "Comunicação", href: `/${nomePrefeitura}/proponente/suporte`, icon: HelpCircle },
+    { name: "Perfil", href: `/${nomePrefeitura}/proponente/perfil`, icon: User },
   ];
 
   const handleLogout = () => {
@@ -139,6 +141,18 @@ export const ProponenteLayout = ({
                     size="sm"
                     className="w-full"
                     onClick={() => {
+                      navigate(`/${nomePrefeitura}/proponente/perfil`);
+                      setSidebarOpen(false);
+                    }}
+                  >
+                    <Settings className="mr-2 h-4 w-4" />
+                    Editar Perfil
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => {
                       setModalSuporteOpen(true);
                       setSidebarOpen(false);
                     }}
@@ -206,6 +220,15 @@ export const ProponenteLayout = ({
               </div>
             </div>
             <div className="space-y-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={() => navigate(`/${nomePrefeitura}/proponente/perfil`)}
+              >
+                <Settings className="mr-2 h-4 w-4" />
+                Editar Perfil
+              </Button>
               <Button
                 variant="outline"
                 size="sm"

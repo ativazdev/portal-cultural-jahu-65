@@ -26,6 +26,7 @@ import { ProponenteProjetoDetalhes } from "./pages/ProponenteProjetoDetalhes";
 import { ProponenteSuporte } from "./pages/ProponenteSuporte";
 import { ProponenteProponentes } from "./pages/ProponenteProponentes";
 import { ProponenteCadastrarProjeto } from "./pages/ProponenteCadastrarProjeto";
+import { ProponentePerfil } from "./pages/ProponentePerfil";
 import { PareceristaLogin } from "./pages/PareceristaLogin";
 import { PareceristaSolicitarRedefinicaoSenha } from "./pages/PareceristaSolicitarRedefinicaoSenha";
 import { PareceristaRedefinicaoSenha } from "./pages/PareceristaRedefinicaoSenha";
@@ -117,6 +118,11 @@ const App = () => (
           <Route path="/:nomePrefeitura/proponente/proponentes" element={
             <AuthGuard>
               <ProponenteProponentes />
+            </AuthGuard>
+          } />
+          <Route path="/:nomePrefeitura/proponente/perfil" element={
+            <AuthGuard>
+              <ProponentePerfil />
             </AuthGuard>
           } />
           
