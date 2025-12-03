@@ -14,7 +14,7 @@ import { PareceristaLayout } from "@/components/layout/PareceristaLayout";
 import { usePareceristaAuth } from "@/hooks/usePareceristaAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useProjetoDetalhes } from "@/hooks/useProjetoDetalhes";
-import { supabase } from "@/integrations/supabase/client";
+import { getAuthenticatedSupabaseClient } from "@/integrations/supabase/client";
 
 // Função para formatar datas sem problemas de timezone
 const formatarData = (dataString: string | Date): string => {
@@ -232,7 +232,8 @@ export const PareceristaProjetoDetalhes = () => {
       try {
         setLoadingAvaliacao(true);
         
-        const { data, error } = await supabase
+        const authClient = getAuthenticatedSupabaseClient();
+        const { data, error } = await authClient
           .from('avaliacoes')
           .select('*')
           .eq('projeto_id', projetoId)
@@ -282,7 +283,8 @@ export const PareceristaProjetoDetalhes = () => {
 
     try {
       // Registrar o início da avaliação
-      const { data, error } = await supabase
+      const authClient = getAuthenticatedSupabaseClient();
+      const { data, error } = await (authClient as any)
         .from('avaliacoes')
         .update({
           status: 'em_avaliacao',
@@ -354,7 +356,8 @@ export const PareceristaProjetoDetalhes = () => {
       const notaFinal = somaObrigatorios + somaBonus;
 
       // Sempre marcar como avaliado ao enviar
-      const { data, error } = await supabase
+      const authClient = getAuthenticatedSupabaseClient();
+      const { data, error } = await (authClient as any)
         .from('avaliacoes')
         .update({
           ...notasNumericas,
@@ -372,7 +375,7 @@ export const PareceristaProjetoDetalhes = () => {
       if (error) throw error;
 
       // Verificar se todas as avaliações do projeto foram concluídas
-      const { data: todasAvaliacoes } = await supabase
+      const { data: todasAvaliacoes } = await (authClient as any)
         .from('avaliacoes')
         .select('id, status')
         .eq('projeto_id', projetoId);

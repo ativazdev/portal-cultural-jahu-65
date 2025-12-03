@@ -1,11 +1,27 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
+// URLs permitidas para CORS
+const ALLOWED_ORIGINS = [
+  'https://portalativaz.lovable.app',
+  'http://localhost:8080',
+  'http://localhost:5173',
+  'http://localhost:3000',
+]
+
+// Função para obter headers CORS baseado na origem
+function getCorsHeaders(origin: string | null): Record<string, string> {
+  const allowedOrigin = origin && ALLOWED_ORIGINS.includes(origin) 
+    ? origin 
+    : ALLOWED_ORIGINS[0]
+  
+  return {
+    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Credentials': 'true',
+  }
+}
 
 interface EmailPareceristaRequest {
   parecerista: {
@@ -21,6 +37,9 @@ interface EmailPareceristaRequest {
 }
 
 Deno.serve(async (req: Request) => {
+  const origin = req.headers.get('origin')
+  const corsHeaders = getCorsHeaders(origin)
+
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });

@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { CheckCircle, Clock, Eye } from "lucide-react";
 import { PareceristaLayout } from "@/components/layout/PareceristaLayout";
 import { usePareceristaAuth } from "@/hooks/usePareceristaAuth";
-import { supabase } from "@/integrations/supabase/client";
+import { getAuthenticatedSupabaseClient } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 interface ProjetoAvaliacao {
@@ -41,7 +41,8 @@ export const PareceristaDashboard = () => {
         setLoading(true);
         
         // Buscar todas as avaliações do parecerista para este edital
-        const { data: avaliacoes, error: avaliacoesError } = await supabase
+        const authClient = getAuthenticatedSupabaseClient();
+        const { data: avaliacoes, error: avaliacoesError } = await authClient
           .from('avaliacoes')
           .select(`
             id,
@@ -64,8 +65,9 @@ export const PareceristaDashboard = () => {
         if (avaliacoesError) throw avaliacoesError;
 
         // Contar avaliações
-        const totalAvaliacoes = avaliacoes?.length || 0;
-        const pendentes = avaliacoes?.filter(a => 
+        const avaliacoesData = avaliacoes as any[];
+        const totalAvaliacoes = avaliacoesData?.length || 0;
+        const pendentes = avaliacoesData?.filter((a: any) => 
           a.status === 'pendente' || a.status === 'aguardando_parecerista'
         ).length || 0;
         
@@ -73,9 +75,9 @@ export const PareceristaDashboard = () => {
         setProjetosPendentes(pendentes);
 
         // Filtrar projetos pendentes para exibir na lista
-        const pendentesList = avaliacoes
-          ?.filter(a => a.status === 'pendente' || a.status === 'aguardando_parecerista')
-          .map(a => ({
+        const pendentesList = avaliacoesData
+          ?.filter((a: any) => a.status === 'pendente' || a.status === 'aguardando_parecerista')
+          .map((a: any) => ({
             id: a.projeto.id,
             nome: a.projeto.nome,
             modalidade: a.projeto.modalidade,

@@ -12,9 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Plus, Edit, Loader2, ChevronLeft, ChevronRight, Check, Search } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { getAuthenticatedSupabaseClient } from "@/integrations/supabase/client";
 import { useProponenteAuth } from "@/hooks/useProponenteAuth";
-import { createClient } from "@supabase/supabase-js";
 import {
   DadosBasicosPF, EnderecoPF, DadosPessoaisPF, PCDPF, FormacaoPF,
   ProgramasSociaisPF, CotasPF, ArtisticoPF, ColetivoPF, ExperienciaPF, BancarioPF,
@@ -70,26 +69,6 @@ export const ProponenteProponentes = () => {
   const { nomePrefeitura } = useParams<{ nomePrefeitura: string }>();
   const { proponente: userProponente } = useProponenteAuth();
   
-  // Função auxiliar para obter cliente Supabase autenticado
-  const getAuthenticatedClient = () => {
-    const token = localStorage.getItem('proponente_token');
-    if (!token) return supabase;
-    
-    const SUPABASE_URL = "https://ymkytnhdslvkigzilbvy.supabase.co";
-    const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlta3l0bmhkc2x2a2lnemlsYnZ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2ODE2MTAsImV4cCI6MjA3MzI1NzYxMH0.ZJpWx1g8LOxuBfO6ohJy4OKNLZAqYtw7rFPZOZjxzdw";
-    
-    return createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-      global: {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    });
-  };
 
   // Função auxiliar para formatar data
   const formatarData = (data: string | Date) => {
@@ -366,7 +345,7 @@ export const ProponenteProponentes = () => {
       setIsLoadingProponentes(true);
       
       // Buscar proponentes relacionados ao usuario_proponente atual
-      const client = getAuthenticatedClient();
+      const client = getAuthenticatedSupabaseClient();
       const { data, error } = await client
         .from('proponentes')
         .select('*')
@@ -1127,7 +1106,7 @@ export const ProponenteProponentes = () => {
       dadosProponente.usuario_id = userProponente.id;
       dadosProponente.email = userProponente.email;
 
-      const client = getAuthenticatedClient();
+      const client = getAuthenticatedSupabaseClient();
       const { error } = await client
         .from('proponentes')
         .insert([dadosProponente]);
@@ -1258,7 +1237,7 @@ export const ProponenteProponentes = () => {
       dadosProponente.tipo_conta = formData.tipoConta;
       dadosProponente.pix = formData.pix;
 
-      const client = getAuthenticatedClient();
+      const client = getAuthenticatedSupabaseClient();
       const { error } = await client
         .from('proponentes')
         .update(dadosProponente)

@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { MessageCircle, Plus, Search, Loader2, Send, CheckCircle2, XCircle } from "lucide-react";
 import { PareceristaLayout } from "@/components/layout/PareceristaLayout";
 import { usePareceristaAuth } from "@/hooks/usePareceristaAuth";
-import { supabase } from "@/integrations/supabase/client";
+import { getAuthenticatedSupabaseClient } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 interface Duvida {
@@ -66,7 +66,8 @@ export const PareceristaSuporte = () => {
         setLoading(true);
         
         // Buscar dúvidas do parecerista para este edital
-        const { data, error } = await supabase
+        const authClient = getAuthenticatedSupabaseClient();
+        const { data, error } = await authClient
           .from('duvidas')
           .select('*')
           .eq('parecerista_id', parecerista.id)
@@ -92,7 +93,8 @@ export const PareceristaSuporte = () => {
 
       try {
         // Buscar todos os editais da prefeitura
-        const { data, error } = await supabase
+        const authClient = getAuthenticatedSupabaseClient();
+        const { data, error } = await authClient
           .from('editais')
           .select('id, codigo, nome')
           .eq('prefeitura_id', prefeitura.id)
@@ -145,19 +147,25 @@ export const PareceristaSuporte = () => {
         pergunta: formData.pergunta.trim(),
         prefeitura_id: prefeitura.id,
         parecerista_id: parecerista.id,
-        edital_id: editalId,
         fechada: false,
       };
 
-      if (formData.edital_selecionado && formData.edital_selecionado !== 'nenhum' && formData.edital_selecionado !== editalId) {
+      // Adicionar edital_id apenas se fornecido
+      if (formData.edital_selecionado && formData.edital_selecionado !== 'nenhum') {
         duvidaData.edital_id = formData.edital_selecionado;
+      } else if (editalId) {
+        duvidaData.edital_id = editalId;
       }
 
       if (formData.categoria) {
         duvidaData.categoria = formData.categoria;
       }
 
-      const { error } = await supabase
+      console.log('📝 Dados da dúvida a serem inseridos:', duvidaData);
+      console.log('🔑 Token do parecerista:', localStorage.getItem('parecerista_token') ? 'Presente' : 'Ausente');
+
+      const authClient = getAuthenticatedSupabaseClient();
+      const { error } = await authClient
         .from('duvidas')
         .insert([duvidaData]);
 
@@ -177,7 +185,7 @@ export const PareceristaSuporte = () => {
       setShowModal(false);
       
       // Reload dúvidas
-      const { data, error: fetchError } = await supabase
+      const { data, error: fetchError } = await authClient
         .from('duvidas')
         .select('*')
         .eq('parecerista_id', parecerista.id)

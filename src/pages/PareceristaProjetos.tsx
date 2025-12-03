@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Eye, Search } from "lucide-react";
 import { PareceristaLayout } from "@/components/layout/PareceristaLayout";
 import { usePareceristaAuth } from "@/hooks/usePareceristaAuth";
-import { supabase } from "@/integrations/supabase/client";
+import { getAuthenticatedSupabaseClient } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 interface ProjetoAvaliacao {
@@ -44,7 +44,8 @@ export const PareceristaProjetos = () => {
         setLoading(true);
         
         // Buscar todas as avaliações do parecerista para este edital
-        const { data: avaliacoes, error: avaliacoesError } = await supabase
+        const authClient = getAuthenticatedSupabaseClient();
+        const { data: avaliacoes, error: avaliacoesError } = await authClient
           .from('avaliacoes')
           .select(`
             id,
@@ -68,7 +69,8 @@ export const PareceristaProjetos = () => {
 
         if (avaliacoesError) throw avaliacoesError;
 
-        const projetosList = avaliacoes?.map(a => ({
+        const avaliacoesData = avaliacoes as any[];
+        const projetosList = avaliacoesData?.map((a: any) => ({
           id: a.projeto.id,
           nome: a.projeto.nome,
           modalidade: a.projeto.modalidade,

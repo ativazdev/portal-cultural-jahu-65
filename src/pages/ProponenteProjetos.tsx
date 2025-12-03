@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ProponenteLayout } from "@/components/layout/ProponenteLayout";
-import { supabase } from "@/integrations/supabase/client";
+import { getAuthenticatedSupabaseClient } from "@/integrations/supabase/client";
 import { useProponenteAuth } from "@/hooks/useProponenteAuth";
 
 export const ProponenteProjetos = () => {
@@ -58,8 +58,10 @@ export const ProponenteProjetos = () => {
     try {
       setLoading(true);
 
+      const authClient = getAuthenticatedSupabaseClient();
+      
       // Buscar os proponentes vinculados ao usuário
-      const { data: proponentes, error: proponentesError } = await (supabase as any)
+      const { data: proponentes, error: proponentesError } = await authClient
         .from('proponentes')
         .select('id')
         .eq('usuario_id', proponente.id);
@@ -70,10 +72,10 @@ export const ProponenteProjetos = () => {
         return;
       }
       
-      const proponenteIds = proponentes.map(p => p.id);
+      const proponenteIds = (proponentes as any[]).map(p => p.id);
       
       // Buscar projetos dos proponentes com dados do edital
-      const { data, error } = await (supabase as any)
+      const { data, error } = await authClient
         .from('projetos')
         .select(`
           *,

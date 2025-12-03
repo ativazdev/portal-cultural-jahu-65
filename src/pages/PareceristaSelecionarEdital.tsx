@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, FileText, ArrowLeft, Building2 } from "lucide-react";
 import { usePareceristaAuth } from "@/hooks/usePareceristaAuth";
-import { supabase } from "@/integrations/supabase/client";
+import { getAuthenticatedSupabaseClient } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 interface EditalDisponivel {
@@ -38,7 +38,8 @@ export const PareceristaSelecionarEdital = () => {
         setLoading(true);
         
         // Buscar avaliações do parecerista com dados do projeto e edital
-        const { data: avaliacoes, error: avaliacoesError } = await supabase
+        const authClient = getAuthenticatedSupabaseClient();
+        const { data: avaliacoes, error: avaliacoesError } = await authClient
           .from('avaliacoes')
           .select(`
             id,
@@ -87,23 +88,24 @@ export const PareceristaSelecionarEdital = () => {
         
         for (const edital of editaisList) {
           // Buscar avaliações deste parecerista para projetos deste edital
-          const { data: projetosEdital } = await supabase
+          const { data: projetosEdital } = await authClient
             .from('projetos')
             .select('id')
             .eq('edital_id', edital.id);
 
-          const projetoIds = projetosEdital?.map(p => p.id) || [];
+          const projetoIds = (projetosEdital as any[])?.map((p: any) => p.id) || [];
           
           if (projetoIds.length > 0) {
-            const { data: avals } = await supabase
+            const { data: avals } = await authClient
               .from('avaliacoes')
               .select('status')
               .eq('parecerista_id', parecerista.id)
               .in('projeto_id', projetoIds);
 
             if (avals) {
-              edital.total_avaliacoes = avals.length;
-              edital.total_pendentes = avals.filter(a => a.status === 'pendente' || a.status === 'aguardando_parecerista').length;
+              const avalsData = avals as any[];
+              edital.total_avaliacoes = avalsData.length;
+              edital.total_pendentes = avalsData.filter((a: any) => a.status === 'pendente' || a.status === 'aguardando_parecerista').length;
             }
           }
         }

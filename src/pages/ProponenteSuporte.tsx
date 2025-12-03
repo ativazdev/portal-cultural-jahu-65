@@ -25,8 +25,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useProponenteAuth } from "@/hooks/useProponenteAuth";
-import { supabase } from "@/integrations/supabase/client";
-import { createClient } from '@supabase/supabase-js';
+import { getAuthenticatedSupabaseClient } from "@/integrations/supabase/client";
 import { useRecursos } from "@/hooks/useRecursos";
 import { recursosService } from "@/services/recursosService";
 
@@ -105,26 +104,6 @@ export const ProponenteSuporte = () => {
     'Outro'
   ];
 
-  // Função auxiliar para obter cliente Supabase autenticado
-  const getAuthenticatedClient = () => {
-    const token = localStorage.getItem('proponente_token');
-    if (!token) return supabase;
-    
-    const SUPABASE_URL = "https://ymkytnhdslvkigzilbvy.supabase.co";
-    const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlta3l0bmhkc2x2a2lnemlsYnZ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2ODE2MTAsImV4cCI6MjA3MzI1NzYxMH0.ZJpWx1g8LOxuBfO6ohJy4OKNLZAqYtw7rFPZOZjxzdw";
-    
-    return createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-      global: {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    });
-  };
 
   useEffect(() => {
     if (proponente?.id && prefeitura?.id) {
@@ -144,7 +123,7 @@ export const ProponenteSuporte = () => {
 
   const carregarEditais = async () => {
     try {
-      const client = getAuthenticatedClient();
+      const client = getAuthenticatedSupabaseClient();
       const { data, error } = await client
         .from('editais')
         .select('id, codigo, nome, status')
@@ -162,7 +141,7 @@ export const ProponenteSuporte = () => {
     try {
       if (!proponente?.id) return;
 
-      const client = getAuthenticatedClient();
+      const client = getAuthenticatedSupabaseClient();
       const { data: proponentesData } = await (client as any)
         .from('proponentes')
         .select('id')
@@ -249,7 +228,7 @@ export const ProponenteSuporte = () => {
     try {
       setLoading(true);
       
-      const client = getAuthenticatedClient();
+      const client = getAuthenticatedSupabaseClient();
       const { data, error } = await (client as any)
         .from('duvidas')
         .select('*')
@@ -307,7 +286,7 @@ export const ProponenteSuporte = () => {
         duvidaData.categoria = categoriaSelecionada;
       }
 
-      const client = getAuthenticatedClient();
+      const client = getAuthenticatedSupabaseClient();
       const { error } = await (client as any)
         .from('duvidas')
         .insert([duvidaData]);

@@ -91,10 +91,10 @@ export const ProponenteEditais = () => {
         return;
       }
       
-      const prefeituraId = proponenteData.prefeitura_id;
+      const prefeituraId = (proponenteData as any).prefeitura_id;
 
       // Buscar editais recebendo projetos (incluindo regulamento)
-      const { data, error } = await (supabase as any)
+      const { data, error } = await authClient
         .from('editais')
         .select('id, codigo, nome, descricao, data_abertura, data_final_envio_projeto, valor_maximo, status, modalidades, regulamento')
         .eq('prefeitura_id', prefeituraId)
@@ -314,7 +314,8 @@ export const ProponenteEditais = () => {
           }
 
           // Baixar arquivo do storage
-          const { data: fileData, error: downloadError } = await supabase.storage
+          const authClient = getAuthenticatedSupabaseClient();
+          const { data: fileData, error: downloadError } = await authClient.storage
             .from('editais')
             .download(storagePath);
 

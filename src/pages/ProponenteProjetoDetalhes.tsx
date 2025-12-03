@@ -50,7 +50,7 @@ import { useMovimentacoesFinanceiras } from "@/hooks/useMovimentacoesFinanceiras
 import { useContasMonitoradas } from "@/hooks/useContasMonitoradas";
 import { useDocumentosHabilitacao } from "@/hooks/useDocumentosHabilitacao";
 import { ProjetoWithDetails } from "@/services/projetoService";
-import { supabase } from "@/integrations/supabase/client";
+import { getAuthenticatedSupabaseClient } from "@/integrations/supabase/client";
 
 // Opções para múltipla escolha
 const publicoPrioritarioOptions = [
@@ -476,8 +476,9 @@ export const ProponenteProjetoDetalhes = () => {
       
       try {
         setLoadingProponentes(true);
+        const authClient = getAuthenticatedSupabaseClient();
         // @ts-ignore - Supabase type issue
-        const { data, error } = await supabase
+        const { data, error } = await authClient
           .from('proponentes')
           .select('id, nome, tipo, cpf, cnpj')
           .eq('usuario_id', proponente.id)
@@ -629,7 +630,8 @@ export const ProponenteProjetoDetalhes = () => {
           };
       }
 
-      const { data, error } = await supabase
+      const authClient = getAuthenticatedSupabaseClient();
+      const { data, error } = await authClient
         .from('projetos')
         .update(dadosUpdate)
         .eq('id', projeto.id)
@@ -668,8 +670,9 @@ export const ProponenteProjetoDetalhes = () => {
     if (!projetoId) return;
 
     try {
+      const authClient = getAuthenticatedSupabaseClient();
       // Deletar todos os membros atuais
-      const { error: deleteError } = await supabase
+      const { error: deleteError } = await authClient
         .from('equipe_projeto')
         .delete()
         .eq('projeto_id', projetoId);
@@ -678,7 +681,7 @@ export const ProponenteProjetoDetalhes = () => {
 
       // Inserir novos membros
       if (equipeTemp.length > 0) {
-        const { error: insertError } = await supabase
+        const { error: insertError } = await authClient
           .from('equipe_projeto')
           .insert(
             equipeTemp.map(membro => ({
@@ -1194,8 +1197,9 @@ export const ProponenteProjetoDetalhes = () => {
     }
 
     try {
+      const authClient = getAuthenticatedSupabaseClient();
       // Criar a nova avaliação sem parecerista_id (null)
-      const { error } = await supabase
+      const { error } = await authClient
         .from('avaliacoes')
         .insert({
           prefeitura_id: prefeitura?.id || '',
@@ -1238,7 +1242,8 @@ export const ProponenteProjetoDetalhes = () => {
           const oldFileName = urlParts[urlParts.length - 1];
           
           if (oldFileName) {
-            const { error: deleteError } = await supabase.storage
+            const authClient = getAuthenticatedSupabaseClient();
+            const { error: deleteError } = await authClient.storage
               .from('documentos_habilitacao')
               .remove([oldFileName]);
 
@@ -1254,16 +1259,17 @@ export const ProponenteProjetoDetalhes = () => {
       }
 
       // Upload do novo arquivo para o Supabase Storage
+      const authClient = getAuthenticatedSupabaseClient();
       const fileExt = arquivoDoc.name.split('.').pop();
       const fileName = `${documentoParaUpload}-${Date.now()}.${fileExt}`;
       
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      const { data: uploadData, error: uploadError } = await authClient.storage
         .from('documentos_habilitacao')
         .upload(fileName, arquivoDoc);
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
+      const { data: { publicUrl } } = authClient.storage
         .from('documentos_habilitacao')
         .getPublicUrl(fileName);
 
@@ -1311,6 +1317,7 @@ export const ProponenteProjetoDetalhes = () => {
 
     try {
       // Upload dos arquivos para o Storage
+      const authClient = getAuthenticatedSupabaseClient();
       let relatorioAtividadesUrl: string | null = null;
       let relatorioFinanceiroUrl: string | null = null;
       let comprovantesUrl: string | null = null;
@@ -1319,13 +1326,13 @@ export const ProponenteProjetoDetalhes = () => {
         const fileExt = novaPrestacaoRelatorio.name.split('.').pop();
         const fileName = `relatorio-atividades-${Date.now()}.${fileExt}`;
         
-        const { data: uploadData, error: uploadError } = await supabase.storage
+        const { data: uploadData, error: uploadError } = await authClient.storage
           .from('prestacoes_contas')
           .upload(fileName, novaPrestacaoRelatorio);
 
         if (uploadError) throw uploadError;
 
-        const { data: { publicUrl } } = supabase.storage
+        const { data: { publicUrl } } = authClient.storage
           .from('prestacoes_contas')
           .getPublicUrl(fileName);
 
@@ -1336,13 +1343,13 @@ export const ProponenteProjetoDetalhes = () => {
         const fileExt = novaPrestacaoFinanceiro.name.split('.').pop();
         const fileName = `relatorio-financeiro-${Date.now()}.${fileExt}`;
         
-        const { data: uploadData, error: uploadError } = await supabase.storage
+        const { data: uploadData, error: uploadError } = await authClient.storage
           .from('prestacoes_contas')
           .upload(fileName, novaPrestacaoFinanceiro);
 
         if (uploadError) throw uploadError;
 
-        const { data: { publicUrl } } = supabase.storage
+        const { data: { publicUrl } } = authClient.storage
           .from('prestacoes_contas')
           .getPublicUrl(fileName);
 
@@ -1353,13 +1360,13 @@ export const ProponenteProjetoDetalhes = () => {
         const fileExt = novaPrestacaoComprovantes.name.split('.').pop();
         const fileName = `comprovantes-${Date.now()}.${fileExt}`;
         
-        const { data: uploadData, error: uploadError } = await supabase.storage
+        const { data: uploadData, error: uploadError } = await authClient.storage
           .from('prestacoes_contas')
           .upload(fileName, novaPrestacaoComprovantes);
 
         if (uploadError) throw uploadError;
 
-        const { data: { publicUrl } } = supabase.storage
+        const { data: { publicUrl } } = authClient.storage
           .from('prestacoes_contas')
           .getPublicUrl(fileName);
 
