@@ -58,7 +58,7 @@ export const ProponenteProjetos = () => {
     try {
       setLoading(true);
 
-      const authClient = getAuthenticatedSupabaseClient();
+      const authClient = getAuthenticatedSupabaseClient('proponente');
       
       // Buscar os proponentes vinculados ao usuário
       const { data: proponentes, error: proponentesError } = await authClient

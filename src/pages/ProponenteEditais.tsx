@@ -66,34 +66,18 @@ export const ProponenteEditais = () => {
   }, [searchTerm, editais]);
 
   const carregarEditais = async () => {
-    if (!proponente?.id) {
+    if (!proponente?.id || !proponente?.prefeitura_id) {
       return;
     }
     
     try {
       setLoading(true);
 
-      // Buscar o ID da prefeitura do proponente usando cliente autenticado
-      const authClient = getAuthenticatedSupabaseClient();
-      const { data: proponenteData, error: proponenteError } = await authClient
-        .from('usuarios_proponentes')
-        .select('prefeitura_id')
-        .eq('id', proponente.id)
-        .single();
-      
-      if (proponenteError || !proponenteData) {
-        console.error('❌ Erro ao buscar prefeitura do proponente:', proponenteError);
-        toast({
-          title: "Erro",
-          description: "Erro ao carregar dados da prefeitura",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      const prefeituraId = (proponenteData as any).prefeitura_id;
+      // Usar o prefeitura_id diretamente do objeto proponente (já vem do login)
+      const prefeituraId = proponente.prefeitura_id;
 
       // Buscar editais recebendo projetos (incluindo regulamento)
+      const authClient = getAuthenticatedSupabaseClient('proponente');
       const { data, error } = await authClient
         .from('editais')
         .select('id, codigo, nome, descricao, data_abertura, data_final_envio_projeto, valor_maximo, status, modalidades, regulamento')
@@ -314,7 +298,7 @@ export const ProponenteEditais = () => {
           }
 
           // Baixar arquivo do storage
-          const authClient = getAuthenticatedSupabaseClient();
+          const authClient = getAuthenticatedSupabaseClient('proponente');
           const { data: fileData, error: downloadError } = await authClient.storage
             .from('editais')
             .download(storagePath);

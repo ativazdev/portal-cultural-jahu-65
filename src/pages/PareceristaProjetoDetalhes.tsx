@@ -199,7 +199,7 @@ export const PareceristaProjetoDetalhes = () => {
   const { parecerista } = usePareceristaAuth();
   const { toast } = useToast();
   
-  const { projeto, loading: projetoLoading } = useProjetoDetalhes(projetoId || '');
+  const { projeto, loading: projetoLoading } = useProjetoDetalhes(projetoId || '', 'parecerista');
   const [avaliacao, setAvaliacao] = useState<Avaliacao | null>(null);
   const [loadingAvaliacao, setLoadingAvaliacao] = useState(true);
   const [editando, setEditando] = useState(false);
@@ -232,7 +232,7 @@ export const PareceristaProjetoDetalhes = () => {
       try {
         setLoadingAvaliacao(true);
         
-        const authClient = getAuthenticatedSupabaseClient();
+        const authClient = getAuthenticatedSupabaseClient('parecerista');
         const { data, error } = await authClient
           .from('avaliacoes')
           .select('*')
@@ -283,7 +283,7 @@ export const PareceristaProjetoDetalhes = () => {
 
     try {
       // Registrar o início da avaliação
-      const authClient = getAuthenticatedSupabaseClient();
+      const authClient = getAuthenticatedSupabaseClient('parecerista');
       const { data, error } = await (authClient as any)
         .from('avaliacoes')
         .update({
@@ -356,7 +356,7 @@ export const PareceristaProjetoDetalhes = () => {
       const notaFinal = somaObrigatorios + somaBonus;
 
       // Sempre marcar como avaliado ao enviar
-      const authClient = getAuthenticatedSupabaseClient();
+      const authClient = getAuthenticatedSupabaseClient('parecerista');
       const { data, error } = await (authClient as any)
         .from('avaliacoes')
         .update({

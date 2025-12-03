@@ -26,9 +26,10 @@ import {
   Send,
   Loader2
 } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { ProponenteLayout } from "@/components/layout/ProponenteLayout";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, getAuthenticatedSupabaseClient } from "@/integrations/supabase/client";
 import { useProponenteAuth } from "@/hooks/useProponenteAuth";
 
 // Opções predefinidas
@@ -274,8 +275,9 @@ export const ProponenteCadastrarProjeto = () => {
       setLoading(true);
       setDadosCarregados(false);
 
-      // Carregar edital
-      const { data: editalData, error: editalError } = await supabase
+      // Carregar edital usando cliente autenticado
+      const authClient = getAuthenticatedSupabaseClient('proponente');
+      const { data: editalData, error: editalError } = await authClient
         .from('editais')
         .select('*')
         .eq('id', editalId)
@@ -284,8 +286,8 @@ export const ProponenteCadastrarProjeto = () => {
       if (editalError) throw editalError;
       setEdital(editalData);
 
-      // Carregar proponentes do usuário
-      const { data: proponentesData, error: proponentesError } = await (supabase as any)
+      // Carregar proponentes do usuário usando cliente autenticado
+      const { data: proponentesData, error: proponentesError } = await (authClient as any)
         .from('proponentes')
         .select('*')
         .eq('usuario_id', proponente.id)
@@ -294,10 +296,10 @@ export const ProponenteCadastrarProjeto = () => {
       if (proponentesError) throw proponentesError;
       setProponentes(proponentesData || []);
 
-      // Verificar se já existe um projeto em rascunho
+      // Verificar se já existe um projeto em rascunho usando cliente autenticado
       const proponenteIds = (proponentesData || []).map(p => p.id);
       if (proponenteIds.length > 0) {
-        const { data: projetoRascunho, error: projetoError } = await (supabase as any)
+        const { data: projetoRascunho, error: projetoError } = await (authClient as any)
           .from('projetos')
           .select('*')
           .in('proponente_id', proponenteIds)
@@ -332,12 +334,13 @@ export const ProponenteCadastrarProjeto = () => {
 
   const carregarDadosProjeto = async (projetoId: string, projetoData?: any) => {
     try {
-      // Carregar dados relacionados
+      // Carregar dados relacionados usando cliente autenticado
+      const authClient = getAuthenticatedSupabaseClient('proponente');
       const [equipeRes, atividadesRes, metasRes, orcamentoRes] = await Promise.all([
-        (supabase as any).from('equipe_projeto').select('*').eq('projeto_id', projetoId),
-        (supabase as any).from('atividades_projeto').select('*').eq('projeto_id', projetoId).order('data_inicio'),
-        (supabase as any).from('metas_projeto').select('*').eq('projeto_id', projetoId),
-        (supabase as any).from('itens_orcamento_projeto').select('*').eq('projeto_id', projetoId)
+        (authClient as any).from('equipe_projeto').select('*').eq('projeto_id', projetoId),
+        (authClient as any).from('atividades_projeto').select('*').eq('projeto_id', projetoId).order('data_inicio'),
+        (authClient as any).from('metas_projeto').select('*').eq('projeto_id', projetoId),
+        (authClient as any).from('itens_orcamento_projeto').select('*').eq('projeto_id', projetoId)
       ]);
 
       const dadosProjeto = projetoData || projetoExistente;
@@ -383,8 +386,9 @@ export const ProponenteCadastrarProjeto = () => {
         return;
       }
 
-      // Buscar prefeitura_id
-      const { data: proponenteData } = await (supabase as any)
+      // Buscar prefeitura_id usando cliente autenticado
+      const authClient = getAuthenticatedSupabaseClient('proponente');
+      const { data: proponenteData } = await (authClient as any)
         .from('proponentes')
         .select('prefeitura_id')
         .eq('id', formData.proponente_id)
@@ -423,8 +427,8 @@ export const ProponenteCadastrarProjeto = () => {
       let projetoId;
       
       if (projetoExistente) {
-        // Atualizar projeto existente
-        const { error } = await (supabase as any)
+        // Atualizar projeto existente usando cliente autenticado
+        const { error } = await (authClient as any)
           .from('projetos')
           .update(projetoData)
           .eq('id', projetoExistente.id);
@@ -432,8 +436,8 @@ export const ProponenteCadastrarProjeto = () => {
         if (error) throw error;
         projetoId = projetoExistente.id;
       } else {
-        // Criar novo projeto
-        const { data, error } = await (supabase as any)
+        // Criar novo projeto usando cliente autenticado
+        const { data, error } = await (authClient as any)
           .from('projetos')
           .insert([projetoData])
           .select()
@@ -471,8 +475,9 @@ export const ProponenteCadastrarProjeto = () => {
   const salvarEquipe = async (projetoId: string) => {
     if (!formData.equipe || formData.equipe.length === 0) return;
 
+    const authClient = getAuthenticatedSupabaseClient('proponente');
     // Deletar equipe existente
-    await (supabase as any).from('equipe_projeto').delete().eq('projeto_id', projetoId);
+    await (authClient as any).from('equipe_projeto').delete().eq('projeto_id', projetoId);
 
     // Inserir nova equipe
     const equipeData = formData.equipe.map((membro: any) => ({
@@ -488,15 +493,16 @@ export const ProponenteCadastrarProjeto = () => {
     }));
 
     if (equipeData.length > 0) {
-      await (supabase as any).from('equipe_projeto').insert(equipeData);
+      await (authClient as any).from('equipe_projeto').insert(equipeData);
     }
   };
 
   const salvarAtividades = async (projetoId: string) => {
     if (!formData.atividades || formData.atividades.length === 0) return;
 
+    const authClient = getAuthenticatedSupabaseClient('proponente');
     // Deletar atividades existentes
-    await (supabase as any).from('atividades_projeto').delete().eq('projeto_id', projetoId);
+    await (authClient as any).from('atividades_projeto').delete().eq('projeto_id', projetoId);
 
     // Ordenar atividades por data
     const atividadesOrdenadas = [...formData.atividades].sort((a, b) => 
@@ -515,15 +521,16 @@ export const ProponenteCadastrarProjeto = () => {
     }));
 
     if (atividadesData.length > 0) {
-      await (supabase as any).from('atividades_projeto').insert(atividadesData);
+      await (authClient as any).from('atividades_projeto').insert(atividadesData);
     }
   };
 
   const salvarMetas = async (projetoId: string) => {
     if (!formData.metas || formData.metas.length === 0) return;
 
+    const authClient = getAuthenticatedSupabaseClient('proponente');
     // Deletar metas existentes
-    await (supabase as any).from('metas_projeto').delete().eq('projeto_id', projetoId);
+    await (authClient as any).from('metas_projeto').delete().eq('projeto_id', projetoId);
 
     // Inserir novas metas
     const metasData = formData.metas.map((meta: any, index: number) => ({
@@ -533,15 +540,16 @@ export const ProponenteCadastrarProjeto = () => {
     }));
 
     if (metasData.length > 0) {
-      await (supabase as any).from('metas_projeto').insert(metasData);
+      await (authClient as any).from('metas_projeto').insert(metasData);
     }
   };
 
   const salvarOrcamento = async (projetoId: string) => {
     if (!formData.orcamento || formData.orcamento.length === 0) return;
 
+    const authClient = getAuthenticatedSupabaseClient('proponente');
     // Deletar orçamento existente
-    await (supabase as any).from('itens_orcamento_projeto').delete().eq('projeto_id', projetoId);
+    await (authClient as any).from('itens_orcamento_projeto').delete().eq('projeto_id', projetoId);
 
     // Inserir novo orçamento
     const orcamentoData = formData.orcamento.map((item: any, index: number) => ({
@@ -556,7 +564,7 @@ export const ProponenteCadastrarProjeto = () => {
     }));
 
     if (orcamentoData.length > 0) {
-      await (supabase as any).from('itens_orcamento_projeto').insert(orcamentoData);
+      await (authClient as any).from('itens_orcamento_projeto').insert(orcamentoData);
     }
   };
 
@@ -635,8 +643,9 @@ export const ProponenteCadastrarProjeto = () => {
     try {
       setSaving(true);
 
-      // Buscar prefeitura_id
-      const { data: proponenteData } = await (supabase as any)
+      // Buscar prefeitura_id usando cliente autenticado
+      const authClient = getAuthenticatedSupabaseClient('proponente');
+      const { data: proponenteData } = await (authClient as any)
         .from('proponentes')
         .select('prefeitura_id')
         .eq('id', formData.proponente_id)
@@ -649,8 +658,8 @@ export const ProponenteCadastrarProjeto = () => {
       
       // Se não tiver número de inscrição, gerar um novo
       if (!numeroInscricao) {
-        // Buscar código do edital
-        const { data: editalData } = await (supabase as any)
+        // Buscar código do edital usando cliente autenticado
+        const { data: editalData } = await (authClient as any)
           .from('editais')
           .select('codigo')
           .eq('id', editalId)
@@ -658,8 +667,8 @@ export const ProponenteCadastrarProjeto = () => {
 
         const codigoEdital = editalData?.codigo || 'EDT';
 
-        // Contar projetos existentes no edital com número de inscrição
-        const { count } = await (supabase as any)
+        // Contar projetos existentes no edital com número de inscrição usando cliente autenticado
+        const { count } = await (authClient as any)
           .from('projetos')
           .select('*', { count: 'exact', head: true })
           .eq('edital_id', editalId)
@@ -706,8 +715,8 @@ export const ProponenteCadastrarProjeto = () => {
       let projetoId;
 
       if (projetoExistente) {
-        // Atualizar projeto existente
-        const { error } = await (supabase as any)
+        // Atualizar projeto existente usando cliente autenticado
+        const { error } = await (authClient as any)
           .from('projetos')
           .update(projetoData)
           .eq('id', projetoExistente.id);
@@ -715,8 +724,8 @@ export const ProponenteCadastrarProjeto = () => {
         if (error) throw error;
         projetoId = projetoExistente.id;
       } else {
-        // Criar novo projeto
-        const { data, error } = await (supabase as any)
+        // Criar novo projeto usando cliente autenticado
+        const { data, error } = await (authClient as any)
           .from('projetos')
           .insert([projetoData])
           .select()
@@ -758,8 +767,9 @@ export const ProponenteCadastrarProjeto = () => {
     try {
       setSaving(true);
 
-      // Deletar projeto existente
-      const { error } = await (supabase as any)
+      // Deletar projeto existente usando cliente autenticado
+      const authClient = getAuthenticatedSupabaseClient('proponente');
+      const { error } = await (authClient as any)
         .from('projetos')
         .delete()
         .eq('id', projetoExistente.id);
@@ -1667,8 +1677,57 @@ export const ProponenteCadastrarProjeto = () => {
         );
 
       case 9: // Orçamento Detalhado
+        // Calcular valores para a barra de progresso
+        const totalOrcamento = formData.orcamento.reduce((sum: number, item: any) => {
+          const valor = parseFloat(item.valor_unitario) || 0;
+          const quantidade = parseInt(item.quantidade) || 0;
+          return sum + (valor * quantidade);
+        }, 0);
+        const valorSolicitado = parseFloat(formData.valor_solicitado || '0') || 0;
+        const valorEmAberto = Math.max(0, valorSolicitado - totalOrcamento);
+        const percentualPreenchido = valorSolicitado > 0 ? Math.min(100, (totalOrcamento / valorSolicitado) * 100) : 0;
+        
         return (
           <div className="space-y-6">
+            {/* Barra de Progresso do Orçamento */}
+            {valorSolicitado > 0 && (
+              <Card className="border-2">
+                <CardContent className="p-6">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-semibold">Progresso do Orçamento</h3>
+                      <span className="text-sm font-medium text-gray-600">
+                        {percentualPreenchido.toFixed(1)}% preenchido
+                      </span>
+                    </div>
+                    <Progress value={percentualPreenchido} className="h-3" />
+                    <div className="grid grid-cols-2 gap-4 pt-2">
+                      <div>
+                        <p className="text-sm text-gray-600 mb-1">Valor Preenchido</p>
+                        <p className="text-lg font-bold text-green-600">
+                          R$ {totalOrcamento.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600 mb-1">Valor em Aberto</p>
+                        <p className="text-lg font-bold text-orange-600">
+                          R$ {valorEmAberto.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="pt-2 border-t">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-gray-700">Valor Solicitado Total</span>
+                        <span className="text-base font-bold text-gray-900">
+                          R$ {valorSolicitado.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+            
             <div className="border rounded-lg p-4 space-y-4 bg-gray-50">
               <div>
                 <Label htmlFor="orcamento_descricao">Descrição *</Label>

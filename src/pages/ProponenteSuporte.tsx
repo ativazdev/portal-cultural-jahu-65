@@ -123,7 +123,7 @@ export const ProponenteSuporte = () => {
 
   const carregarEditais = async () => {
     try {
-      const client = getAuthenticatedSupabaseClient();
+      const client = getAuthenticatedSupabaseClient('proponente');
       const { data, error } = await client
         .from('editais')
         .select('id, codigo, nome, status')
@@ -141,7 +141,7 @@ export const ProponenteSuporte = () => {
     try {
       if (!proponente?.id) return;
 
-      const client = getAuthenticatedSupabaseClient();
+      const client = getAuthenticatedSupabaseClient('proponente');
       const { data: proponentesData } = await (client as any)
         .from('proponentes')
         .select('id')
@@ -228,7 +228,7 @@ export const ProponenteSuporte = () => {
     try {
       setLoading(true);
       
-      const client = getAuthenticatedSupabaseClient();
+      const client = getAuthenticatedSupabaseClient('proponente');
       const { data, error } = await (client as any)
         .from('duvidas')
         .select('*')
@@ -286,7 +286,7 @@ export const ProponenteSuporte = () => {
         duvidaData.categoria = categoriaSelecionada;
       }
 
-      const client = getAuthenticatedSupabaseClient();
+      const client = getAuthenticatedSupabaseClient('proponente');
       const { error } = await (client as any)
         .from('duvidas')
         .insert([duvidaData]);

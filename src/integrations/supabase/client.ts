@@ -18,26 +18,13 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
 });
 
 // Função helper para obter cliente autenticado com token customizado
-export function getAuthenticatedSupabaseClient(): SupabaseClient<Database> {
-  // Verificar qual tipo de usuário está logado para usar o token correto
-  const proponenteAuth = localStorage.getItem('proponente_auth');
-  const pareceristaAuth = localStorage.getItem('parecerista_auth');
-  
-  let token: string | null = null;
-  
-  // Priorizar o token baseado no tipo de autenticação ativa
-  if (pareceristaAuth) {
-    // Se há autenticação de parecerista, usar o token de parecerista
-    token = localStorage.getItem('parecerista_token');
-  } else if (proponenteAuth) {
-    // Se há autenticação de proponente, usar o token de proponente
-    token = localStorage.getItem('proponente_token');
-  } else {
-    // Fallback: tentar qualquer token disponível (compatibilidade)
-    token = localStorage.getItem('parecerista_token') || localStorage.getItem('proponente_token');
-  }
+export function getAuthenticatedSupabaseClient(userType: 'parecerista' | 'proponente'): SupabaseClient<Database> {
+  // Obter o token baseado no tipo de usuário especificado
+  const tokenKey = userType === 'parecerista' ? 'parecerista_token' : 'proponente_token';
+  const token = localStorage.getItem(tokenKey);
   
   if (!token) {
+    console.warn(`Token não encontrado para ${userType}. Usando cliente não autenticado.`);
     return supabase;
   }
   

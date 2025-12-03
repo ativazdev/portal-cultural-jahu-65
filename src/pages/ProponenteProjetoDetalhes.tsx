@@ -420,7 +420,7 @@ export const ProponenteProjetoDetalhes = () => {
     error,
     updateStatus,
     refresh
-  } = useProjetoDetalhes(projetoId || '');
+  } = useProjetoDetalhes(projetoId || '', 'proponente');
 
   const {
     pendencias,
@@ -476,7 +476,7 @@ export const ProponenteProjetoDetalhes = () => {
       
       try {
         setLoadingProponentes(true);
-        const authClient = getAuthenticatedSupabaseClient();
+        const authClient = getAuthenticatedSupabaseClient('proponente');
         // @ts-ignore - Supabase type issue
         const { data, error } = await authClient
           .from('proponentes')
@@ -630,7 +630,7 @@ export const ProponenteProjetoDetalhes = () => {
           };
       }
 
-      const authClient = getAuthenticatedSupabaseClient();
+      const authClient = getAuthenticatedSupabaseClient('proponente');
       const { data, error } = await authClient
         .from('projetos')
         .update(dadosUpdate)
@@ -670,7 +670,7 @@ export const ProponenteProjetoDetalhes = () => {
     if (!projetoId) return;
 
     try {
-      const authClient = getAuthenticatedSupabaseClient();
+      const authClient = getAuthenticatedSupabaseClient('proponente');
       // Deletar todos os membros atuais
       const { error: deleteError } = await authClient
         .from('equipe_projeto')
@@ -1197,7 +1197,7 @@ export const ProponenteProjetoDetalhes = () => {
     }
 
     try {
-      const authClient = getAuthenticatedSupabaseClient();
+      const authClient = getAuthenticatedSupabaseClient('proponente');
       // Criar a nova avaliação sem parecerista_id (null)
       const { error } = await authClient
         .from('avaliacoes')
@@ -1242,7 +1242,7 @@ export const ProponenteProjetoDetalhes = () => {
           const oldFileName = urlParts[urlParts.length - 1];
           
           if (oldFileName) {
-            const authClient = getAuthenticatedSupabaseClient();
+            const authClient = getAuthenticatedSupabaseClient('proponente');
             const { error: deleteError } = await authClient.storage
               .from('documentos_habilitacao')
               .remove([oldFileName]);
@@ -1259,7 +1259,7 @@ export const ProponenteProjetoDetalhes = () => {
       }
 
       // Upload do novo arquivo para o Supabase Storage
-      const authClient = getAuthenticatedSupabaseClient();
+      const authClient = getAuthenticatedSupabaseClient('proponente');
       const fileExt = arquivoDoc.name.split('.').pop();
       const fileName = `${documentoParaUpload}-${Date.now()}.${fileExt}`;
       
@@ -1317,7 +1317,7 @@ export const ProponenteProjetoDetalhes = () => {
 
     try {
       // Upload dos arquivos para o Storage
-      const authClient = getAuthenticatedSupabaseClient();
+      const authClient = getAuthenticatedSupabaseClient('proponente');
       let relatorioAtividadesUrl: string | null = null;
       let relatorioFinanceiroUrl: string | null = null;
       let comprovantesUrl: string | null = null;

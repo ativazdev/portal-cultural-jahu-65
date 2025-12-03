@@ -66,7 +66,7 @@ export const PareceristaSuporte = () => {
         setLoading(true);
         
         // Buscar dúvidas do parecerista para este edital
-        const authClient = getAuthenticatedSupabaseClient();
+        const authClient = getAuthenticatedSupabaseClient('parecerista');
         const { data, error } = await authClient
           .from('duvidas')
           .select('*')
@@ -93,7 +93,7 @@ export const PareceristaSuporte = () => {
 
       try {
         // Buscar todos os editais da prefeitura
-        const authClient = getAuthenticatedSupabaseClient();
+        const authClient = getAuthenticatedSupabaseClient('parecerista');
         const { data, error } = await authClient
           .from('editais')
           .select('id, codigo, nome')

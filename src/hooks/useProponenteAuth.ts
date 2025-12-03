@@ -23,9 +23,13 @@ export const useProponenteAuth = () => {
                           path.includes('/solicitar-redefinicao-senha') || 
                           path.includes('/redefinicao-senha');
         
-        // Se estiver em uma página de autenticação, não verificar login
+        // Se estiver em uma página de autenticação, limpar dados antigos e não verificar login
         if (isAuthPage) {
-          console.log('🔄 Página de autenticação detectada, pulando verificação');
+          console.log('🔄 Página de autenticação detectada, limpando dados antigos');
+          // Limpar dados de autenticação antigos para evitar usar IDs incorretos
+          localStorage.removeItem('proponente_auth');
+          localStorage.removeItem('proponente_token');
+          setAuthUser(null);
           setLoading(false);
           return;
         }

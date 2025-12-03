@@ -44,7 +44,7 @@ export const PareceristaProjetos = () => {
         setLoading(true);
         
         // Buscar todas as avaliações do parecerista para este edital
-        const authClient = getAuthenticatedSupabaseClient();
+        const authClient = getAuthenticatedSupabaseClient('parecerista');
         const { data: avaliacoes, error: avaliacoesError } = await authClient
           .from('avaliacoes')
           .select(`

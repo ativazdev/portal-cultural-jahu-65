@@ -345,7 +345,7 @@ export const ProponenteProponentes = () => {
       setIsLoadingProponentes(true);
       
       // Buscar proponentes relacionados ao usuario_proponente atual
-      const client = getAuthenticatedSupabaseClient();
+      const client = getAuthenticatedSupabaseClient('proponente');
       const { data, error } = await client
         .from('proponentes')
         .select('*')
@@ -1106,7 +1106,7 @@ export const ProponenteProponentes = () => {
       dadosProponente.usuario_id = userProponente.id;
       dadosProponente.email = userProponente.email;
 
-      const client = getAuthenticatedSupabaseClient();
+      const client = getAuthenticatedSupabaseClient('proponente');
       const { error } = await client
         .from('proponentes')
         .insert([dadosProponente]);
@@ -1237,7 +1237,7 @@ export const ProponenteProponentes = () => {
       dadosProponente.tipo_conta = formData.tipoConta;
       dadosProponente.pix = formData.pix;
 
-      const client = getAuthenticatedSupabaseClient();
+      const client = getAuthenticatedSupabaseClient('proponente');
       const { error } = await client
         .from('proponentes')
         .update(dadosProponente)
