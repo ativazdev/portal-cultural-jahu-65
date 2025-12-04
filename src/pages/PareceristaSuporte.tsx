@@ -164,7 +164,7 @@ export const PareceristaSuporte = () => {
       console.log('📝 Dados da dúvida a serem inseridos:', duvidaData);
       console.log('🔑 Token do parecerista:', localStorage.getItem('parecerista_token') ? 'Presente' : 'Ausente');
 
-      const authClient = getAuthenticatedSupabaseClient();
+      const authClient = getAuthenticatedSupabaseClient('parecerista');
       const { error } = await authClient
         .from('duvidas')
         .insert([duvidaData]);
