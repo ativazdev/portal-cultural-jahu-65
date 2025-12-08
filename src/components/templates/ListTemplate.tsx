@@ -496,7 +496,7 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
                 {/* Visualização em Tabela (Desktop) */}
                 <div className="hidden lg:block w-full overflow-hidden">
                   <div className="overflow-x-auto max-w-full">
-                    <Table className="w-full table-fixed min-w-full">
+                    <Table className="w-full min-w-full">
                     <TableHeader>
                       <TableRow>
                         {selectable && (
@@ -523,7 +523,7 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
                             </div>
                           </TableHead>
                         ))}
-                        {actions.length > 0 && <TableHead className="w-16 text-xs">Ações</TableHead>}
+                        {actions.length > 0 && <TableHead className="w-32 md:w-36 text-xs">Ações</TableHead>}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -543,8 +543,8 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
                             </TableCell>
                           ))}
                           {actions.length > 0 && (
-                            <TableCell className="w-16">
-                              <div className="flex gap-1">
+                            <TableCell className="w-32 md:w-36">
+                              <div className="flex gap-1.5 flex-nowrap justify-start">
                                 {actions
                               .filter(action => {
                                 const shouldShow = !action.show || action.show(item);
@@ -559,13 +559,13 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
                                         size="sm"
                                         onClick={() => action.onClick(item)}
                                         title={action.label}
-                                        className={`${action.className || ''} h-7 w-7 p-0`}
+                                        className={`${action.className || ''} h-8 w-8 p-0 flex-shrink-0 flex items-center justify-center`}
                                         disabled={isLoading}
                                       >
                                         {isLoading ? (
-                                          <Loader2 className="h-3 w-3 animate-spin" />
+                                          <Loader2 className="h-4 w-4 animate-spin" />
                                         ) : (
-                                          <div className="h-3 w-3">{action.icon}</div>
+                                          <div className="h-4 w-4 flex items-center justify-center">{action.icon}</div>
                                         )}
                                       </Button>
                                     );

@@ -213,7 +213,7 @@ export const PrefeituraEditais = () => {
       key: 'edital',
       label: 'Edital',
       sortable: true,
-      width: 'w-64 md:w-60',
+      width: 'w-48 md:w-44',
       render: (item) => {
         const temRecursosPendentes = recursosPendentesPorEdital[item.id] && recursosPendentesPorEdital[item.id] > 0;
         return (
@@ -238,7 +238,7 @@ export const PrefeituraEditais = () => {
     {
       key: 'periodo',
       label: 'Período',
-      width: 'w-40 md:w-48',
+      width: 'w-32 md:w-36',
       render: (item) => (
         <div className="text-xs text-gray-600 space-y-0.5">
           <div className="flex items-center gap-1">
@@ -255,7 +255,7 @@ export const PrefeituraEditais = () => {
     {
       key: 'valor_maximo',
       label: 'Valor',
-      width: 'w-20 md:w-28',
+      width: 'w-18 md:w-20',
       render: (item) => {
         const valor = item.valor_maximo || 0;
         const valorEmMilhares = valor / 1000;

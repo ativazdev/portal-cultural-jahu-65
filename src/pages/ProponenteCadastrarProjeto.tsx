@@ -388,6 +388,57 @@ export const ProponenteCadastrarProjeto = () => {
 
       // Buscar prefeitura_id usando cliente autenticado
       const authClient = getAuthenticatedSupabaseClient('proponente');
+      
+      // Debug: Verificar qual token está sendo usado
+      const proponenteToken = localStorage.getItem('proponente_token');
+      const pareceristaToken = localStorage.getItem('parecerista_token');
+      console.log('🔑 Token proponente presente:', !!proponenteToken);
+      console.log('🔑 Token parecerista presente:', !!pareceristaToken);
+      if (proponenteToken) {
+        console.log('🔑 Token proponente (primeiros 50 chars):', proponenteToken.substring(0, 50) + '...');
+        // Decodificar JWT para ver o payload (sem verificar assinatura)
+        try {
+          const payload = JSON.parse(atob(proponenteToken.split('.')[1]));
+          console.log('🔑 Payload do token proponente:', {
+            sub: payload.sub,
+            user_type: payload.user_type,
+            prefeitura_id: payload.prefeitura_id,
+            email: payload.email
+          });
+        } catch (e) {
+          console.warn('⚠️ Erro ao decodificar token:', e);
+        }
+      }
+      
+      // Debug: Verificar valores do JWT e políticas
+      try {
+        const { data: debugData, error: debugError } = await (authClient as any).rpc('debug_rls_projetos');
+        console.log('🔍 Debug RLS:', debugData);
+        if (debugError) console.error('❌ Erro no debug:', debugError);
+
+        // Debug adicional: verificar is_proponente()
+        const { data: debugIsProponente, error: debugIsProponenteError } = await (authClient as any).rpc('debug_is_proponente');
+        console.log('🔍 Debug is_proponente:', debugIsProponente);
+        if (debugIsProponenteError) console.error('❌ Erro no debug is_proponente:', debugIsProponenteError);
+
+        // Debug: Verificar se Supabase reconhece como authenticated
+        const { data: testAuth, error: testAuthError } = await (authClient as any).rpc('testar_autenticacao');
+        console.log('🔍 Teste de autenticação:', testAuth);
+        if (testAuthError) console.error('❌ Erro no teste de autenticação:', testAuthError);
+
+        const { data: proponenteValido, error: proponenteError } = await (authClient as any).rpc('verificar_proponente_usuario', {
+          p_proponente_id: formData.proponente_id
+        });
+        console.log('✅ Proponente válido:', proponenteValido);
+        console.log('📋 Proponente ID:', formData.proponente_id);
+        if (proponenteError) console.error('❌ Erro ao verificar proponente:', proponenteError);
+        if (!proponenteValido) {
+          console.error('❌ Proponente não pertence ao usuário!');
+        }
+      } catch (debugErr) {
+        console.warn('⚠️ Erro ao executar debug:', debugErr);
+      }
+
       const { data: proponenteData } = await (authClient as any)
         .from('proponentes')
         .select('prefeitura_id')
@@ -395,6 +446,8 @@ export const ProponenteCadastrarProjeto = () => {
         .single();
 
       if (!proponenteData) throw new Error('Proponente não encontrado');
+      
+      console.log('📊 Dados do proponente:', proponenteData);
 
       const projetoData = {
         prefeitura_id: proponenteData.prefeitura_id,
@@ -426,26 +479,41 @@ export const ProponenteCadastrarProjeto = () => {
 
       let projetoId;
       
-      if (projetoExistente) {
-        // Atualizar projeto existente usando cliente autenticado
-        const { error } = await (authClient as any)
-          .from('projetos')
-          .update(projetoData)
-          .eq('id', projetoExistente.id);
+      // Usar Edge Function para criar/atualizar projeto
+      const token = localStorage.getItem('proponente_token');
+      if (!token) {
+        throw new Error('Token de autenticação não encontrado');
+      }
 
-        if (error) throw error;
-        projetoId = projetoExistente.id;
-      } else {
-        // Criar novo projeto usando cliente autenticado
-        const { data, error } = await (authClient as any)
-          .from('projetos')
-          .insert([projetoData])
-          .select()
-          .single();
+      console.log('📝 Tentando salvar projeto via Edge Function:', {
+        projeto_id: projetoExistente?.id,
+        ...projetoData
+      });
 
-        if (error) throw error;
-        projetoId = data.id;
-        setProjetoExistente(data);
+      const { data: response, error: functionError } = await supabase.functions.invoke('salvar-projeto', {
+        body: {
+          projeto_id: projetoExistente?.id,
+          ...projetoData
+        },
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      if (functionError) {
+        console.error('❌ Erro na Edge Function:', functionError);
+        throw new Error(functionError.message || 'Erro ao salvar projeto');
+      }
+
+      if (!response || !response.success) {
+        throw new Error(response?.error || 'Erro ao salvar projeto');
+      }
+
+      console.log('✅ Projeto salvo com sucesso:', response.projeto);
+      projetoId = response.projeto.id;
+      
+      if (!projetoExistente) {
+        setProjetoExistente(response.projeto);
       }
 
       // Salvar equipe, atividades, metas e orçamento
@@ -714,26 +782,38 @@ export const ProponenteCadastrarProjeto = () => {
 
       let projetoId;
 
-      if (projetoExistente) {
-        // Atualizar projeto existente usando cliente autenticado
-        const { error } = await (authClient as any)
-          .from('projetos')
-          .update(projetoData)
-          .eq('id', projetoExistente.id);
-
-        if (error) throw error;
-        projetoId = projetoExistente.id;
-      } else {
-        // Criar novo projeto usando cliente autenticado
-        const { data, error } = await (authClient as any)
-          .from('projetos')
-          .insert([projetoData])
-          .select()
-          .single();
-
-        if (error) throw error;
-        projetoId = data.id;
+      // Usar Edge Function para criar/atualizar projeto
+      const token = localStorage.getItem('proponente_token');
+      if (!token) {
+        throw new Error('Token de autenticação não encontrado');
       }
+
+      console.log('📝 Tentando inscrever projeto via Edge Function:', {
+        projeto_id: projetoExistente?.id,
+        ...projetoData
+      });
+
+      const { data: response, error: functionError } = await supabase.functions.invoke('salvar-projeto', {
+        body: {
+          projeto_id: projetoExistente?.id,
+          ...projetoData
+        },
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      if (functionError) {
+        console.error('❌ Erro na Edge Function:', functionError);
+        throw new Error(functionError.message || 'Erro ao inscrever projeto');
+      }
+
+      if (!response || !response.success) {
+        throw new Error(response?.error || 'Erro ao inscrever projeto');
+      }
+
+      console.log('✅ Projeto inscrito com sucesso:', response.projeto);
+      projetoId = response.projeto.id;
 
       // Salvar equipe, atividades, metas e orçamento
       await Promise.all([

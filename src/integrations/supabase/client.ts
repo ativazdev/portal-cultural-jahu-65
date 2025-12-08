@@ -24,8 +24,22 @@ export function getAuthenticatedSupabaseClient(userType: 'parecerista' | 'propon
   const token = localStorage.getItem(tokenKey);
   
   if (!token) {
-    console.warn(`Token não encontrado para ${userType}. Usando cliente não autenticado.`);
+    console.warn(`⚠️ Token não encontrado para ${userType}. Usando cliente não autenticado.`);
     return supabase;
+  }
+  
+  // Debug: Verificar qual token está sendo usado
+  console.log(`🔑 Usando token para ${userType}:`, token.substring(0, 50) + '...');
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    console.log(`🔑 Payload do token ${userType}:`, {
+      sub: payload.sub,
+      user_type: payload.user_type,
+      prefeitura_id: payload.prefeitura_id,
+      email: payload.email
+    });
+  } catch (e) {
+    console.warn('⚠️ Erro ao decodificar token:', e);
   }
   
   return createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {

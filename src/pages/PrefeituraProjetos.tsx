@@ -140,6 +140,7 @@ export const PrefeituraProjetos = () => {
       key: 'numero_inscricao',
       label: 'Nº Inscrição',
       sortable: true,
+      width: 'w-24',
       render: (item) => (
         <div className="font-mono text-sm font-medium text-blue-600">
           {item.numero_inscricao}
@@ -150,6 +151,7 @@ export const PrefeituraProjetos = () => {
       key: 'nome',
       label: 'Nome do Projeto',
       sortable: true,
+      width: 'w-56',
       render: (item) => (
         <div className="max-w-md">
           <p className="font-medium text-gray-900 truncate">{item.nome}</p>
@@ -160,6 +162,7 @@ export const PrefeituraProjetos = () => {
     {
       key: 'modalidade',
       label: 'Modalidade',
+      width: 'w-24',
       render: (item) => (
         <Badge variant="outline" className="text-xs">
           {item.modalidade}
@@ -169,6 +172,7 @@ export const PrefeituraProjetos = () => {
     {
       key: 'status',
       label: 'Status',
+      width: 'w-36',
       render: (item) => {
         const statusConfig = {
           'rascunho': { label: 'Rascunho', color: 'bg-gray-100 text-gray-800', icon: <FileText className="h-3 w-3" /> },
@@ -198,8 +202,9 @@ export const PrefeituraProjetos = () => {
     {
       key: 'data_submissao',
       label: 'Data Submissão',
+      width: 'w-28',
       render: (item) => (
-        <div className="text-sm text-gray-600">
+        <div className="text-sm text-gray-600 whitespace-nowrap">
           {item.data_submissao ? new Date(item.data_submissao).toLocaleDateString('pt-BR') : '-'}
         </div>
       )
@@ -207,8 +212,9 @@ export const PrefeituraProjetos = () => {
     {
       key: 'valor_solicitado',
       label: 'Valor Solicitado',
+      width: 'w-28',
       render: (item) => (
-        <div className="text-sm font-medium text-gray-900">
+        <div className="text-sm font-medium text-gray-900 whitespace-nowrap">
           R$ {item.valor_solicitado?.toLocaleString('pt-BR') || '0'}
         </div>
       )

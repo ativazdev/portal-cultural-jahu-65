@@ -101,18 +101,20 @@ export const PrefeituraPareceristas = () => {
       key: 'nome',
       label: 'Nome',
       sortable: true,
+      width: 'w-48',
       render: (item) => (
         <div className="space-y-1">
-          <div className="font-medium">{item.nome}</div>
-          <div className="text-sm text-gray-500">{item.email}</div>
+          <div className="font-medium truncate">{item.nome}</div>
+          <div className="text-sm text-gray-500 truncate">{item.email}</div>
         </div>
       )
     },
     {
       key: 'area_atuacao',
       label: 'Área de Atuação',
+      width: 'w-32',
       render: (item) => (
-        <Badge variant="outline" className="bg-blue-50 text-blue-700">
+        <Badge variant="outline" className="bg-blue-50 text-blue-700 text-xs">
           {item.area_atuacao}
         </Badge>
       )
@@ -120,6 +122,7 @@ export const PrefeituraPareceristas = () => {
     {
       key: 'especialidade',
       label: 'Especialidades',
+      width: 'w-40',
       render: (item) => (
         <div className="flex flex-wrap gap-1">
           {item.especialidades.slice(0, 2).map((esp, index) => (
@@ -138,11 +141,15 @@ export const PrefeituraPareceristas = () => {
     {
       key: 'experiencia_anos',
       label: 'Experiência',
-      render: (item) => `${item.experiencia_anos || 0} anos`
+      width: 'w-24',
+      render: (item) => (
+        <span className="text-sm whitespace-nowrap">{item.experiencia_anos || 0} anos</span>
+      )
     },
     {
       key: 'status',
       label: 'Status',
+      width: 'w-24',
       render: (item) => (
         <Badge className={item.status === 'ativo' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
           {item.status === 'ativo' ? 'Ativo' : 'Inativo'}
@@ -152,9 +159,14 @@ export const PrefeituraPareceristas = () => {
     {
       key: 'ultimo_acesso',
       label: 'Último Acesso',
-      render: (item) => item.ultimo_acesso ? 
-        new Date(item.ultimo_acesso).toLocaleDateString('pt-BR') : 
-        'Nunca'
+      width: 'w-32',
+      render: (item) => (
+        <span className="text-sm whitespace-nowrap">
+          {item.ultimo_acesso ? 
+            new Date(item.ultimo_acesso).toLocaleDateString('pt-BR') : 
+            'Nunca'}
+        </span>
+      )
     }
   ];
 
