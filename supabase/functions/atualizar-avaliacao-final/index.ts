@@ -100,10 +100,47 @@ serve(async (req) => {
       )
     }
 
-    // Buscar todas as avaliações do projeto
+    // Buscar projeto para obter prefeitura_id
+    const { data: projeto, error: projetoError } = await supabase
+      .from('projetos')
+      .select('id, prefeitura_id')
+      .eq('id', projeto_id)
+      .single()
+
+    if (projetoError || !projeto) {
+      return new Response(
+        JSON.stringify({ error: 'Projeto não encontrado' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 404 
+        }
+      )
+    }
+
+    // Buscar todas as avaliações do projeto com todos os critérios
     const { data: avaliacoes, error: avaliacoesError } = await supabase
       .from('avaliacoes')
-      .select('id, status, nota_final')
+      .select(`
+        id, 
+        status, 
+        nota_final,
+        nota_criterio_a,
+        nota_criterio_b,
+        nota_criterio_c,
+        nota_criterio_d,
+        nota_criterio_e,
+        obs_criterio_a,
+        obs_criterio_b,
+        obs_criterio_c,
+        obs_criterio_d,
+        obs_criterio_e,
+        bonus_criterio_f,
+        bonus_criterio_g,
+        bonus_criterio_h,
+        bonus_criterio_i,
+        parecer_tecnico,
+        motivo_rejeicao
+      `)
       .eq('projeto_id', projeto_id)
 
     if (avaliacoesError) {
@@ -131,31 +168,148 @@ serve(async (req) => {
     const avaliacoesConcluidas = avaliacoes.filter(a => a.status === 'avaliado')
     const totalConcluidas = avaliacoesConcluidas.length
 
-    // Verificar se todas as avaliações foram concluídas
-    if (totalConcluidas === totalAvaliacoes && totalAvaliacoes > 0) {
-      // Calcular média das notas finais
-      const notasFinais = avaliacoesConcluidas
-        .map(a => a.nota_final)
-        .filter(nota => nota !== null && nota !== undefined) as number[]
+    // Buscar ou criar registro em avaliacoes_final
+    let { data: avaliacaoFinal, error: avaliacaoFinalError } = await supabase
+      .from('avaliacoes_final')
+      .select('*')
+      .eq('projeto_id', projeto_id)
+      .single()
 
-      if (notasFinais.length === 0) {
+    if (avaliacaoFinalError && avaliacaoFinalError.code !== 'PGRST116') {
+      console.error('Erro ao buscar avaliação final:', avaliacaoFinalError)
+      return new Response(
+        JSON.stringify({ error: 'Erro ao buscar avaliação final', details: avaliacaoFinalError.message }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500 
+        }
+      )
+    }
+
+    // Se não existe, criar
+    if (!avaliacaoFinal) {
+      const { data: novaAvaliacaoFinal, error: createError } = await supabase
+        .from('avaliacoes_final')
+        .insert({
+          prefeitura_id: projeto.prefeitura_id,
+          projeto_id: projeto_id,
+          quantidade_pareceristas: totalAvaliacoes,
+          quantidade_avaliacoes_concluidas: totalConcluidas,
+          status: totalConcluidas === totalAvaliacoes ? 'avaliado' : 'em_avaliacao'
+        })
+        .select()
+        .single()
+
+      if (createError) {
+        console.error('Erro ao criar avaliação final:', createError)
         return new Response(
-          JSON.stringify({ error: 'Nenhuma nota final encontrada nas avaliações concluídas' }),
+          JSON.stringify({ error: 'Erro ao criar avaliação final', details: createError.message }),
           { 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 400 
+            status: 500 
           }
         )
       }
+      avaliacaoFinal = novaAvaliacaoFinal
+    }
 
-      const somaNotas = notasFinais.reduce((acc, nota) => acc + nota, 0)
-      const notaMedia = somaNotas / notasFinais.length
+    // Calcular médias dos critérios
+    const calcularMedia = (campo: string): number => {
+      const valores = avaliacoesConcluidas
+        .map(a => a[campo])
+        .filter(v => v !== null && v !== undefined) as number[]
+      
+      if (valores.length === 0) return 0
+      const soma = valores.reduce((acc, v) => acc + v, 0)
+      return Math.round((soma / valores.length) * 100) / 100
+    }
 
+    // Calcular médias de cada critério
+    const nota_criterio_a = calcularMedia('nota_criterio_a')
+    const nota_criterio_b = calcularMedia('nota_criterio_b')
+    const nota_criterio_c = calcularMedia('nota_criterio_c')
+    const nota_criterio_d = calcularMedia('nota_criterio_d')
+    const nota_criterio_e = calcularMedia('nota_criterio_e')
+    const bonus_criterio_f = calcularMedia('bonus_criterio_f')
+    const bonus_criterio_g = calcularMedia('bonus_criterio_g')
+    const bonus_criterio_h = calcularMedia('bonus_criterio_h')
+    const bonus_criterio_i = calcularMedia('bonus_criterio_i')
+
+    // Calcular média da nota final
+    const notasFinais = avaliacoesConcluidas
+      .map(a => a.nota_final)
+      .filter(nota => nota !== null && nota !== undefined) as number[]
+    
+    const nota_final = notasFinais.length > 0
+      ? Math.round((notasFinais.reduce((acc, nota) => acc + nota, 0) / notasFinais.length) * 100) / 100
+      : 0
+
+    // Consolidar observações (pegar a primeira não vazia ou concatenar)
+    const consolidarObs = (campo: string): string | null => {
+      const observacoes = avaliacoesConcluidas
+        .map(a => a[campo])
+        .filter(obs => obs && obs.trim() !== '') as string[]
+      
+      if (observacoes.length === 0) return null
+      // Retornar a primeira observação não vazia
+      return observacoes[0] || null
+    }
+
+    const obs_criterio_a = consolidarObs('obs_criterio_a')
+    const obs_criterio_b = consolidarObs('obs_criterio_b')
+    const obs_criterio_c = consolidarObs('obs_criterio_c')
+    const obs_criterio_d = consolidarObs('obs_criterio_d')
+    const obs_criterio_e = consolidarObs('obs_criterio_e')
+
+    // Consolidar parecer técnico (pegar o primeiro não vazio)
+    const parecer_tecnico = avaliacoesConcluidas
+      .map(a => a.parecer_tecnico)
+      .find(p => p && p.trim() !== '') || null
+
+    // Consolidar motivo_rejeicao (pegar o primeiro não vazio)
+    const motivo_rejeicao = avaliacoesConcluidas
+      .map(a => a.motivo_rejeicao)
+      .find(m => m && m.trim() !== '') || null
+
+    // Atualizar avaliacoes_final
+    const dadosAtualizacao: any = {
+      nota_criterio_a,
+      nota_criterio_b,
+      nota_criterio_c,
+      nota_criterio_d,
+      nota_criterio_e,
+      obs_criterio_a,
+      obs_criterio_b,
+      obs_criterio_c,
+      obs_criterio_d,
+      obs_criterio_e,
+      bonus_criterio_f,
+      bonus_criterio_g,
+      bonus_criterio_h,
+      bonus_criterio_i,
+      nota_final,
+      quantidade_avaliacoes_concluidas: totalConcluidas,
+      quantidade_pareceristas: totalAvaliacoes,
+      updated_at: new Date().toISOString()
+    }
+
+    if (parecer_tecnico) {
+      dadosAtualizacao.parecer_tecnico = parecer_tecnico
+    }
+
+    if (motivo_rejeicao) {
+      dadosAtualizacao.motivo_rejeicao = motivo_rejeicao
+    }
+
+    // Se todas as avaliações foram concluídas, atualizar status
+    if (totalConcluidas === totalAvaliacoes && totalAvaliacoes > 0) {
+      dadosAtualizacao.status = 'avaliado'
+      
       // Atualizar nota_media e status do projeto
-      const { data: projetoAtualizado, error: updateError } = await supabase
+      const { data: projetoAtualizado, error: updateProjetoError } = await supabase
         .from('projetos')
         .update({
-          nota_media: Math.round(notaMedia * 100) / 100, // Arredondar para 2 casas decimais
+          nota_media: nota_final,
           status: 'avaliado',
           updated_at: new Date().toISOString()
         })
@@ -163,10 +317,29 @@ serve(async (req) => {
         .select()
         .single()
 
-      if (updateError) {
-        console.error('Erro ao atualizar projeto:', updateError)
+      if (updateProjetoError) {
+        console.error('Erro ao atualizar projeto:', updateProjetoError)
         return new Response(
-          JSON.stringify({ error: 'Erro ao atualizar projeto', details: updateError.message }),
+          JSON.stringify({ error: 'Erro ao atualizar projeto', details: updateProjetoError.message }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 500 
+          }
+        )
+      }
+
+      // Atualizar avaliacoes_final
+      const { data: avaliacaoFinalAtualizada, error: updateAvaliacaoError } = await supabase
+        .from('avaliacoes_final')
+        .update(dadosAtualizacao)
+        .eq('id', avaliacaoFinal.id)
+        .select()
+        .single()
+
+      if (updateAvaliacaoError) {
+        console.error('Erro ao atualizar avaliação final:', updateAvaliacaoError)
+        return new Response(
+          JSON.stringify({ error: 'Erro ao atualizar avaliação final', details: updateAvaliacaoError.message }),
           { 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 500 
@@ -179,7 +352,8 @@ serve(async (req) => {
           success: true,
           message: 'Avaliação final atualizada com sucesso',
           projeto: projetoAtualizado,
-          nota_media: notaMedia,
+          avaliacao_final: avaliacaoFinalAtualizada,
+          nota_media: nota_final,
           total_avaliacoes: totalAvaliacoes,
           avaliacoes_concluidas: totalConcluidas
         }),
@@ -189,11 +363,32 @@ serve(async (req) => {
         }
       )
     } else {
-      // Ainda há avaliações pendentes
+      // Ainda há avaliações pendentes - atualizar apenas quantidade
+      dadosAtualizacao.status = 'em_avaliacao'
+      
+      const { data: avaliacaoFinalAtualizada, error: updateAvaliacaoError } = await supabase
+        .from('avaliacoes_final')
+        .update(dadosAtualizacao)
+        .eq('id', avaliacaoFinal.id)
+        .select()
+        .single()
+
+      if (updateAvaliacaoError) {
+        console.error('Erro ao atualizar avaliação final:', updateAvaliacaoError)
+        return new Response(
+          JSON.stringify({ error: 'Erro ao atualizar avaliação final', details: updateAvaliacaoError.message }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 500 
+          }
+        )
+      }
+
       return new Response(
         JSON.stringify({ 
           success: true,
           message: 'Avaliação salva. Aguardando conclusão de todas as avaliações.',
+          avaliacao_final: avaliacaoFinalAtualizada,
           total_avaliacoes: totalAvaliacoes,
           avaliacoes_concluidas: totalConcluidas,
           avaliacoes_pendentes: totalAvaliacoes - totalConcluidas
