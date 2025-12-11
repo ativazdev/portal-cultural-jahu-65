@@ -374,19 +374,36 @@ export const PareceristaProjetoDetalhes = () => {
 
       if (error) throw error;
 
-      // Verificar se todas as avaliações do projeto foram concluídas
-      const { data: todasAvaliacoes } = await (authClient as any)
-        .from('avaliacoes')
-        .select('id, status')
-        .eq('projeto_id', projetoId);
+      // Chamar edge function para atualizar avaliação final e status do projeto
+      const pareceristaToken = localStorage.getItem('parecerista_token');
+      if (!pareceristaToken) {
+        throw new Error('Token de parecerista não encontrado');
+      }
 
-      const totalAvaliacoes = todasAvaliacoes?.length || 0;
-      const avaliacoesConcluidas = todasAvaliacoes?.filter(a => a.status === 'avaliado').length || 0;
+      try {
+        const response = await fetch('https://ymkytnhdslvkigzilbvy.supabase.co/functions/v1/atualizar-avaliacao-final', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${pareceristaToken}`,
+          },
+          body: JSON.stringify({ projeto_id: projetoId }),
+        });
 
-      // Se todas as avaliações foram concluídas, o trigger do banco já atualizará nota_media e status do projeto
-      // Não atualizamos o status do projeto aqui porque pode haver múltiplos pareceristas
-      // O status será "avaliado" quando todas as avaliações forem concluídas (via trigger)
-      // A decisão final (aprovado/rejeitado) será feita pela prefeitura após análise
+        if (!response.ok) {
+          const errorData = await response.json();
+          console.error('Erro ao atualizar avaliação final:', errorData);
+          // Não falhar a operação se a atualização da avaliação final falhar
+          // A avaliação individual já foi salva
+        } else {
+          const result = await response.json();
+          console.log('Avaliação final atualizada:', result);
+        }
+      } catch (updateError) {
+        console.error('Erro ao chamar função de atualização:', updateError);
+        // Não falhar a operação se a atualização da avaliação final falhar
+        // A avaliação individual já foi salva
+      }
 
       setAvaliacao(data);
       setEditando(false);
