@@ -89,7 +89,7 @@ export const EditalModal = ({ open, onClose, onSave, edital, loading = false }: 
     }));
   };
 
-  const handleModalidadeChange = (modalidade: string, checked: boolean) => {
+  const handleCategoriaChange = (modalidade: string, checked: boolean) => {
     setFormData(prev => ({
       ...prev,
       modalidades: checked 
@@ -238,7 +238,7 @@ export const EditalModal = ({ open, onClose, onSave, edital, loading = false }: 
     if (formData.modalidades.length === 0) {
       toast({
         title: "Erro",
-        description: "Selecione pelo menos uma modalidade.",
+        description: "Selecione pelo menos uma categoria.",
         variant: "destructive",
       });
       return;
@@ -387,7 +387,7 @@ export const EditalModal = ({ open, onClose, onSave, edital, loading = false }: 
           </div>
 
           <div>
-            <Label>Modalidades *</Label>
+            <Label>Categorias *</Label>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-2">
               {modalidades.map((modalidade) => (
                 <div key={modalidade.value} className="flex items-center space-x-2">
@@ -395,7 +395,7 @@ export const EditalModal = ({ open, onClose, onSave, edital, loading = false }: 
                     id={modalidade.value}
                     checked={formData.modalidades.includes(modalidade.value)}
                     onCheckedChange={(checked) => 
-                      handleModalidadeChange(modalidade.value, checked as boolean)
+                      handleCategoriaChange(modalidade.value, checked as boolean)
                     }
                   />
                   <Label 
@@ -409,7 +409,7 @@ export const EditalModal = ({ open, onClose, onSave, edital, loading = false }: 
             </div>
             {formData.modalidades.length === 0 && (
               <p className="text-sm text-red-500 mt-1">
-                Selecione pelo menos uma modalidade
+                Selecione pelo menos uma categoria
               </p>
             )}
           </div>

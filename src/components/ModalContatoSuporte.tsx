@@ -14,9 +14,10 @@ interface ContatoSuporte {
 interface ModalContatoSuporteProps {
   open: boolean;
   onClose: () => void;
+  role?: 'prefeitura' | 'proponente' | 'parecerista';
 }
 
-export const ModalContatoSuporte = ({ open, onClose }: ModalContatoSuporteProps) => {
+export const ModalContatoSuporte = ({ open, onClose, role }: ModalContatoSuporteProps) => {
   const [contato, setContato] = useState<ContatoSuporte | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -24,24 +25,38 @@ export const ModalContatoSuporte = ({ open, onClose }: ModalContatoSuporteProps)
     if (open) {
       carregarContato();
     }
-  }, [open]);
+  }, [open, role]);
 
   const carregarContato = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      let query = supabase
         .from('contato_suporte')
         .select('whatsapp, email, telefone, observacoes')
-        .eq('ativo', true)
-        .single();
+        .eq('ativo', true);
+      
+      // Se role foi fornecido, filtrar por role
+      if (role) {
+        query = query.eq('role', role);
+      }
+      
+      const { data, error } = await query.maybeSingle();
 
       if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
         console.error('Erro ao carregar contato:', error);
+        setContato(null);
+        return;
       }
 
-      setContato(data || null);
+      // Verificar se há dados e se pelo menos um campo de contato está preenchido
+      if (data && (data.whatsapp || data.email || data.telefone)) {
+        setContato(data);
+      } else {
+        setContato(null);
+      }
     } catch (error) {
       console.error('Erro ao carregar contato:', error);
+      setContato(null);
     } finally {
       setLoading(false);
     }

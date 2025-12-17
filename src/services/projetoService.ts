@@ -235,7 +235,7 @@ export const projetoService = {
     }
   },
 
-  async getByCategory(prefeituraId: string): Promise<Array<{ categoria: string; count: number }>> {
+  async getByCategory(prefeituraId: string): Promise<Array<{ modalidade: string; count: number }>> {
     try {
       const { data, error } = await supabase
         .from('projetos')
@@ -245,17 +245,17 @@ export const projetoService = {
       if (error) throw error;
 
       const categories = data?.reduce((acc, projeto) => {
-        const categoria = projeto.modalidade || 'Outros';
-        acc[categoria] = (acc[categoria] || 0) + 1;
+        const modalidade = projeto.modalidade || 'Outros';
+        acc[modalidade] = (acc[modalidade] || 0) + 1;
         return acc;
       }, {} as Record<string, number>) || {};
 
-      return Object.entries(categories).map(([categoria, count]) => ({
-        categoria,
+      return Object.entries(categories).map(([modalidade, count]) => ({
+        modalidade,
         count
       }));
     } catch (error) {
-      console.error('Erro ao buscar projetos por categoria:', error);
+      console.error('Erro ao buscar projetos por modalidade:', error);
       return [];
     }
   }

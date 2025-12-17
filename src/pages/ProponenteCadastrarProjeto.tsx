@@ -33,7 +33,7 @@ import { supabase, getAuthenticatedSupabaseClient } from "@/integrations/supabas
 import { useProponenteAuth } from "@/hooks/useProponenteAuth";
 
 // Opções predefinidas
-const modalidadesOptions = [
+const CategoriasOptions = [
   { value: "musica", label: "Música" },
   { value: "teatro", label: "Teatro" },
   { value: "danca", label: "Dança" },
@@ -640,7 +640,7 @@ export const ProponenteCadastrarProjeto = () => {
     // Verificar se todos os passos foram preenchidos
     const requiredFields = [
       { field: 'nome', message: 'Nome do projeto' },
-      { field: 'modalidade', message: 'Modalidade' },
+      { field: 'modalidade', message: 'categoria' },
       { field: 'descricao', message: 'Descrição' },
       { field: 'objetivos', message: 'Objetivos' },
       { field: 'proponente_id', message: 'Proponente' }
@@ -1189,13 +1189,13 @@ export const ProponenteCadastrarProjeto = () => {
               />
             </div>
             <div>
-              <Label htmlFor="modalidade">Modalidade *</Label>
+              <Label htmlFor="modalidade">Categoria *</Label>
               <Select value={formData.modalidade} onValueChange={(value) => handleInputChange('modalidade', value)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione uma modalidade" />
+                  <SelectValue placeholder="Selecione uma categoria" />
                 </SelectTrigger>
                 <SelectContent>
-                  {modalidadesOptions
+                  {CategoriasOptions
                     .filter(option => edital?.modalidades?.includes(option.value))
                     .map(option => (
                       <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
@@ -1203,7 +1203,7 @@ export const ProponenteCadastrarProjeto = () => {
                 </SelectContent>
               </Select>
               {edital?.modalidades && edital.modalidades.length === 0 && (
-                <p className="text-sm text-amber-500 mt-1">Nenhuma modalidade disponível para este edital</p>
+                <p className="text-sm text-amber-500 mt-1">Nenhuma categoria disponível para este edital</p>
               )}
             </div>
             <div>

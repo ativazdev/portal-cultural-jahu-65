@@ -17,7 +17,7 @@ CREATE TABLE editais (
   total_projetos INTEGER DEFAULT 0,
   valor_maximo DECIMAL(12,2),
   prazo_avaliacao INTEGER, -- dias
-  modalidades modalidade_cultural[],
+  modalidades Categoria_cultural[],
   
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
@@ -57,8 +57,8 @@ CREATE TABLE projetos (
   parecerista_id UUID REFERENCES pareceristas(id),
   
   nome TEXT NOT NULL,
-  modalidade modalidade_cultural NOT NULL,
-  categoria TEXT,
+  modalidade Categoria_cultural NOT NULL,
+  modalidade TEXT,
   descricao TEXT NOT NULL,
   objetivos TEXT NOT NULL,
   perfil_publico TEXT,
@@ -147,7 +147,7 @@ CREATE TABLE planilha_orcamentaria (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   projeto_id UUID NOT NULL REFERENCES projetos(id) ON DELETE CASCADE,
   
-  categoria TEXT NOT NULL, -- recursos_humanos, servicos, material, divulgacao, etc
+  modalidade TEXT NOT NULL, -- recursos_humanos, servicos, material, divulgacao, etc
   item TEXT NOT NULL,
   descricao TEXT,
   quantidade INTEGER,

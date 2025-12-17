@@ -126,7 +126,7 @@ export const EditaisListExample: React.FC = () => {
       ]
     },
     {
-      key: 'categoria',
+      key: 'modalidade',
       label: 'Categoria',
       type: 'select',
       options: [

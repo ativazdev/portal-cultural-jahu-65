@@ -181,7 +181,7 @@ export const PareceristaProjetos = () => {
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
-                    placeholder="Pesquisar por nome, proponente ou modalidade..."
+                    placeholder="Pesquisar por nome, proponente ou categoria..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-10"
@@ -243,7 +243,7 @@ export const PareceristaProjetos = () => {
                         {projeto.descricao}
                       </p>
                       <div className="flex items-center gap-4 text-xs text-gray-500">
-                        <span><strong>Modalidade:</strong> {projeto.modalidade}</span>
+                        <span><strong>Categoria:</strong> {projeto.modalidade}</span>
                         <span><strong>Proponente:</strong> {projeto.proponente.nome}</span>
                         <span><strong>Atribuído em:</strong> {new Date(projeto.data_recebimento).toLocaleDateString('pt-BR')}</span>
                       </div>

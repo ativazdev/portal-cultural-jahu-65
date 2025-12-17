@@ -5,7 +5,7 @@ import { usePrefeitura } from '@/contexts/PrefeituraContext';
 export interface ProjetoCompleto {
   id: string;
   nome: string;
-  categoria: string;
+  modalidade: string;
   descricao: string;
   objetivos: string;
   valorSolicitado: number;

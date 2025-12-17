@@ -371,7 +371,7 @@ export const ProjectDataDisplay: React.FC<ProjectDataDisplayProps> = ({
       title: 'Informações do Projeto',
       fields: [
         { key: 'nome', label: 'Nome do Projeto', value: project.nome, type: 'text' },
-        { key: 'categoria', label: 'Categoria', value: project.categoria, type: 'badge', color: 'info' },
+        { key: 'modalidade', label: 'Categoria', value: project.modalidade, type: 'badge', color: 'info' },
         { key: 'proponente', label: 'Proponente', value: project.proponente?.nome, type: 'text' },
         { key: 'valor_solicitado', label: 'Valor Solicitado', value: project.valor_solicitado, type: 'currency' },
         { key: 'status', label: 'Status', value: project.status, type: 'badge', color: 'success' },

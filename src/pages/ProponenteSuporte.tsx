@@ -38,7 +38,7 @@ interface Duvida {
   parecerista_id?: string;
   fechada: boolean;
   respondida_por?: string;
-  categoria?: string;
+  modalidade?: string;
   edital_id?: string;
   created_at: string;
 }
@@ -96,7 +96,7 @@ export const ProponenteSuporte = () => {
   // Hook para recursos
   const { recursos, loading: loadingRecursos, createRecurso, refresh: refreshRecursos } = useRecursos(proponente?.id);
   
-  const categorias = [
+  const modalidades = [
     'Dúvida sobre edital',
     'Dúvida sobre projeto',
     'Dúvida sobre documentação',
@@ -283,7 +283,7 @@ export const ProponenteSuporte = () => {
       }
 
       if (categoriaSelecionada) {
-        duvidaData.categoria = categoriaSelecionada;
+        duvidaData.modalidade = categoriaSelecionada;
       }
 
       const client = getAuthenticatedSupabaseClient('proponente');
@@ -453,7 +453,7 @@ export const ProponenteSuporte = () => {
     return (
       <ProponenteLayout 
         title="Comunicação"
-        description="Entre em contato para dúvidas, recursos e contra-razões"
+        description="Entre em contato para dúvidas, recursos e Contrarrazões"
       >
         <div className="p-6">
           <div className="flex items-center justify-center h-64">
@@ -476,7 +476,7 @@ export const ProponenteSuporte = () => {
   return (
     <ProponenteLayout 
       title="Comunicação"
-      description="Entre em contato para dúvidas, recursos e contra-razões"
+      description="Entre em contato para dúvidas, recursos e Contrarrazões"
     >
       <Card className="p-6 space-y-4">
 
@@ -496,7 +496,7 @@ export const ProponenteSuporte = () => {
             {permiteContraRazao && (
               <TabsTrigger value="contra_razao">
                 <FileText className="h-4 w-4 mr-2" />
-                Contra-razão
+                Contrarrazão
               </TabsTrigger>
             )}
           </TabsList>
@@ -567,9 +567,9 @@ export const ProponenteSuporte = () => {
                             <><XCircle className="h-3 w-3 mr-1" /> Aguardando</>
                           )}
                         </Badge>
-                        {duvida.categoria && (
+                        {duvida.modalidade && (
                           <Badge variant="outline" className="text-xs">
-                            {duvida.categoria}
+                            {duvida.modalidade}
                           </Badge>
                         )}
                         <span className="text-xs text-gray-500">
@@ -610,13 +610,13 @@ export const ProponenteSuporte = () => {
             
             <div className="space-y-4 py-4">
               <div>
-                <Label htmlFor="categoria">Categoria</Label>
+                <Label htmlFor="modalidade">Categoria</Label>
                 <Select value={categoriaSelecionada} onValueChange={setCategoriaSelecionada}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione uma categoria (opcional)" />
                   </SelectTrigger>
                   <SelectContent>
-                    {categorias.map((cat) => (
+                    {modalidades.map((cat) => (
                       <SelectItem key={cat} value={cat}>
                         {cat}
                       </SelectItem>
@@ -759,7 +759,7 @@ export const ProponenteSuporte = () => {
                     <p className="text-gray-600 text-center">
                       Você não possui projetos elegíveis para recursos/contrarrazão no momento.
                       <br />
-                      Recursos e contra-razões só podem ser criados para projetos de editais nas fases correspondentes.
+                      Recursos e Contrarrazões só podem ser criados para projetos de editais nas fases correspondentes.
                     </p>
                   </CardContent>
                 </Card>
@@ -839,14 +839,14 @@ export const ProponenteSuporte = () => {
             </TabsContent>
           )}
 
-          {/* Tab de Contra-razão */}
+          {/* Tab de Contrarrazão */}
           {permiteContraRazao && (
             <TabsContent value="contra_razao" className="space-y-6 mt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-xl font-semibold">Contra-razões</h3>
+                  <h3 className="text-xl font-semibold">Contrarrazões</h3>
                   <p className="text-sm text-gray-600">
-                    Envie contra-razões sobre projetos avaliados
+                    Envie Contrarrazões sobre projetos avaliados
                   </p>
                   {editaisPermitemContraRazao.length > 0 && (
                     <p className="text-xs text-blue-600 mt-1">
@@ -865,7 +865,7 @@ export const ProponenteSuporte = () => {
                   disabled={projetos.length === 0}
                 >
                   <Plus className="h-4 w-4 mr-2" />
-                  Nova Contra-razão
+                  Nova Contrarrazão
                 </Button>
               </div>
 
@@ -877,13 +877,13 @@ export const ProponenteSuporte = () => {
                     <p className="text-gray-600 text-center">
                       Você não possui projetos elegíveis para contrarrazão no momento.
                       <br />
-                      Contra-razões só podem ser criadas para projetos de editais na fase de contrarrazão.
+                      Contrarrazões só podem ser criadas para projetos de editais na fase de contrarrazão.
                     </p>
                   </CardContent>
                 </Card>
               )}
 
-              {/* Lista de Contra-razões */}
+              {/* Lista de Contrarrazões */}
               {loadingRecursos ? (
                 <Card>
                   <CardContent className="flex items-center justify-center py-12">
@@ -896,7 +896,7 @@ export const ProponenteSuporte = () => {
                     <FileText className="h-16 w-16 text-gray-300 mb-4" />
                     <p className="text-gray-600 text-center">
                       {recursos.filter(r => r.tipo === 'contra_razao').length === 0 
-                        ? "Você ainda não possui contra-razões cadastradas."
+                        ? "Você ainda não possui Contrarrazões cadastradas."
                         : "Nenhuma contrarrazão encontrada com os filtros aplicados."}
                     </p>
                   </CardContent>
@@ -924,7 +924,7 @@ export const ProponenteSuporte = () => {
                                 {recurso.status === 'indeferido' && <><XCircle className="h-3 w-3 mr-1" /> Indeferido</>}
                               </Badge>
                               <Badge variant="outline" className="text-xs">
-                                Contra-razão
+                                Contrarrazão
                               </Badge>
                               <span className="text-xs text-gray-500">
                                 {formatarData(recurso.created_at)}
@@ -962,7 +962,7 @@ export const ProponenteSuporte = () => {
         <Dialog open={showModalRecurso} onOpenChange={setShowModalRecurso}>
           <DialogContent className="sm:max-w-2xl">
             <DialogHeader>
-              <DialogTitle>Novo {tipoRecurso === 'recurso' ? 'Recurso' : 'Contra-razão'}</DialogTitle>
+              <DialogTitle>Novo {tipoRecurso === 'recurso' ? 'Recurso' : 'Contrarrazão'}</DialogTitle>
               <DialogDescription>
                 {tipoRecurso === 'recurso' 
                   ? 'Envie um recurso sobre a avaliação do seu projeto ou de outro projeto.'
@@ -1062,7 +1062,7 @@ export const ProponenteSuporte = () => {
                 {isSubmitting ? (
                   <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Enviando...</>
                 ) : (
-                  <><Send className="h-4 w-4 mr-2" /> Enviar {tipoRecurso === 'recurso' ? 'Recurso' : 'Contra-razão'}</>
+                  <><Send className="h-4 w-4 mr-2" /> Enviar {tipoRecurso === 'recurso' ? 'Recurso' : 'Contrarrazão'}</>
                 )}
               </Button>
             </DialogFooter>

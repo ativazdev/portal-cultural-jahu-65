@@ -65,7 +65,7 @@ export const PrefeituraProjetos = () => {
 
   // Estado para recursos pendentes (para badges)
   const [recursosPendentes, setRecursosPendentes] = useState<{ recursos: number; contraRazoes: number; total: number }>({ recursos: 0, contraRazoes: 0, total: 0 });
-  // Estado para todos os recursos/contra-razões (para exibir nas abas)
+  // Estado para todos os recursos/Contrarrazões (para exibir nas abas)
   const [projetosComRecursos, setProjetosComRecursos] = useState<Array<{ projeto: any; recurso: Recurso }>>([]);
   const [projetosComContraRazoes, setProjetosComContraRazoes] = useState<Array<{ projeto: any; contraRazao: Recurso }>>([]);
   const [activeTab, setActiveTab] = useState<'projetos' | 'recursos' | 'contra_razao'>('projetos');
@@ -78,7 +78,7 @@ export const PrefeituraProjetos = () => {
   const { user, profile } = usePrefeituraAuth();
 
 
-  // Buscar recursos pendentes (para badges) e todos os recursos/contra-razões (para abas)
+  // Buscar recursos pendentes (para badges) e todos os recursos/Contrarrazões (para abas)
   useEffect(() => {
     const carregarRecursos = async () => {
       if (editalId) {
@@ -86,7 +86,7 @@ export const PrefeituraProjetos = () => {
         const dados = await recursosService.getPendentesByEdital(editalId);
         setRecursosPendentes(dados);
         
-        // Buscar TODOS os recursos e contra-razões para exibir nas abas
+        // Buscar TODOS os recursos e Contrarrazões para exibir nas abas
         const projetosRecursos = await recursosService.getProjetosComRecursos(editalId);
         const projetosContraRazoes = await recursosService.getProjetosComContraRazoes(editalId);
         setProjetosComRecursos(projetosRecursos);
@@ -114,7 +114,7 @@ export const PrefeituraProjetos = () => {
       filtered = filtered.filter(item => item.status === activeFilters.status);
     }
 
-    // Filtro por modalidade
+    // Filtro por categoria
     if (activeFilters.modalidade && activeFilters.modalidade !== 'all') {
       filtered = filtered.filter(item => item.modalidade === activeFilters.modalidade);
     }
@@ -161,7 +161,7 @@ export const PrefeituraProjetos = () => {
     },
     {
       key: 'modalidade',
-      label: 'Modalidade',
+      label: 'Categoria',
       width: 'w-24',
       render: (item) => (
         <Badge variant="outline" className="text-xs">
@@ -240,7 +240,7 @@ export const PrefeituraProjetos = () => {
     },
     {
       key: 'modalidade',
-      label: 'Modalidade',
+      label: 'Categoria',
       type: 'select',
       options: [
         { value: 'musica', label: 'Música' },
@@ -401,7 +401,7 @@ export const PrefeituraProjetos = () => {
       color: recursosPendentes.recursos > 0 ? 'red' : 'gray'
     },
     {
-      title: 'Contra-razões Pendentes',
+      title: 'Contrarrazões Pendentes',
       value: recursosPendentes.contraRazoes.toString(),
       subtitle: 'Aguardando resposta',
       icon: <AlertCircle className="h-4 w-4" />,
@@ -462,7 +462,7 @@ export const PrefeituraProjetos = () => {
               )}
             </TabsTrigger>
             <TabsTrigger value="contra_razao">
-              Contra-razão
+              Contrarrazão
               {recursosPendentes.contraRazoes > 0 && (
                 <Badge className="ml-2 bg-orange-500">{recursosPendentes.contraRazoes}</Badge>
               )}
@@ -561,7 +561,7 @@ export const PrefeituraProjetos = () => {
 
           <TabsContent value="contra_razao" className="space-y-4">
             <div className="bg-white rounded-lg border p-6">
-              <h3 className="text-lg font-semibold mb-4">Contra-razões</h3>
+              <h3 className="text-lg font-semibold mb-4">Contrarrazões</h3>
               {projetosComContraRazoes.length === 0 ? (
                 <p className="text-gray-500 text-center py-8">Nenhuma contrarrazão encontrada</p>
               ) : (
@@ -618,7 +618,7 @@ export const PrefeituraProjetos = () => {
                             className="ml-4"
                           >
                             <MessageSquare className="h-4 w-4 mr-2" />
-                            Responder Contra-razão
+                            Responder Contrarrazão
                           </Button>
                         )}
                       </div>
@@ -631,12 +631,12 @@ export const PrefeituraProjetos = () => {
         </Tabs>
       </div>
 
-      {/* Modal de Responder Recurso/Contra-razão */}
+      {/* Modal de Responder Recurso/Contrarrazão */}
       <Dialog open={showModalResponder} onOpenChange={setShowModalResponder}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>
-              Responder {recursoParaResponder?.tipo === 'recurso' ? 'Recurso' : 'Contra-razão'}
+              Responder {recursoParaResponder?.tipo === 'recurso' ? 'Recurso' : 'Contrarrazão'}
             </DialogTitle>
             <DialogDescription>
               Forneça uma resposta para o {recursoParaResponder?.tipo === 'recurso' ? 'recurso' : 'contrarrazão'} e defina o status.
@@ -697,13 +697,13 @@ export const PrefeituraProjetos = () => {
 
                   toast({
                     title: "Sucesso",
-                    description: `${recursoParaResponder.tipo === 'recurso' ? 'Recurso' : 'Contra-razão'} respondido com sucesso!`,
+                    description: `${recursoParaResponder.tipo === 'recurso' ? 'Recurso' : 'Contrarrazão'} respondido com sucesso!`,
                   });
 
                   // Recarregar dados
                   const dados = await recursosService.getPendentesByEdital(editalId || '');
                   setRecursosPendentes(dados);
-                  // Recarregar todos os recursos/contra-razões (não apenas pendentes)
+                  // Recarregar todos os recursos/Contrarrazões (não apenas pendentes)
                   const projetosRecursos = await recursosService.getProjetosComRecursos(editalId || '');
                   const projetosContraRazoes = await recursosService.getProjetosComContraRazoes(editalId || '');
                   setProjetosComRecursos(projetosRecursos);

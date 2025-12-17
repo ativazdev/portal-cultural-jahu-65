@@ -115,11 +115,11 @@ export const PrefeituraDuvidas = () => {
       )
     },
     {
-      key: 'categoria',
+      key: 'modalidade',
       label: 'Categoria',
       render: (item) => (
         <Badge variant="outline" className="text-xs">
-          {item.categoria || 'Não especificada'}
+          {item.modalidade || 'Não especificada'}
         </Badge>
       )
     },
@@ -353,12 +353,12 @@ export const PrefeituraDuvidas = () => {
                 </div>
               </div>
 
-              {/* Categoria */}
+              {/* categoria */}
               <div>
                 <Label className="text-sm font-medium text-gray-700">Categoria:</Label>
                 <div className="mt-1">
                   <Badge variant="outline" className="text-sm">
-                    {modalResposta.duvida.categoria || 'Não especificada'}
+                    {modalResposta.duvida.modalidade || 'Não especificada'}
                   </Badge>
                 </div>
               </div>

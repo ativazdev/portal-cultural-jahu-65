@@ -14,7 +14,7 @@ export interface DashboardData {
   };
   graficos: {
     categoriaProjetos: Array<{
-      categoria: string;
+      modalidade: string;
       quantidade: number;
       valor: number;
     }>;
@@ -79,7 +79,7 @@ export const useDashboardPrefeitura = (prefeituraId: string) => {
           // Não falhar por causa disso, apenas logar
         }
 
-        // Buscar recursos e contra-razões pendentes (apenas status pendente)
+        // Buscar recursos e Contrarrazões pendentes (apenas status pendente)
         const { data: recursos, error: recursosError } = await supabase
           .from('recursos')
           .select('id, tipo, status')
@@ -103,24 +103,24 @@ export const useDashboardPrefeitura = (prefeituraId: string) => {
           .filter(p => p.status === 'aprovado')
           .reduce((sum, p) => sum + (p.valor_solicitado || 0), 0);
 
-        // Agrupar por modalidade (categoria)
+        // Agrupar por modalidade (modalidade)
         const categoriaProjetos = projetosData.reduce((acc, projeto) => {
-          const categoria = projeto.modalidade || 'Outros';
-          const existing = acc.find(item => item.categoria === categoria);
+          const modalidade = projeto.modalidade || 'Outros';
+          const existing = acc.find(item => item.modalidade === modalidade);
           
           if (existing) {
             existing.quantidade += 1;
             existing.valor += projeto.valor_solicitado || 0;
           } else {
             acc.push({
-              categoria,
+              modalidade,
               quantidade: 1,
               valor: projeto.valor_solicitado || 0
             });
           }
           
           return acc;
-        }, [] as Array<{ categoria: string; quantidade: number; valor: number }>);
+        }, [] as Array<{ modalidade: string; quantidade: number; valor: number }>);
 
         // Agrupar por status
         const projetosPorStatus = [

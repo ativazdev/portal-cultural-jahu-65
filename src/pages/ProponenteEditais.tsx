@@ -106,7 +106,7 @@ export const ProponenteEditais = () => {
       recebendo_projetos: { label: 'Recebendo Projetos', color: 'bg-blue-500' },
       avaliacao: { label: 'Avaliação', color: 'bg-orange-500' },
       recurso: { label: 'Recurso', color: 'bg-purple-500' },
-      contra_razao: { label: 'Contra-razão', color: 'bg-pink-500' },
+      contra_razao: { label: 'Contrarrazão', color: 'bg-pink-500' },
       em_execucao: { label: 'Em Execução', color: 'bg-indigo-500' },
       finalizado: { label: 'Finalizado', color: 'bg-green-500' },
       rascunho: { label: 'Rascunho', color: 'bg-yellow-500' },
@@ -428,7 +428,7 @@ export const ProponenteEditais = () => {
                     <div className="flex items-center gap-2 text-sm">
                       <FileText className="h-4 w-4 text-gray-400" />
                       <div>
-                        <p className="text-gray-500">Modalidades</p>
+                        <p className="text-gray-500">Categorias</p>
                         <p className="font-medium">{edital.modalidades?.join(', ') || 'N/A'}</p>
                       </div>
                     </div>

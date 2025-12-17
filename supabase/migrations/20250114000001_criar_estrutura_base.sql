@@ -47,8 +47,8 @@ CREATE TYPE tipo_comunicacao AS ENUM ('recurso', 'duvida', 'solicitacao', 'notif
 -- Status de comunicação
 CREATE TYPE status_comunicacao AS ENUM ('enviado', 'lido', 'em_analise', 'respondido');
 
--- Modalidades culturais
-CREATE TYPE modalidade_cultural AS ENUM (
+-- modalidades culturais
+CREATE TYPE Categoria_cultural AS ENUM (
   'musica',
   'teatro',
   'danca',
@@ -127,7 +127,7 @@ CREATE TABLE pareceristas (
   
   -- Dados profissionais
   area_atuacao TEXT,
-  especialidade modalidade_cultural[],
+  especialidade Categoria_cultural[],
   experiencia_anos INTEGER,
   formacao_academica TEXT,
   mini_curriculo TEXT,

@@ -6,7 +6,7 @@ export interface DadosProjetoRascunho {
   // Dados básicos do projeto
   nome?: string;
   modalidade?: string;
-  categoria?: string;
+  modalidade?: string;
   descricao?: string;
   objetivos?: string;
   perfil_publico?: string;
@@ -95,7 +95,7 @@ export function useRascunhoProjeto(proponenteId?: string, editalId?: string) {
           edital_id,
           nome,
           modalidade,
-          categoria,
+          modalidade,
           descricao,
           objetivos,
           perfil_publico,
@@ -155,7 +155,7 @@ export function useRascunhoProjeto(proponenteId?: string, editalId?: string) {
           dados: {
             nome: data.nome,
             modalidade: data.modalidade,
-            categoria: data.categoria,
+            modalidade: data.modalidade,
             descricao: data.descricao,
             objetivos: data.objetivos,
             perfil_publico: data.perfil_publico,
@@ -228,7 +228,7 @@ export function useRascunhoProjeto(proponenteId?: string, editalId?: string) {
         status: 'rascunho' as const,
         nome: dados.nome || '',
         modalidade: dados.modalidade || 'teatro',
-        categoria: dados.categoria || '',
+        modalidade: dados.modalidade || '',
         descricao: dados.descricao || '',
         objetivos: dados.objetivos || '',
         perfil_publico: dados.perfil_publico || '',

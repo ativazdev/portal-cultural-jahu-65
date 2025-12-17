@@ -200,7 +200,7 @@ export const PareceristaDashboard = () => {
                         {projeto.descricao}
                       </p>
                       <div className="flex items-center gap-4 text-xs text-gray-500">
-                        <span><strong>Modalidade:</strong> {projeto.modalidade}</span>
+                        <span><strong>modalidade:</strong> {projeto.modalidade}</span>
                         <span><strong>Proponente:</strong> {projeto.proponente.nome}</span>
                         <span><strong>Recebido em:</strong> {new Date(projeto.created_at).toLocaleDateString('pt-BR')}</span>
                       </div>

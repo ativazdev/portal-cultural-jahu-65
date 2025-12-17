@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Home,
@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/sidebar";
 import { ModalContatoSuporte } from "@/components/ModalContatoSuporte";
 import { APP_VERSION } from "@/config/version";
+import { supabase } from "@/integrations/supabase/client";
 
 const menuItemsBase = [
   { title: "Início", icon: Home, path: "dashboard" },
@@ -55,6 +56,35 @@ export const DashboardSidebar = () => {
   const [minhaContaOpen, setMinhaContaOpen] = useState(true);
   const [ajudaOpen, setAjudaOpen] = useState(false);
   const [modalSuporteOpen, setModalSuporteOpen] = useState(false);
+  const [temContatoSuporte, setTemContatoSuporte] = useState(false);
+  
+  // Verificar se há contato de suporte para proponente
+  useEffect(() => {
+    const carregarContatoSuporte = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('contato_suporte')
+          .select('whatsapp, email, telefone')
+          .eq('role', 'proponente')
+          .eq('ativo', true)
+          .maybeSingle();
+
+        // Se não há erro e há dados, verificar se tem contato
+        if (!error && data) {
+          const temContato = !!(data as any).whatsapp || !!(data as any).email || !!(data as any).telefone;
+          setTemContatoSuporte(temContato);
+        } else {
+          // Se não encontrou registro ou houve erro, não mostrar botão
+          setTemContatoSuporte(false);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar contato de suporte:', error);
+        setTemContatoSuporte(false);
+      }
+    };
+
+    carregarContatoSuporte();
+  }, []);
   
   // Gerar menus com URLs da prefeitura
   const menuItems = useMemo(() => menuItemsBase.map(item => ({ ...item, url: getUrl(item.path) })), [getUrl]);
@@ -124,14 +154,16 @@ export const DashboardSidebar = () => {
                 </SidebarMenuItem>
               ))}
               
-              <SidebarMenuItem>
-                <SidebarMenuButton 
-                  onClick={() => setModalSuporteOpen(true)}
-                >
-                  <Headphones className="h-4 w-4" />
-                  {open && <span>Suporte</span>}
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+              {temContatoSuporte && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton 
+                    onClick={() => setModalSuporteOpen(true)}
+                  >
+                    <Headphones className="h-4 w-4" />
+                    {open && <span>Suporte</span>}
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
               <SidebarMenuItem>
                 <SidebarMenuButton 
                   onClick={handleLogout}
@@ -155,6 +187,7 @@ export const DashboardSidebar = () => {
       <ModalContatoSuporte
         open={modalSuporteOpen}
         onClose={() => setModalSuporteOpen(false)}
+        role="proponente"
       />
     </Sidebar>
   );

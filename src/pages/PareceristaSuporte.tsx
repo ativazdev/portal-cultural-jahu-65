@@ -18,7 +18,7 @@ interface Duvida {
   id: string;
   pergunta: string;
   resposta?: string;
-  categoria?: string;
+  modalidade?: string;
   edital_id?: string;
   fechada: boolean;
   created_at: string;
@@ -45,12 +45,12 @@ export const PareceristaSuporte = () => {
   
   const [formData, setFormData] = useState({
     pergunta: "",
-    categoria: "",
+    modalidade: "",
     edital_selecionado: editalId || ""
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const categorias = [
+  const modalidades = [
     'Dúvida sobre edital',
     'Dúvida sobre projeto',
     'Dúvida sobre documentação',
@@ -115,7 +115,7 @@ export const PareceristaSuporte = () => {
   const handleAbrirModal = () => {
     setFormData({
       pergunta: "",
-      categoria: "",
+      modalidade: "",
       edital_selecionado: editalId || ""
     });
     setShowModal(true);
@@ -157,8 +157,8 @@ export const PareceristaSuporte = () => {
         duvidaData.edital_id = editalId;
       }
 
-      if (formData.categoria) {
-        duvidaData.categoria = formData.categoria;
+      if (formData.modalidade) {
+        duvidaData.modalidade = formData.modalidade;
       }
 
       console.log('📝 Dados da dúvida a serem inseridos:', duvidaData);
@@ -179,7 +179,7 @@ export const PareceristaSuporte = () => {
       // Reset form
       setFormData({
         pergunta: "",
-        categoria: "",
+        modalidade: "",
         edital_selecionado: editalId || ""
       });
       setShowModal(false);
@@ -320,9 +320,9 @@ export const PareceristaSuporte = () => {
                             <><XCircle className="h-3 w-3 mr-1" /> Aguardando</>
                           )}
                         </Badge>
-                        {duvida.categoria && (
+                        {duvida.modalidade && (
                           <Badge variant="outline" className="text-xs">
-                            {duvida.categoria}
+                            {duvida.modalidade}
                           </Badge>
                         )}
                         <span className="text-xs text-gray-500">
@@ -361,13 +361,13 @@ export const PareceristaSuporte = () => {
             
             <div className="space-y-4 py-4">
               <div>
-                <Label htmlFor="categoria">Categoria</Label>
-                <Select value={formData.categoria} onValueChange={(value) => setFormData({ ...formData, categoria: value })}>
+                <Label htmlFor="modalidade">Categoria</Label>
+                <Select value={formData.modalidade} onValueChange={(value) => setFormData({ ...formData, modalidade: value })}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione uma categoria (opcional)" />
                   </SelectTrigger>
                   <SelectContent>
-                    {categorias.map((cat) => (
+                    {modalidades.map((cat) => (
                       <SelectItem key={cat} value={cat}>
                         {cat}
                       </SelectItem>

@@ -90,7 +90,7 @@ export const PrefeituraDashboard = () => {
       icon: <AlertCircle className="h-6 w-6" />
     },
     {
-      title: "Contra-razões Pendentes",
+      title: "Contrarrazões Pendentes",
       value: dashboardData.cards.contraRazoesPendentes,
       subtitle: "aguardando resposta",
       color: dashboardData.cards.contraRazoesPendentes > 0 ? "orange" : "gray",
@@ -183,12 +183,12 @@ export const PrefeituraDashboard = () => {
 
         {/* Gráficos */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Gráfico de Categorias (Pizza) */}
+          {/* Gráfico de categorias (Pizza) */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center">
                 <PieChart className="h-5 w-5 mr-2" />
-                Projetos por Categoria
+                Projetos por categoria
               </CardTitle>
               <CardDescription>
                 Distribuição dos projetos por área cultural
@@ -210,7 +210,7 @@ export const PrefeituraDashboard = () => {
                               backgroundColor: `hsl(${index * 60}, 70%, 50%)`
                             }}
                           />
-                          <span className="text-sm font-medium">{item.categoria}</span>
+                          <span className="text-sm font-medium">{item.modalidade}</span>
                         </div>
                         <div className="text-right">
                           <span className="text-sm font-bold">{item.quantidade}</span>

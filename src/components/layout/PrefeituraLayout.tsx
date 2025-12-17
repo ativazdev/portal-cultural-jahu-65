@@ -14,7 +14,8 @@ import {
   LogOut,
   ChevronLeft,
   AlertCircle,
-  Headphones
+  Headphones,
+  BookOpen
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BaseLayout, Container, PageHeader, PageContent } from "./BaseLayout";
@@ -44,6 +45,8 @@ export const PrefeituraLayout = ({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [recursosPendentesCount, setRecursosPendentesCount] = useState(0);
   const [modalSuporteOpen, setModalSuporteOpen] = useState(false);
+  const [linkTutorial, setLinkTutorial] = useState<string | null>(null);
+  const [temContatoSuporte, setTemContatoSuporte] = useState(false);
 
   // Buscar recursos pendentes para mostrar badge na sidebar
   useEffect(() => {
@@ -62,6 +65,48 @@ export const PrefeituraLayout = ({
     };
     carregarRecursosPendentes();
   }, [prefeitura?.id]);
+
+  // Buscar link do tutorial e verificar se há contato de suporte baseado no role
+  useEffect(() => {
+    const carregarDadosSuporte = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('contato_suporte')
+          .select('link_tutorial, whatsapp, email, telefone')
+          .eq('role', 'prefeitura')
+          .eq('ativo', true)
+          .maybeSingle();
+
+        // Se não há erro e há dados, processar
+        if (!error && data) {
+          if ((data as any).link_tutorial) {
+            setLinkTutorial((data as any).link_tutorial);
+          } else {
+            setLinkTutorial(null);
+          }
+          // Verificar se há pelo menos um meio de contato
+          const temContato = !!(data as any).whatsapp || !!(data as any).email || !!(data as any).telefone;
+          setTemContatoSuporte(temContato);
+        } else {
+          // Se não encontrou registro ou houve erro, não mostrar botão
+          setLinkTutorial(null);
+          setTemContatoSuporte(false);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar dados de suporte:', error);
+        setLinkTutorial(null);
+        setTemContatoSuporte(false);
+      }
+    };
+
+    if (isAuthenticated && profile) {
+      carregarDadosSuporte();
+    } else {
+      // Resetar quando não autenticado
+      setLinkTutorial(null);
+      setTemContatoSuporte(false);
+    }
+  }, [isAuthenticated, profile]);
 
   // Verificar se está autenticado e tem profile válido
   React.useEffect(() => {
@@ -159,19 +204,34 @@ export const PrefeituraLayout = ({
                   </Button>
                 );
               })}
+              {linkTutorial && (
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start"
+                  onClick={() => {
+                    window.open(linkTutorial, '_blank', 'noopener,noreferrer');
+                    setSidebarOpen(false);
+                  }}
+                >
+                  <BookOpen className="mr-2 h-4 w-4" />
+                  Tutorial
+                </Button>
+              )}
             </nav>
             <div className="p-4 border-t space-y-2">
-              <Button
-                variant="outline"
-                className="w-full justify-start"
-                onClick={() => {
-                  setModalSuporteOpen(true);
-                  setSidebarOpen(false);
-                }}
-              >
-                <Headphones className="mr-2 h-4 w-4" />
-                Suporte
-              </Button>
+              {temContatoSuporte && (
+                <Button
+                  variant="outline"
+                  className="w-full justify-start"
+                  onClick={() => {
+                    setModalSuporteOpen(true);
+                    setSidebarOpen(false);
+                  }}
+                >
+                  <Headphones className="mr-2 h-4 w-4" />
+                  Suporte
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 className="w-full justify-start text-destructive hover:text-destructive"
@@ -224,16 +284,28 @@ export const PrefeituraLayout = ({
                   </Button>
                 );
               })}
+              {linkTutorial && (
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start"
+                  onClick={() => window.open(linkTutorial, '_blank', 'noopener,noreferrer')}
+                >
+                  <BookOpen className="mr-2 h-4 w-4" />
+                  Tutorial
+                </Button>
+              )}
             </nav>
             <div className="p-4 border-t space-y-2">
-              <Button
-                variant="outline"
-                className="w-full justify-start"
-                onClick={() => setModalSuporteOpen(true)}
-              >
-                <Headphones className="mr-2 h-4 w-4" />
-                Suporte
-              </Button>
+              {temContatoSuporte && (
+                <Button
+                  variant="outline"
+                  className="w-full justify-start"
+                  onClick={() => setModalSuporteOpen(true)}
+                >
+                  <Headphones className="mr-2 h-4 w-4" />
+                  Suporte
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 className="w-full justify-start text-destructive hover:text-destructive"
@@ -292,6 +364,7 @@ export const PrefeituraLayout = ({
       <ModalContatoSuporte
         open={modalSuporteOpen}
         onClose={() => setModalSuporteOpen(false)}
+        role="prefeitura"
       />
     </BaseLayout>
   );

@@ -9,7 +9,7 @@ export interface Duvida {
   parecerista_id?: string;
   fechada: boolean;
   respondida_por?: string;
-  categoria?: string;
+  modalidade?: string;
   edital_id?: string;
   created_at: string;
 }
@@ -19,7 +19,7 @@ export interface CreateDuvidaData {
   prefeitura_id: string;
   proponente_id?: string;
   parecerista_id?: string;
-  categoria?: string;
+  modalidade?: string;
   edital_id?: string;
 }
 
@@ -79,7 +79,7 @@ export const duvidaService = {
           prefeitura_id: data.prefeitura_id,
           proponente_id: data.proponente_id,
           parecerista_id: data.parecerista_id,
-          categoria: data.categoria,
+          modalidade: data.modalidade,
           edital_id: data.edital_id,
           fechada: false
         })

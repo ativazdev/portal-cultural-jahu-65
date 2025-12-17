@@ -213,7 +213,7 @@ export const PareceristaSelecionarEdital = () => {
                     </div>
                     {edital.modalidades.length > 0 && (
                       <div>
-                        <strong>Modalidades:</strong> {edital.modalidades.join(', ')}
+                        <strong>modalidades:</strong> {edital.modalidades.join(', ')}
                       </div>
                     )}
                   </div>

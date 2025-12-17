@@ -191,7 +191,7 @@ export const DashboardMain = () => {
                       
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
-                          <label className="text-sm font-medium text-gray-500">Modalidades</label>
+                          <label className="text-sm font-medium text-gray-500">Categorias</label>
                           <p className="text-sm text-gray-900">{edital.modalidades.join(', ')}</p>
                         </div>
                         <div>

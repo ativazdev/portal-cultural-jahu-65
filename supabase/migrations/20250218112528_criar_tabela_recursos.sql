@@ -40,7 +40,7 @@ FOR EACH ROW
 EXECUTE FUNCTION update_updated_at_column();
 
 -- Comentários
-COMMENT ON TABLE recursos IS 'Tabela para recursos e contra-razões de projetos avaliados';
+COMMENT ON TABLE recursos IS 'Tabela para recursos e Contrarrazões de projetos avaliados';
 COMMENT ON COLUMN recursos.tipo IS 'Tipo: recurso ou contra_razao';
 COMMENT ON COLUMN recursos.status IS 'Status: pendente, em_analise, deferido, indeferido';
 

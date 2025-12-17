@@ -509,7 +509,7 @@ export const PrefeituraProjetoDetalhes = () => {
     });
   };
 
-  const getModalidadeLabel = (modalidade: string) => {
+  const getCategoriaLabel = (modalidade: string) => {
     const labels: Record<string, string> = {
       'musica': 'Música',
       'teatro': 'Teatro',
@@ -870,7 +870,7 @@ export const PrefeituraProjetoDetalhes = () => {
                     <p className="text-sm font-medium">{projeto.nome}</p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-500">Modalidade</label>
+                    <label className="text-sm font-medium text-gray-500">Categoria</label>
                     <p className="text-sm">{projeto.modalidade}</p>
                   </div>
                   <div>
@@ -2901,10 +2901,10 @@ export const PrefeituraProjetoDetalhes = () => {
                   <p className="text-gray-900">{projeto.nome}</p>
                 </div>
                 <div>
-                  <span className="font-medium text-gray-700">Modalidade:</span>
+                  <span className="font-medium text-gray-700">Categoria:</span>
                   <p className="text-gray-900">
                     <Badge className="bg-blue-100 text-blue-800">
-                      {getModalidadeLabel(projeto.modalidade)}
+                      {getCategoriaLabel(projeto.modalidade)}
                     </Badge>
                   </p>
                 </div>
@@ -3001,7 +3001,7 @@ export const PrefeituraProjetoDetalhes = () => {
                                         : 'bg-gray-100 text-gray-600'
                                     }`}
                                   >
-                                    {getModalidadeLabel(esp)}
+                                    {getCategoriaLabel(esp)}
                                   </Badge>
                                 ))}
                               </div>
@@ -3083,7 +3083,7 @@ export const PrefeituraProjetoDetalhes = () => {
                   <p className="text-gray-900">{projeto.nome}</p>
                 </div>
                 <div>
-                  <span className="font-medium text-gray-700">Modalidade:</span>
+                  <span className="font-medium text-gray-700">Categoria:</span>
                   <p className="text-gray-900">{projeto.modalidade}</p>
                 </div>
                 <div>

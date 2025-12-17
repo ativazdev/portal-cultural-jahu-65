@@ -63,7 +63,14 @@ export const DadosBasicosPF = ({ formData, handleInputChange }: StepFormsProps) 
           id="reg-nascimento"
           type="date"
           value={formData.dataNascimento}
-          onChange={(e) => handleInputChange("dataNascimento", e.target.value)}
+          onChange={(e) => {
+            const selectedDate = e.target.value;
+            const today = new Date().toISOString().split('T')[0];
+            if (selectedDate <= today) {
+              handleInputChange("dataNascimento", selectedDate);
+            }
+          }}
+          max={new Date().toISOString().split('T')[0]}
           required
         />
       </div>
@@ -957,7 +964,14 @@ export const ResponsavelPJ = ({ formData, handleInputChange }: StepFormsProps) =
             id="reg-nascimento-responsavel"
             type="date"
             value={formData.dataNascimentoResponsavel}
-            onChange={(e) => handleInputChange("dataNascimentoResponsavel", e.target.value)}
+            onChange={(e) => {
+              const selectedDate = e.target.value;
+              const today = new Date().toISOString().split('T')[0];
+              if (selectedDate <= today) {
+                handleInputChange("dataNascimentoResponsavel", selectedDate);
+              }
+            }}
+            max={new Date().toISOString().split('T')[0]}
             required
           />
         </div>

@@ -33,7 +33,7 @@ export const PrefeituraExportarRanking = () => {
   const [editalInfo, setEditalInfo] = useState<{ nome: string; codigo: string } | null>(null);
   const [rankingExpanded, setRankingExpanded] = useState(true);
 
-  const getModalidadeLabel = (m: string) => {
+  const getCategoriaLabel = (m: string) => {
     const labels: Record<string, string> = {
       'musica': 'Música',
       'teatro': 'Teatro',
@@ -108,13 +108,13 @@ export const PrefeituraExportarRanking = () => {
 
       // Calcular ranking por modalidade e tipo de concorrência
       const projetosComRanking = projetosComAvaliacoes.map(projeto => {
-        const projetosMesmaModalidadeECategoria = projetosComAvaliacoes.filter(
+        const projetosMesmaCategoriaECategoria = projetosComAvaliacoes.filter(
           p => p.modalidade === projeto.modalidade && 
                p.tipo_concorrencia === projeto.tipo_concorrencia
         );
         
         // Ordenar por nota final (maior para menor)
-        const ordenados = [...projetosMesmaModalidadeECategoria].sort((a, b) => {
+        const ordenados = [...projetosMesmaCategoriaECategoria].sort((a, b) => {
           const notaA = a.nota_final || 0;
           const notaB = b.nota_final || 0;
           return notaB - notaA;
@@ -160,11 +160,11 @@ export const PrefeituraExportarRanking = () => {
     const modalidades = Array.from(new Set(habilitados.map(p => p.modalidade)));
     
     return modalidades.map(modalidade => {
-      const projetosModalidade = habilitados.filter(p => p.modalidade === modalidade);
-      const amplaConcorrencia = projetosModalidade
+      const projetosCategoria = habilitados.filter(p => p.modalidade === modalidade);
+      const amplaConcorrencia = projetosCategoria
         .filter(p => p.tipo_concorrencia === 'ampla_concorrencia')
         .sort((a, b) => (b.nota_final || 0) - (a.nota_final || 0));
-      const cotistas = projetosModalidade
+      const cotistas = projetosCategoria
         .filter(p => p.tipo_concorrencia === 'cotistas')
         .sort((a, b) => (b.nota_final || 0) - (a.nota_final || 0));
 
@@ -301,14 +301,14 @@ export const PrefeituraExportarRanking = () => {
                     const modalidades = Array.from(new Set(projetosHabilitados.map(p => p.modalidade)));
 
                     return modalidades.map(modalidade => {
-                      const projetosModalidade = projetosHabilitados.filter(p => p.modalidade === modalidade);
-                      const amplaConcorrencia = projetosModalidade.filter(p => p.tipo_concorrencia === 'ampla_concorrencia');
-                      const cotistas = projetosModalidade.filter(p => p.tipo_concorrencia === 'cotistas');
+                      const projetosCategoria = projetosHabilitados.filter(p => p.modalidade === modalidade);
+                      const amplaConcorrencia = projetosCategoria.filter(p => p.tipo_concorrencia === 'ampla_concorrencia');
+                      const cotistas = projetosCategoria.filter(p => p.tipo_concorrencia === 'cotistas');
 
                       return (
                         <div key={modalidade} className="space-y-4">
                           <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">
-                            {getModalidadeLabel(modalidade)}
+                            {getCategoriaLabel(modalidade)}
                           </h3>
                           
                           {/* Ampla Concorrência */}
@@ -532,7 +532,7 @@ export const PrefeituraExportarRanking = () => {
                     {projetosHabilitadosAgrupados().map((grupo) => (
                       <div key={grupo.modalidade} className="space-y-3">
                         <h3 className="text-sm font-semibold text-gray-900 border-b pb-1">
-                          {getModalidadeLabel(grupo.modalidade)}
+                          {getCategoriaLabel(grupo.modalidade)}
                         </h3>
                         
                         {/* Ampla Concorrência */}

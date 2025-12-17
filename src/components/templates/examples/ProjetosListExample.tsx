@@ -31,7 +31,7 @@ export const ProjetosListExample: React.FC = () => {
     {
       id: '1',
       nome: 'Festival de Música Popular',
-      categoria: 'Música',
+      modalidade: 'Música',
       proponente: 'João Silva',
       tipoProponente: 'PF',
       valorSolicitado: 25000,
@@ -44,7 +44,7 @@ export const ProjetosListExample: React.FC = () => {
     {
       id: '2',
       nome: 'Teatro Comunitário',
-      categoria: 'Artes Cênicas',
+      modalidade: 'Artes Cênicas',
       proponente: 'Grupo Teatral ABC',
       tipoProponente: 'PJ',
       valorSolicitado: 40000,
@@ -57,7 +57,7 @@ export const ProjetosListExample: React.FC = () => {
     {
       id: '3',
       nome: 'Exposição de Artes Visuais',
-      categoria: 'Artes Visuais',
+      modalidade: 'Artes Visuais',
       proponente: 'Ana Costa',
       tipoProponente: 'PF',
       valorSolicitado: 15000,
@@ -81,7 +81,7 @@ export const ProjetosListExample: React.FC = () => {
       render: (item) => (
         <div className="space-y-1">
           <div className="font-medium">{item.nome}</div>
-          <div className="text-sm text-gray-500">{item.categoria}</div>
+          <div className="text-sm text-gray-500">{item.modalidade}</div>
         </div>
       )
     },
@@ -160,7 +160,7 @@ export const ProjetosListExample: React.FC = () => {
       ]
     },
     {
-      key: 'categoria',
+      key: 'modalidade',
       label: 'Categoria',
       type: 'select',
       options: [
@@ -309,7 +309,7 @@ export const ProjetosListExample: React.FC = () => {
       title: 'Informações do Projeto',
       fields: [
         { key: 'nome', label: 'Nome do Projeto', value: projeto.nome, type: 'text' },
-        { key: 'categoria', label: 'Categoria', value: projeto.categoria, type: 'badge', color: 'info' },
+        { key: 'modalidade', label: 'Categoria', value: projeto.modalidade, type: 'badge', color: 'info' },
         { key: 'edital', label: 'Edital', value: projeto.edital, type: 'text' },
         { key: 'dataSubmissao', label: 'Data de Submissão', value: projeto.dataSubmissao, type: 'date' }
       ]

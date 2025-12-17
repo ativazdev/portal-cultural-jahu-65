@@ -288,7 +288,7 @@ export const recursosService = {
     }
   },
 
-  // Buscar projetos com contra-razões pendentes por edital
+  // Buscar projetos com Contrarrazões pendentes por edital
   async getProjetosComContraRazoesPendentes(editalId: string): Promise<Array<{ projeto: any; contraRazao: Recurso }>> {
     try {
       // Buscar projetos do edital
@@ -305,7 +305,7 @@ export const recursosService = {
 
       const projetoIds = projetos.map(p => p.id);
 
-      // Buscar contra-razões pendentes
+      // Buscar Contrarrazões pendentes
       const { data: contraRazoes, error: contraRazoesError } = await supabase
         .from('recursos')
         .select('*')
@@ -315,13 +315,13 @@ export const recursosService = {
 
       if (contraRazoesError) throw contraRazoesError;
 
-      // Combinar projetos com suas contra-razões
+      // Combinar projetos com suas Contrarrazões
       return (contraRazoes || []).map(contraRazao => ({
         projeto: projetos.find(p => p.id === contraRazao.projeto_id),
         contraRazao: contraRazao as Recurso
       })).filter(item => item.projeto);
     } catch (error: any) {
-      console.error('Erro ao buscar projetos com contra-razões pendentes:', error);
+      console.error('Erro ao buscar projetos com Contrarrazões pendentes:', error);
       return [];
     }
   },
@@ -364,7 +364,7 @@ export const recursosService = {
     }
   },
 
-  // Buscar TODOS os projetos com contra-razões por edital (não apenas pendentes)
+  // Buscar TODOS os projetos com Contrarrazões por edital (não apenas pendentes)
   async getProjetosComContraRazoes(editalId: string): Promise<Array<{ projeto: any; contraRazao: Recurso }>> {
     try {
       // Buscar projetos do edital
@@ -381,7 +381,7 @@ export const recursosService = {
 
       const projetoIds = projetos.map(p => p.id);
 
-      // Buscar TODAS as contra-razões (não apenas pendentes)
+      // Buscar TODAS as Contrarrazões (não apenas pendentes)
       const { data: contraRazoes, error: contraRazoesError } = await supabase
         .from('recursos')
         .select('*')
@@ -391,13 +391,13 @@ export const recursosService = {
 
       if (contraRazoesError) throw contraRazoesError;
 
-      // Combinar projetos com suas contra-razões
+      // Combinar projetos com suas Contrarrazões
       return (contraRazoes || []).map(contraRazao => ({
         projeto: projetos.find(p => p.id === contraRazao.projeto_id),
         contraRazao: contraRazao as Recurso
       })).filter(item => item.projeto);
     } catch (error: any) {
-      console.error('Erro ao buscar projetos com contra-razões:', error);
+      console.error('Erro ao buscar projetos com Contrarrazões:', error);
       return [];
     }
   },

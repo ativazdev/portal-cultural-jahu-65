@@ -386,11 +386,11 @@ export function useProjetos() {
   // Filtrar projetos
   const filtrarProjetos = (filtros: ProjetoFiltros): ProjetoCompleto[] => {
     return projetos.filter(projeto => {
-      // Busca em nome do projeto, proponente e categoria
+      // Busca em nome do projeto, proponente e modalidade
       const matchBusca = !filtros.busca || 
         projeto.nome.toLowerCase().includes(filtros.busca.toLowerCase()) ||
         (projeto.proponente && projeto.proponente.nome.toLowerCase().includes(filtros.busca.toLowerCase())) ||
-        (projeto.categoria && projeto.categoria.toLowerCase().includes(filtros.busca.toLowerCase()));
+        (projeto.modalidade && projeto.modalidade.toLowerCase().includes(filtros.busca.toLowerCase()));
 
       // Filtro por parecerista
       const matchParecerista = filtros.parecerista === "Todos" ||

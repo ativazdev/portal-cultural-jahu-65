@@ -547,7 +547,7 @@ export const PareceristaProjetoDetalhes = () => {
                     <p className="text-sm font-medium">{projeto.nome}</p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-500">Modalidade</label>
+                    <label className="text-sm font-medium text-gray-500">Categoria</label>
                     <p className="text-sm">{projeto.modalidade}</p>
                   </div>
                   <div>

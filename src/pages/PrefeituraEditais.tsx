@@ -223,7 +223,7 @@ export const PrefeituraEditais = () => {
                 {item.codigo}
               </div>
               {temRecursosPendentes && (
-                <div className="flex items-center gap-0.5 flex-shrink-0" title={`${recursosPendentesPorEdital[item.id]} recursos/contra-razões pendentes`}>
+                <div className="flex items-center gap-0.5 flex-shrink-0" title={`${recursosPendentesPorEdital[item.id]} recursos/Contrarrazões pendentes`}>
                   <AlertCircle className="h-3 w-3 text-red-500" />
                   <span className="text-xs font-bold text-red-500">{recursosPendentesPorEdital[item.id]}</span>
                 </div>
@@ -264,7 +264,7 @@ export const PrefeituraEditais = () => {
             {valorEmMilhares >= 1000 
               ? `R$ ${(valorEmMilhares / 1000).toFixed(1)}M`
               : valorEmMilhares >= 1
-              ? `R$ ${valorEmMilhares.toFixed(0)}k`
+              ? `R$ ${valorEmMilhares.toFixed(0)} mil`
               : `R$ ${valor.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`
             }
           </div>
@@ -295,7 +295,7 @@ export const PrefeituraEditais = () => {
               <SelectItem value="recebendo_projetos">Recebendo Projetos</SelectItem>
               <SelectItem value="avaliacao">Avaliação</SelectItem>
               <SelectItem value="recurso">Recurso</SelectItem>
-              <SelectItem value="contra_razao">Contra-razão</SelectItem>
+              <SelectItem value="contra_razao">Contrarrazão</SelectItem>
               <SelectItem value="em_execucao">Em Execução</SelectItem>
               <SelectItem value="finalizado">Finalizado</SelectItem>
               {currentStatus === 'rascunho' && (
@@ -319,7 +319,7 @@ export const PrefeituraEditais = () => {
         { value: 'recebendo_projetos', label: 'Recebendo Projetos' },
         { value: 'avaliacao', label: 'Avaliação' },
         { value: 'recurso', label: 'Recurso' },
-        { value: 'contra_razao', label: 'Contra-razão' },
+        { value: 'contra_razao', label: 'Contrarrazão' },
         { value: 'em_execucao', label: 'Em Execução' },
         { value: 'finalizado', label: 'Finalizado' },
         { value: 'rascunho', label: 'Rascunho' },
@@ -373,7 +373,7 @@ export const PrefeituraEditais = () => {
       case "recurso":
         return "Recurso";
       case "contra_razao":
-        return "Contra-razão";
+        return "Contrarrazão";
       case "em_execucao":
         return "Em Execução";
       case "finalizado":

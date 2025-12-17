@@ -1,4 +1,4 @@
-import React, { ReactNode, useState } from "react";
+import React, { ReactNode, useState, useEffect } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { 
@@ -11,7 +11,8 @@ import {
   LogOut,
   Briefcase,
   Headphones,
-  Settings
+  Settings,
+  BookOpen
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BaseLayout } from "./BaseLayout";
@@ -19,6 +20,7 @@ import { useProponenteAuth } from "@/hooks/useProponenteAuth";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ModalContatoSuporte } from "@/components/ModalContatoSuporte";
 import { APP_VERSION } from "@/config/version";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ProponenteLayoutProps {
   children: ReactNode;
@@ -39,6 +41,50 @@ export const ProponenteLayout = ({
   const { logout, isAuthenticated, loading, proponente, prefeitura } = useProponenteAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [modalSuporteOpen, setModalSuporteOpen] = useState(false);
+  const [linkTutorial, setLinkTutorial] = useState<string | null>(null);
+  const [temContatoSuporte, setTemContatoSuporte] = useState(false);
+
+  // Buscar link do tutorial e verificar se há contato de suporte baseado no role
+  useEffect(() => {
+    const carregarDadosSuporte = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('contato_suporte')
+          .select('link_tutorial, whatsapp, email, telefone')
+          .eq('role', 'proponente')
+          .eq('ativo', true)
+          .maybeSingle();
+
+        // Se não há erro e há dados, processar
+        if (!error && data) {
+          if ((data as any).link_tutorial) {
+            setLinkTutorial((data as any).link_tutorial);
+          } else {
+            setLinkTutorial(null);
+          }
+          // Verificar se há pelo menos um meio de contato
+          const temContato = !!(data as any).whatsapp || !!(data as any).email || !!(data as any).telefone;
+          setTemContatoSuporte(temContato);
+        } else {
+          // Se não encontrou registro ou houve erro, não mostrar botão
+          setLinkTutorial(null);
+          setTemContatoSuporte(false);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar dados de suporte:', error);
+        setLinkTutorial(null);
+        setTemContatoSuporte(false);
+      }
+    };
+
+    if (isAuthenticated && proponente) {
+      carregarDadosSuporte();
+    } else {
+      // Resetar quando não autenticado
+      setLinkTutorial(null);
+      setTemContatoSuporte(false);
+    }
+  }, [isAuthenticated, proponente]);
 
   // Verificar se está autenticado e tem proponente válido
   React.useEffect(() => {
@@ -123,6 +169,21 @@ export const ProponenteLayout = ({
                     </button>
                   );
                 })}
+                {linkTutorial && (
+                  <button
+                    onClick={() => {
+                      window.open(linkTutorial, '_blank', 'noopener,noreferrer');
+                      setSidebarOpen(false);
+                    }}
+                    className={cn(
+                      "flex items-center gap-3 px-3 py-2 rounded-lg w-full transition-colors",
+                      "text-gray-700 hover:bg-gray-100"
+                    )}
+                  >
+                    <BookOpen className="h-5 w-5" />
+                    <span>Tutorial</span>
+                  </button>
+                )}
               </nav>
 
               <div className="p-4 border-t">
@@ -148,18 +209,20 @@ export const ProponenteLayout = ({
                     <Settings className="mr-2 h-4 w-4" />
                     Editar Perfil
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full"
-                    onClick={() => {
-                      setModalSuporteOpen(true);
-                      setSidebarOpen(false);
-                    }}
-                  >
-                    <Headphones className="mr-2 h-4 w-4" />
-                    Suporte
-                  </Button>
+                  {temContatoSuporte && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => {
+                        setModalSuporteOpen(true);
+                        setSidebarOpen(false);
+                      }}
+                    >
+                      <Headphones className="mr-2 h-4 w-4" />
+                      Suporte
+                    </Button>
+                  )}
                   <Button
                     variant="outline"
                     size="sm"
@@ -207,6 +270,18 @@ export const ProponenteLayout = ({
                 </button>
               );
             })}
+            {linkTutorial && (
+              <button
+                onClick={() => window.open(linkTutorial, '_blank', 'noopener,noreferrer')}
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2 rounded-lg w-full transition-colors",
+                  "text-gray-700 hover:bg-gray-100"
+                )}
+              >
+                <BookOpen className="h-5 w-5" />
+                <span>Tutorial</span>
+              </button>
+            )}
           </nav>
 
           <div className="p-4 border-t">
@@ -229,15 +304,17 @@ export const ProponenteLayout = ({
                 <Settings className="mr-2 h-4 w-4" />
                 Editar Perfil
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full"
-                onClick={() => setModalSuporteOpen(true)}
-              >
-                <Headphones className="mr-2 h-4 w-4" />
-                Suporte
-              </Button>
+              {temContatoSuporte && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => setModalSuporteOpen(true)}
+                >
+                  <Headphones className="mr-2 h-4 w-4" />
+                  Suporte
+                </Button>
+              )}
               <Button
                 variant="outline"
                 size="sm"
@@ -310,6 +387,7 @@ export const ProponenteLayout = ({
       <ModalContatoSuporte
         open={modalSuporteOpen}
         onClose={() => setModalSuporteOpen(false)}
+        role="proponente"
       />
     </BaseLayout>
   );

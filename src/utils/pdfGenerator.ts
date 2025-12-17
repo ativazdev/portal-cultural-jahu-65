@@ -62,20 +62,20 @@ export const gerarPDF = async (data: PDFData) => {
   doc.text(tipoTitulo, margin, yPosition);
   yPosition += 10;
 
-  // Filtrar projetos por modalidades selecionadas
+  // Filtrar projetos por categorias selecionadas
   const projetosFiltrados = data.projetos.filter(p => 
     data.modalidades.includes(p.modalidade)
   );
 
-  // Processar cada modalidade
+  // Processar cada categoria
   for (const modalidade of data.modalidades) {
-    const projetosModalidade = projetosFiltrados.filter(p => p.modalidade === modalidade);
+    const projetosCategoria = projetosFiltrados.filter(p => p.modalidade === modalidade);
     
-    if (projetosModalidade.length === 0) continue;
+    if (projetosCategoria.length === 0) continue;
 
     checkPageBreak(15);
 
-    // Título da modalidade
+    // Título da categoria
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
     doc.setFillColor(200, 200, 200);
@@ -83,9 +83,9 @@ export const gerarPDF = async (data: PDFData) => {
     doc.text(modalidade, margin + 5, yPosition);
     yPosition += 10;
 
-    // Processar projetos da modalidade
-    for (let i = 0; i < projetosModalidade.length; i++) {
-      const projeto = projetosModalidade[i];
+    // Processar projetos da categoria
+    for (let i = 0; i < projetosCategoria.length; i++) {
+      const projeto = projetosCategoria[i];
       
       checkPageBreak(40);
 
@@ -210,7 +210,7 @@ interface PDFRankingData {
   editalCodigo?: string;
 }
 
-const getModalidadeLabel = (m: string) => {
+const getCategoriaLabel = (m: string) => {
   const labels: Record<string, string> = {
     'musica': 'Música',
     'teatro': 'Teatro',
@@ -313,7 +313,7 @@ const gerarPDFRankingBlob = async (data: PDFRankingData): Promise<Blob> => {
   doc.text(tipoTitulo, (pageWidth - tipoTituloWidth) / 2, yPosition);
   yPosition += 10;
 
-  // Ordenar projetos por modalidade e depois por ranking
+  // Ordenar projetos por categoria e depois por ranking
   const projetosOrdenados = [...data.projetos].sort((a, b) => {
     if (a.modalidade !== b.modalidade) {
       return a.modalidade.localeCompare(b.modalidade);
@@ -321,8 +321,8 @@ const gerarPDFRankingBlob = async (data: PDFRankingData): Promise<Blob> => {
     return a.ranking - b.ranking;
   });
 
-  // Agrupar por modalidade
-  const projetosPorModalidade = projetosOrdenados.reduce((acc, projeto) => {
+  // Agrupar por categoria
+  const projetosPorCategoria = projetosOrdenados.reduce((acc, projeto) => {
     if (!acc[projeto.modalidade]) {
       acc[projeto.modalidade] = [];
     }
@@ -330,11 +330,11 @@ const gerarPDFRankingBlob = async (data: PDFRankingData): Promise<Blob> => {
     return acc;
   }, {} as Record<string, ProjetoRanking[]>);
 
-  // Processar cada modalidade
-  for (const [modalidade, projetosModalidade] of Object.entries(projetosPorModalidade)) {
+  // Processar cada categoria
+  for (const [modalidade, projetosCategoria] of Object.entries(projetosPorCategoria)) {
     checkPageBreak(35);
 
-    // Título da modalidade
+    // Título da categoria
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
     doc.setFillColor(230, 230, 230);
@@ -342,7 +342,7 @@ const gerarPDFRankingBlob = async (data: PDFRankingData): Promise<Blob> => {
     doc.setDrawColor(180, 180, 180);
     doc.rect(tableStartX, yPosition - 6, tableWidth, headerHeight, 'S');
     doc.setTextColor(0, 0, 0);
-    doc.text(getModalidadeLabel(modalidade), tableStartX + 5, yPosition);
+    doc.text(getCategoriaLabel(modalidade), tableStartX + 5, yPosition);
     yPosition += headerHeight + 2;
 
     // Cabeçalho da tabela
@@ -372,7 +372,7 @@ const gerarPDFRankingBlob = async (data: PDFRankingData): Promise<Blob> => {
     xPos += colWidths.ranking;
     doc.text('Nome', xPos, yPosition);
     xPos += colWidths.nome;
-    doc.text('Modalidade', xPos, yPosition);
+    doc.text('Categoria', xPos, yPosition);
     xPos += colWidths.modalidade;
     doc.text('Pontos', xPos, yPosition);
     xPos += colWidths.pontos;
@@ -381,9 +381,9 @@ const gerarPDFRankingBlob = async (data: PDFRankingData): Promise<Blob> => {
     yPosition += rowHeight;
 
     // Linhas da tabela
-    for (let i = 0; i < projetosModalidade.length; i++) {
-      const projeto = projetosModalidade[i];
-      const isLast = i === projetosModalidade.length - 1;
+    for (let i = 0; i < projetosCategoria.length; i++) {
+      const projeto = projetosCategoria[i];
+      const isLast = i === projetosCategoria.length - 1;
       
       checkPageBreak(rowHeight + 5);
       
@@ -392,12 +392,12 @@ const gerarPDFRankingBlob = async (data: PDFRankingData): Promise<Blob> => {
       
       // Calcular altura necessária para todas as células (pode quebrar linha)
       const nomeLines = doc.splitTextToSize(projeto.nome, colWidths.nome - 4);
-      const modalidadeLabel = getModalidadeLabel(projeto.modalidade);
-      const modalidadeLines = doc.splitTextToSize(modalidadeLabel, colWidths.modalidade - 4);
+      const CategoriaLabel = getCategoriaLabel(projeto.modalidade);
+      const CategoriaLines = doc.splitTextToSize(CategoriaLabel, colWidths.modalidade - 4);
       const statusLabel = getStatusLabel(projeto.status);
       const statusLines = doc.splitTextToSize(statusLabel, colWidths.status - 4);
       
-      const maxLines = Math.max(nomeLines.length, modalidadeLines.length, statusLines.length, 1);
+      const maxLines = Math.max(nomeLines.length, CategoriaLines.length, statusLines.length, 1);
       const cellHeight = Math.max(rowHeight, maxLines * 4 + 2);
       
       // Desenhar célula da linha
@@ -440,15 +440,15 @@ const gerarPDFRankingBlob = async (data: PDFRankingData): Promise<Blob> => {
       }
       xPos += colWidths.nome;
       
-      // Modalidade
-      if (Array.isArray(modalidadeLines)) {
-        let modalidadeY = textY;
-        modalidadeLines.forEach((line: string) => {
-          doc.text(line, xPos, modalidadeY);
-          modalidadeY += 4;
+      // modalidade
+      if (Array.isArray(CategoriaLines)) {
+        let CategoriaY = textY;
+        CategoriaLines.forEach((line: string) => {
+          doc.text(line, xPos, CategoriaY);
+          CategoriaY += 4;
         });
       } else {
-        doc.text(modalidadeLabel, xPos, textY);
+        doc.text(CategoriaLabel, xPos, textY);
       }
       xPos += colWidths.modalidade;
       

@@ -180,7 +180,7 @@ export const ProponenteProjetos = () => {
                           <p className="text-gray-600 mt-1">{projeto.descricao}</p>
                         </div>
                         <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
-                          <span className="font-medium">Modalidade: {projeto.modalidade}</span>
+                          <span className="font-medium">Categoria: {projeto.modalidade}</span>
                           {edital?.codigo && (
                             <span className="font-medium">Edital: {edital.codigo}</span>
                           )}
