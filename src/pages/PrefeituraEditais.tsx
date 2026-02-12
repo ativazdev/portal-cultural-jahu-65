@@ -425,7 +425,13 @@ export const PrefeituraEditais = () => {
     if (currentStatus === novoStatus) return;
     
     // Se está saindo de rascunho, mostrar modal de confirmação
+    // EXCEÇÃO: Se for mudar para "Recebendo Projetos", não mostrar modal (solicitação do usuário)
     if (currentStatus === 'rascunho' && novoStatus !== 'rascunho') {
+      if (novoStatus === 'recebendo_projetos') {
+        await confirmarAlteracaoStatus(edital, novoStatus);
+        return;
+      }
+
       setModalConfirmacaoStatus({
         aberto: true,
         edital: edital,
@@ -693,11 +699,13 @@ export const PrefeituraEditais = () => {
               <p>
                 Você está prestes a alterar o status do edital <strong>"{modalConfirmacaoStatus.edital?.nome}"</strong> de <strong>"Rascunho"</strong> para <strong>"{getStatusLabel(modalConfirmacaoStatus.novoStatus || '')}"</strong>.
               </p>
-              <div className="bg-red-50 border border-red-200 rounded-md p-3">
-                <p className="text-red-800 font-semibold">
-                  ⚠️ ATENÇÃO: Após esta alteração, não será mais possível editar este edital ou voltar o status para "Rascunho".
-                </p>
-              </div>
+              {modalConfirmacaoStatus.edital?.status === 'rascunho' && (
+                <div className="bg-red-50 border border-red-200 rounded-md p-3">
+                  <p className="text-red-800 font-semibold">
+                    ⚠️ ATENÇÃO: Após esta alteração, não será mais possível editar este edital ou voltar o status para "Rascunho".
+                  </p>
+                </div>
+              )}
               <p>
                 Tem certeza que deseja continuar?
               </p>

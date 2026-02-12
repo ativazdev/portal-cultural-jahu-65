@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { recursosService, Recurso, CreateRecursoData, UpdateRecursoData } from '@/services/recursosService';
 import { useToast } from '@/hooks/use-toast';
+import { getAuthenticatedSupabaseClient } from '@/integrations/supabase/client';
+
 
 export const useRecursos = (proponenteId?: string, projetoId?: string, prefeituraId?: string) => {
   const [recursos, setRecursos] = useState<Recurso[]>([]);
@@ -48,7 +50,8 @@ export const useRecursos = (proponenteId?: string, projetoId?: string, prefeitur
   const createRecurso = async (recursoData: CreateRecursoData): Promise<boolean> => {
     try {
       setLoading(true);
-      await recursosService.create(recursoData);
+      const client = getAuthenticatedSupabaseClient('proponente');
+      await recursosService.create(recursoData, client);
       
       toast({
         title: 'Recurso criado',
@@ -73,7 +76,8 @@ export const useRecursos = (proponenteId?: string, projetoId?: string, prefeitur
   const updateRecurso = async (id: string, updateData: UpdateRecursoData): Promise<boolean> => {
     try {
       setLoading(true);
-      await recursosService.update(id, updateData);
+      const client = getAuthenticatedSupabaseClient('proponente');
+      await recursosService.update(id, updateData, client);
       
       toast({
         title: 'Recurso atualizado',
@@ -98,7 +102,8 @@ export const useRecursos = (proponenteId?: string, projetoId?: string, prefeitur
   const deleteRecurso = async (id: string): Promise<boolean> => {
     try {
       setLoading(true);
-      const success = await recursosService.delete(id);
+      const client = getAuthenticatedSupabaseClient('proponente');
+      const success = await recursosService.delete(id, client);
       
       if (success) {
         toast({

@@ -469,8 +469,8 @@ export const PrefeituraProjetoDetalhes = () => {
       avaliacaoFinalId = avaliacaoFinalExistente.id;
     } else {
       // Criar avaliação final primeiro
-      const { data: novaAvaliacaoFinal, error: avaliacaoFinalError } = await supabase
-        .from('avaliacoes_final')
+      const { data: novaAvaliacaoFinal, error: avaliacaoFinalError } = await (supabase
+        .from('avaliacoes_final') as any)
         .insert({
           prefeitura_id: projeto.prefeitura_id || prefeitura.id,
           projeto_id: projetoId,
@@ -504,32 +504,32 @@ export const PrefeituraProjetoDetalhes = () => {
         data_atribuicao: new Date().toISOString()
       }));
 
-      const { error: avaliacoesError } = await supabase
-        .from('avaliacoes')
+      const { error: avaliacoesError } = await (supabase
+        .from('avaliacoes') as any)
         .insert(avaliacoesParaCriar);
 
       if (avaliacoesError) throw avaliacoesError;
 
       // Atualizar quantidade de pareceristas na avaliação final
       const totalPareceristas = (avaliacoesExistentes?.length || 0) + novosPareceristas.length;
-      await supabase
-        .from('avaliacoes_final')
+      await (supabase
+        .from('avaliacoes_final') as any)
         .update({ quantidade_pareceristas: totalPareceristas })
         .eq('id', avaliacaoFinalId);
 
       // Atualizar contador de projetos dos pareceristas
       for (const id of novosPareceristas) {
         // Buscar valor atual
-        const { data: pareceristaAtual } = await supabase
-          .from('pareceristas')
+        const { data: pareceristaAtual } = await (supabase
+          .from('pareceristas') as any)
           .select('projetos_em_analise')
           .eq('id', id)
           .single();
         
         const novoValor = (pareceristaAtual?.projetos_em_analise || 0) + 1;
         
-        await supabase
-          .from('pareceristas')
+        await (supabase
+          .from('pareceristas') as any)
           .update({ projetos_em_analise: novoValor })
           .eq('id', id);
       }
@@ -538,8 +538,8 @@ export const PrefeituraProjetoDetalhes = () => {
     // Atualizar status do projeto para aguardando_avaliacao quando pareceristas são atribuídos
     const totalAvaliacoes = (avaliacoesExistentes?.length || 0) + novosPareceristas.length;
     if (totalAvaliacoes > 0 && projeto.status === 'aguardando_parecerista') {
-      const { error: projetoError } = await supabase
-        .from('projetos')
+      const { error: projetoError } = await (supabase
+        .from('projetos') as any)
         .update({
           status: 'aguardando_avaliacao',
           updated_at: new Date().toISOString()
@@ -646,12 +646,25 @@ export const PrefeituraProjetoDetalhes = () => {
   };
 
   const handleCriarAvaliacao = async () => {
-    if (pareceristasSelecionados.length === 0 || !projetoId || !prefeitura?.id) return;
+    if (pareceristasSelecionados.length === 0 || !projetoId || !prefeitura?.id) {
+      console.warn('Tentativa de criar avaliação com dados incompletos:', { 
+        pareceristas: pareceristasSelecionados.length, 
+        projetoId, 
+        prefeituraId: prefeitura?.id 
+      });
+      return;
+    }
+
+    console.log('Iniciando criação de avaliação:', {
+      projetoId,
+      pareceristasSelecionados
+    });
 
     try {
       setCriandoAvaliacao(true);
       await atribuirPareceristaWrapper(projetoId, pareceristasSelecionados);
       
+      console.log('Avaliações criadas com sucesso');
       toast({
         title: "Avaliações criadas",
         description: `${pareceristasSelecionados.length} parecerista(s) atribuído(s) com sucesso.`,
@@ -660,9 +673,10 @@ export const PrefeituraProjetoDetalhes = () => {
       setPareceristasSelecionados([]);
       refreshAvaliacoes();
     } catch (error: any) {
+      console.error('Erro detalhado ao criar avaliação:', error);
       toast({
-        title: "Erro",
-        description: error.message || "Não foi possível criar as avaliações.",
+        title: "Erro ao atribuir parecerista",
+        description: error.message || "Não foi possível criar as avaliações. Verifique se o parecerista já está atribuído.",
         variant: "destructive",
       });
     } finally {
@@ -2113,7 +2127,7 @@ export const PrefeituraProjetoDetalhes = () => {
                     )}
 
                     {/* Avaliação Final Consolidada */}
-                    {avaliacaoFinal && (
+                    {/*avaliacaoFinal && (
                       <div className="mt-6 pt-6 border-t-2 border-blue-300">
                         <h3 className="text-lg font-semibold mb-4 text-gray-900">Avaliação Final Consolidada</h3>
                         <div className="border rounded-lg p-4 bg-blue-50 border-blue-200">
@@ -2146,7 +2160,6 @@ export const PrefeituraProjetoDetalhes = () => {
                                 )}
                               </div>
 
-                              {/* Notas detalhadas - Critérios Obrigatórios */}
                               <div className="space-y-4 mb-4">
                                 <h4 className="font-semibold text-gray-900">Critérios Obrigatórios (Média)</h4>
                                 <div className="grid grid-cols-1 gap-3">
@@ -2198,7 +2211,6 @@ export const PrefeituraProjetoDetalhes = () => {
                                 </div>
                               </div>
 
-                              {/* Critérios Bônus */}
                               <div className="space-y-2 mt-4 mb-4">
                                 <h4 className="font-semibold text-gray-900">Critérios Bônus (Média)</h4>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -2246,7 +2258,7 @@ export const PrefeituraProjetoDetalhes = () => {
                           </div>
                         </div>
                       </div>
-                    )}
+                    )*/}
                         {projeto?.status === 'habilitado' && (
                       <div className="mt-6 pt-6 border-t flex flex-wrap gap-4 justify-center">
                         <Button
@@ -2708,7 +2720,7 @@ export const PrefeituraProjetoDetalhes = () => {
                               <Button 
                                 variant="outline" 
                                 size="sm" 
-                                onClick={() => window.open(anexo.url, '_blank')} 
+                                onClick={() => handleDownload(anexo.url, anexo.titulo)} 
                                 className="h-8 hover:bg-blue-50 hover:text-blue-700"
                               >
                                 <Download className="h-3.5 w-3.5 mr-2" />
@@ -3270,7 +3282,29 @@ export const PrefeituraProjetoDetalhes = () => {
 
               return (
                 <div className="space-y-3">
-                  <Label>Selecione os Pareceristas:</Label>
+                  <div className="flex items-center justify-between">
+                    <Label>Selecione os Pareceristas:</Label>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const compIds = pareceristasDisponiveis
+                          .filter(p => p.especialidades && p.especialidades.includes(projeto?.modalidade || ''))
+                          .map(p => p.id);
+                        
+                        // Combinar com os já selecionados e remover duplicatas
+                        setPareceristasSelecionados(prev => Array.from(new Set([...prev, ...compIds])));
+                        
+                        toast({
+                          title: "Selecionados",
+                          description: `${compIds.length} parecerista(s) compatível(is) selecionado(s).`,
+                        });
+                      }}
+                      className="text-xs h-7 border-green-200 text-green-700 hover:bg-green-50 hover:text-green-800"
+                    >
+                      Selecionar Todos Compatíveis
+                    </Button>
+                  </div>
                   {pareceristasDisponiveis.map((parecerista) => {
                   const temEspecialidadeCombinada = parecerista.especialidades && parecerista.especialidades.length > 0 
                     ? parecerista.especialidades.includes(projeto?.modalidade || '')

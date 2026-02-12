@@ -43,9 +43,9 @@ export const useProjetoDetalhes = (projetoId: string, userType?: 'parecerista' |
     }
   };
 
-  const updateStatus = async (status: ProjetoWithDetails['status']): Promise<boolean> => {
+  const updateStatus = async (status: ProjetoWithDetails['status'], motivoRejeicao?: string): Promise<boolean> => {
     try {
-      const success = await projetoService.updateStatus(projetoId, status);
+      const success = await projetoService.updateStatus(projetoId, status, motivoRejeicao);
       if (success) {
         await loadProjeto();
         return true;

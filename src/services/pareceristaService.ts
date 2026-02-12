@@ -24,7 +24,6 @@ export interface Parecerista {
   ultimo_acesso: string | null;
   created_at: string;
   updated_at: string;
-  editais_permitidos: string[];
 }
 
 export interface CreatePareceristaData {
@@ -43,7 +42,6 @@ export interface CreatePareceristaData {
   experiencia_anos: number;
   formacao_academica: string;
   mini_curriculo: string;
-  editais_permitidos: string[];
 }
 
 export const pareceristaService = {
@@ -84,11 +82,12 @@ export const pareceristaService = {
       // Chamar a edge function para cadastrar parecerista e enviar email
       const { data: { session } } = await supabase.auth.getSession();
       
-      const response = await fetch(`${supabase.supabaseUrl}/functions/v1/cadastrar-parecerista`, {
+      const response = await fetch(`${(supabase as any).supabaseUrl}/functions/v1/cadastrar-parecerista`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token || supabase.supabaseKey}`,
+          'src': (supabase as any).supabaseUrl, // Used only for constructing the URL
+          'Authorization': `Bearer ${session?.access_token || (supabase as any).supabaseKey}`,
         },
         body: JSON.stringify({
           prefeitura_id: prefeituraId,
@@ -138,12 +137,12 @@ export const pareceristaService = {
 
   async update(id: string, data: Partial<CreatePareceristaData>): Promise<Parecerista | null> {
     try {
-      const { data: parecerista, error } = await supabase
-        .from('pareceristas')
+      const { data: parecerista, error } = await (supabase
+        .from('pareceristas') as any)
         .update({
           ...data,
           updated_at: new Date().toISOString()
-        })
+        } as any)
         .eq('id', id)
         .select()
         .single();
@@ -158,13 +157,13 @@ export const pareceristaService = {
 
   async toggleStatus(id: string, status: 'ativo' | 'inativo'): Promise<boolean> {
     try {
-      const { error } = await supabase
-        .from('pareceristas')
+      const { error } = await (supabase
+        .from('pareceristas') as any)
         .update({
           status,
           data_ativacao: status === 'ativo' ? new Date().toISOString() : null,
           updated_at: new Date().toISOString()
-        })
+        } as any)
         .eq('id', id);
 
       if (error) throw error;

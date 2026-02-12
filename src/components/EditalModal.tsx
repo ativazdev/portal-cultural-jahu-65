@@ -255,6 +255,8 @@ export const EditalModal = ({ open, onClose, onSave, edital, loading = false }: 
         toast({ title: "Atenção", description: "Informe o valor máximo.", variant: "destructive" });
         return;
     }
+    
+    
     if (formData.modalidades.length === 0) {
         toast({ title: "Atenção", description: "Selecione pelo menos uma categoria.", variant: "destructive" });
         return;

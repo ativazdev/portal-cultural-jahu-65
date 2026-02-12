@@ -225,6 +225,23 @@ export const PareceristaProjetoDetalhes = () => {
     parecer_tecnico: ''
   });
 
+  const [edital, setEdital] = useState<any>(null);
+
+  // Carregar edital para pegar critérios personalizados
+  useEffect(() => {
+    if (!editalId) return;
+    const fetchEdital = async () => {
+      const authClient = getAuthenticatedSupabaseClient('parecerista');
+      const { data } = await authClient
+        .from('editais')
+        .select('criterios_avaliacao')
+        .eq('id', editalId)
+        .single();
+      if (data) setEdital(data);
+    };
+    fetchEdital();
+  }, [editalId]);
+
   useEffect(() => {
     const carregarAvaliacao = async () => {
       if (!parecerista || !projetoId) return;
@@ -260,7 +277,9 @@ export const PareceristaProjetoDetalhes = () => {
             bonus_criterio_g: [avaliacaoData.bonus_criterio_g || 0],
             bonus_criterio_h: [avaliacaoData.bonus_criterio_h || 0],
             bonus_criterio_i: [avaliacaoData.bonus_criterio_i || 0],
-            parecer_tecnico: avaliacaoData.parecer_tecnico || ''
+            parecer_tecnico: avaliacaoData.parecer_tecnico || '',
+            // Carregar notas personalizadas se existirem
+            ...((avaliacaoData.notas_criterios as any) || {})
           });
           
           // Se o status for 'em_avaliacao', já está em modo de edição
@@ -320,7 +339,7 @@ export const PareceristaProjetoDetalhes = () => {
     try {
       setSalvando(true);
 
-      const notasNumericas = {
+      const notasNumericas: any = {
         nota_criterio_a: formData.nota_criterio_a[0] || null,
         obs_criterio_a: formData.obs_criterio_a || null,
         nota_criterio_b: formData.nota_criterio_b[0] || null,
@@ -337,14 +356,37 @@ export const PareceristaProjetoDetalhes = () => {
         bonus_criterio_i: formData.bonus_criterio_i[0] || null,
       };
 
-      // Calcular nota final: (A+B+C+D+E) + (F+G+H+I)
-      const somaObrigatorios = [
+      // Se houver critérios personalizados, preparar o objeto para salvar
+      let notasCriteriosPersonalizados = {};
+      let somaCustom = 0;
+      let pesoMaxCustom = 0;
+
+      if (edital?.criterios_avaliacao && edital.criterios_avaliacao.length > 0) {
+        notasCriteriosPersonalizados = edital.criterios_avaliacao.reduce((acc: any, criterio: any) => {
+          const key = `criterio_${criterio.id}`;
+          const nota = (formData as any)[key]?.[0] || 0;
+          acc[key] = nota;
+          somaCustom += nota;
+          pesoMaxCustom += Number(criterio.peso) || 0;
+          return acc;
+        }, {});
+      }
+
+      // Calcular nota final: Normalize Standard + Custom to 70 points
+      // Calcular nota final: Soma padrão + Soma custom
+      // O total dos critérios obrigatórios não pode passar de 70 pontos
+      const somaPadrao = [
         notasNumericas.nota_criterio_a,
         notasNumericas.nota_criterio_b,
         notasNumericas.nota_criterio_c,
         notasNumericas.nota_criterio_d,
         notasNumericas.nota_criterio_e
       ].filter(n => n !== null).reduce((a, b) => (a || 0) + (b || 0), 0);
+      
+      const somaTotalCriterios = somaPadrao + somaCustom;
+      
+      // Se a soma passar de 70, o valor será 70. Caso contrário, é a própria soma.
+      const notaObrigatoriaCalculada = Math.min(somaTotalCriterios, 70);
       
       const somaBonus = [
         notasNumericas.bonus_criterio_f,
@@ -353,13 +395,10 @@ export const PareceristaProjetoDetalhes = () => {
         notasNumericas.bonus_criterio_i
       ].filter(n => n !== null).reduce((a, b) => (a || 0) + (b || 0), 0);
       
-      const notaFinal = somaObrigatorios + somaBonus;
+      const notaFinal = notaObrigatoriaCalculada + somaBonus;
 
       // Sempre marcar como avaliado ao enviar
-      const authClient = getAuthenticatedSupabaseClient('parecerista');
-      const { data, error } = await (authClient as any)
-        .from('avaliacoes')
-        .update({
+      const updatePayload: any = {
           ...notasNumericas,
           nota_final: notaFinal || null,
           parecer_tecnico: formData.parecer_tecnico,
@@ -367,7 +406,16 @@ export const PareceristaProjetoDetalhes = () => {
           data_conclusao: new Date().toISOString(),
           motivo_rejeicao: motivoRejeicao || null,
           updated_at: new Date().toISOString()
-        })
+      };
+
+      if (Object.keys(notasCriteriosPersonalizados).length > 0) {
+        updatePayload.notas_criterios = notasCriteriosPersonalizados;
+      }
+
+      const authClient = getAuthenticatedSupabaseClient('parecerista');
+      const { data, error } = await (authClient as any)
+        .from('avaliacoes')
+        .update(updatePayload)
         .eq('id', avaliacao.id)
         .select()
         .single();
@@ -375,29 +423,15 @@ export const PareceristaProjetoDetalhes = () => {
       if (error) throw error;
 
       // Chamar edge function para atualizar avaliação final e status do projeto
-      const pareceristaToken = localStorage.getItem('parecerista_token');
-      if (!pareceristaToken) {
-        throw new Error('Token de parecerista não encontrado');
-      }
-
       try {
-        const response = await fetch('https://ymkytnhdslvkigzilbvy.supabase.co/functions/v1/atualizar-avaliacao-final', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${pareceristaToken}`,
-          },
-          body: JSON.stringify({ projeto_id: projetoId }),
+        const { data: funcData, error: funcError } = await (authClient as any).functions.invoke('atualizar-avaliacao-final', {
+          body: { projeto_id: projetoId }
         });
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          console.error('Erro ao atualizar avaliação final:', errorData);
-          // Não falhar a operação se a atualização da avaliação final falhar
-          // A avaliação individual já foi salva
+        if (funcError) {
+          console.error('Erro ao invocar atualizar-avaliacao-final:', funcError);
         } else {
-          const result = await response.json();
-          console.log('Avaliação final atualizada:', result);
+          console.log('Avaliação final atualizada:', funcData);
         }
       } catch (updateError) {
         console.error('Erro ao chamar função de atualização:', updateError);
@@ -426,26 +460,7 @@ export const PareceristaProjetoDetalhes = () => {
   };
 
   const handleConfirmarSalvarAvaliacao = async () => {
-    // Calcular nota final
-    const somaObrigatorios = [
-      formData.nota_criterio_a[0],
-      formData.nota_criterio_b[0],
-      formData.nota_criterio_c[0],
-      formData.nota_criterio_d[0],
-      formData.nota_criterio_e[0]
-    ].reduce((a, b) => a + b, 0);
-    
-    const somaBonus = [
-      formData.bonus_criterio_f[0],
-      formData.bonus_criterio_g[0],
-      formData.bonus_criterio_h[0],
-      formData.bonus_criterio_i[0]
-    ].reduce((a, b) => a + b, 0);
-    
-    const notaFinal = somaObrigatorios + somaBonus;
-
    handleSalvarAvaliacao();
-
   };
 
   const getStatusConfig = (status: string) => {
@@ -1388,117 +1403,149 @@ export const PareceristaProjetoDetalhes = () => {
                   <div className="space-y-6">
                     {/* Critérios Obrigatórios */}
                     <div className="space-y-4">
-                      <h3 className="font-semibold text-gray-900">Critérios Obrigatórios</h3>
+                      <h3 className="font-semibold text-gray-900">Critérios Obrigatórios (Soma Limitada a 70 pontos)</h3>
                       
-                      {/* Critério A */}
-                      <div className="space-y-2 border rounded-lg p-4 bg-gray-50">
-                        <Label>Critério A - Qualidade do Projeto (Máx: 10 pontos) ⚠️ Nota 0 resulta em desclassificação</Label>
-                        <div className="flex items-center gap-4">
-                          <Slider
-                            value={formData.nota_criterio_a}
-                            onValueChange={(value) => setFormData({ ...formData, nota_criterio_a: value })}
-                            min={0}
-                            max={10}
-                            step={0.1}
-                            className="flex-1"
+                      {/* Critérios Padrão A-E (Sempre visíveis) */}
+                      <div className="space-y-4 border-b pb-4">
+                        <h4 className="font-medium text-gray-700">Critérios Padrão</h4>
+                        
+                        {/* Critério A */}
+                        <div className="space-y-2 border rounded-lg p-4 bg-gray-50">
+                          <Label>Critério A - Qualidade do Projeto (Máx: 10 pontos) ⚠️ Nota 0 resulta em desclassificação</Label>
+                          <div className="flex items-center gap-4">
+                            <Slider
+                              value={formData.nota_criterio_a}
+                              onValueChange={(value) => setFormData({ ...formData, nota_criterio_a: value })}
+                              min={0}
+                              max={10}
+                              step={0.1}
+                              className="flex-1"
+                            />
+                            <span className="text-lg font-semibold min-w-[60px] text-center">{formData.nota_criterio_a[0].toFixed(1)}</span>
+                          </div>
+                          <Textarea
+                            placeholder="Observações (opcional)"
+                            value={formData.obs_criterio_a}
+                            onChange={(e) => setFormData({ ...formData, obs_criterio_a: e.target.value })}
+                            rows={2}
                           />
-                          <span className="text-lg font-semibold min-w-[60px] text-center">{formData.nota_criterio_a[0].toFixed(1)}</span>
                         </div>
-                        <Textarea
-                          placeholder="Observações (opcional)"
-                          value={formData.obs_criterio_a}
-                          onChange={(e) => setFormData({ ...formData, obs_criterio_a: e.target.value })}
-                          rows={2}
-                        />
-                      </div>
 
-                      {/* Critério B */}
-                      <div className="space-y-2 border rounded-lg p-4 bg-gray-50">
-                        <Label>Critério B - Relevância Cultural (Máx: 10 pontos) ⚠️ Nota 0 resulta em desclassificação</Label>
-                        <div className="flex items-center gap-4">
-                          <Slider
-                            value={formData.nota_criterio_b}
-                            onValueChange={(value) => setFormData({ ...formData, nota_criterio_b: value })}
-                            min={0}
-                            max={10}
-                            step={0.1}
-                            className="flex-1"
+                        {/* Critério B */}
+                        <div className="space-y-2 border rounded-lg p-4 bg-gray-50">
+                          <Label>Critério B - Relevância Cultural (Máx: 10 pontos) ⚠️ Nota 0 resulta em desclassificação</Label>
+                          <div className="flex items-center gap-4">
+                            <Slider
+                              value={formData.nota_criterio_b}
+                              onValueChange={(value) => setFormData({ ...formData, nota_criterio_b: value })}
+                              min={0}
+                              max={10}
+                              step={0.1}
+                              className="flex-1"
+                            />
+                            <span className="text-lg font-semibold min-w-[60px] text-center">{formData.nota_criterio_b[0].toFixed(1)}</span>
+                          </div>
+                          <Textarea
+                            placeholder="Observações (opcional)"
+                            value={formData.obs_criterio_b}
+                            onChange={(e) => setFormData({ ...formData, obs_criterio_b: e.target.value })}
+                            rows={2}
                           />
-                          <span className="text-lg font-semibold min-w-[60px] text-center">{formData.nota_criterio_b[0].toFixed(1)}</span>
                         </div>
-                        <Textarea
-                          placeholder="Observações (opcional)"
-                          value={formData.obs_criterio_b}
-                          onChange={(e) => setFormData({ ...formData, obs_criterio_b: e.target.value })}
-                          rows={2}
-                        />
-                      </div>
 
-                      {/* Critério C */}
-                      <div className="space-y-2 border rounded-lg p-4 bg-gray-50">
-                        <Label>Critério C - Integração Comunitária (Máx: 10 pontos) ⚠️ Nota 0 resulta em desclassificação</Label>
-                        <div className="flex items-center gap-4">
-                          <Slider
-                            value={formData.nota_criterio_c}
-                            onValueChange={(value) => setFormData({ ...formData, nota_criterio_c: value })}
-                            min={0}
-                            max={10}
-                            step={0.1}
-                            className="flex-1"
+                        {/* Critério C */}
+                        <div className="space-y-2 border rounded-lg p-4 bg-gray-50">
+                          <Label>Critério C - Integração Comunitária (Máx: 10 pontos) ⚠️ Nota 0 resulta em desclassificação</Label>
+                          <div className="flex items-center gap-4">
+                            <Slider
+                              value={formData.nota_criterio_c}
+                              onValueChange={(value) => setFormData({ ...formData, nota_criterio_c: value })}
+                              min={0}
+                              max={10}
+                              step={0.1}
+                              className="flex-1"
+                            />
+                            <span className="text-lg font-semibold min-w-[60px] text-center">{formData.nota_criterio_c[0].toFixed(1)}</span>
+                          </div>
+                          <Textarea
+                            placeholder="Observações (opcional)"
+                            value={formData.obs_criterio_c}
+                            onChange={(e) => setFormData({ ...formData, obs_criterio_c: e.target.value })}
+                            rows={2}
                           />
-                          <span className="text-lg font-semibold min-w-[60px] text-center">{formData.nota_criterio_c[0].toFixed(1)}</span>
                         </div>
-                        <Textarea
-                          placeholder="Observações (opcional)"
-                          value={formData.obs_criterio_c}
-                          onChange={(e) => setFormData({ ...formData, obs_criterio_c: e.target.value })}
-                          rows={2}
-                        />
-                      </div>
 
-                      {/* Critério D */}
-                      <div className="space-y-2 border rounded-lg p-4 bg-gray-50">
-                        <Label>Critério D - Trajetória Artística (Máx: 10 pontos) ⚠️ Nota 0 resulta em desclassificação</Label>
-                        <div className="flex items-center gap-4">
-                          <Slider
-                            value={formData.nota_criterio_d}
-                            onValueChange={(value) => setFormData({ ...formData, nota_criterio_d: value })}
-                            min={0}
-                            max={10}
-                            step={0.1}
-                            className="flex-1"
+                        {/* Critério D */}
+                        <div className="space-y-2 border rounded-lg p-4 bg-gray-50">
+                          <Label>Critério D - Trajetória Artística (Máx: 10 pontos) ⚠️ Nota 0 resulta em desclassificação</Label>
+                          <div className="flex items-center gap-4">
+                            <Slider
+                              value={formData.nota_criterio_d}
+                              onValueChange={(value) => setFormData({ ...formData, nota_criterio_d: value })}
+                              min={0}
+                              max={10}
+                              step={0.1}
+                              className="flex-1"
+                            />
+                            <span className="text-lg font-semibold min-w-[60px] text-center">{formData.nota_criterio_d[0].toFixed(1)}</span>
+                          </div>
+                          <Textarea
+                            placeholder="Observações (opcional)"
+                            value={formData.obs_criterio_d}
+                            onChange={(e) => setFormData({ ...formData, obs_criterio_d: e.target.value })}
+                            rows={2}
                           />
-                          <span className="text-lg font-semibold min-w-[60px] text-center">{formData.nota_criterio_d[0].toFixed(1)}</span>
                         </div>
-                        <Textarea
-                          placeholder="Observações (opcional)"
-                          value={formData.obs_criterio_d}
-                          onChange={(e) => setFormData({ ...formData, obs_criterio_d: e.target.value })}
-                          rows={2}
-                        />
-                      </div>
 
-                      {/* Critério E */}
-                      <div className="space-y-2 border rounded-lg p-4 bg-gray-50">
-                        <Label>Critério E - Promoção de Diversidade (Máx: 10 pontos) ⚠️ Nota 0 resulta em desclassificação</Label>
-                        <div className="flex items-center gap-4">
-                          <Slider
-                            value={formData.nota_criterio_e}
-                            onValueChange={(value) => setFormData({ ...formData, nota_criterio_e: value })}
-                            min={0}
-                            max={10}
-                            step={0.1}
-                            className="flex-1"
+                        {/* Critério E */}
+                        <div className="space-y-2 border rounded-lg p-4 bg-gray-50">
+                          <Label>Critério E - Promoção de Diversidade (Máx: 10 pontos) ⚠️ Nota 0 resulta em desclassificação</Label>
+                          <div className="flex items-center gap-4">
+                            <Slider
+                              value={formData.nota_criterio_e}
+                              onValueChange={(value) => setFormData({ ...formData, nota_criterio_e: value })}
+                              min={0}
+                              max={10}
+                              step={0.1}
+                              className="flex-1"
+                            />
+                            <span className="text-lg font-semibold min-w-[60px] text-center">{formData.nota_criterio_e[0].toFixed(1)}</span>
+                          </div>
+                          <Textarea
+                            placeholder="Observações (opcional)"
+                            value={formData.obs_criterio_e}
+                            onChange={(e) => setFormData({ ...formData, obs_criterio_e: e.target.value })}
+                            rows={2}
                           />
-                          <span className="text-lg font-semibold min-w-[60px] text-center">{formData.nota_criterio_e[0].toFixed(1)}</span>
                         </div>
-                        <Textarea
-                          placeholder="Observações (opcional)"
-                          value={formData.obs_criterio_e}
-                          onChange={(e) => setFormData({ ...formData, obs_criterio_e: e.target.value })}
-                          rows={2}
-                        />
                       </div>
+                      
+                      {edital?.criterios_avaliacao && edital.criterios_avaliacao.length > 0 && (
+                        <div className="space-y-4">
+                            <h4 className="font-medium text-gray-700">Critérios Específicos do Edital</h4>
+                            {edital.criterios_avaliacao.map((criterio: any) => {
+                              const key = `criterio_${criterio.id}`;
+                              const nota = (formData as any)[key]?.[0] || 0;
+                              
+                              return (
+                                <div key={criterio.id} className="space-y-2 border rounded-lg p-4 bg-amber-50">
+                                  <Label>{criterio.descricao} (Máx: {criterio.peso} pontos)</Label>
+                                  <div className="flex items-center gap-4">
+                                    <Slider
+                                      value={[(formData as any)[key]?.[0] || 0]}
+                                      onValueChange={(value) => setFormData(prev => ({ ...prev, [key]: value }))}
+                                      min={0}
+                                      max={Number(criterio.peso)}
+                                      step={0.1}
+                                      className="flex-1"
+                                    />
+                                    <span className="text-lg font-semibold min-w-[60px] text-center">{nota.toFixed(1)}</span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                        </div>
+                      )}
                     </div>
 
                     {/* Critérios Bônus */}

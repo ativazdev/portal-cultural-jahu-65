@@ -30,12 +30,14 @@ export interface UpdateRecursoData {
 }
 
 export const recursosService = {
-  // Buscar todos os recursos de um usuário proponente (busca recursos de todos os proponentes do usuário)
-  async getByProponente(usuarioId: string): Promise<Recurso[]> {
+// Buscar todos os recursos de um usuário proponente (busca recursos de todos os proponentes do usuário)
+  async getByProponente(usuarioId: string, client?: any): Promise<Recurso[]> {
     try {
+      const supabaseClient = client || supabase;
+      
       // Primeiro, buscar todos os proponentes do usuário
-      const { data: proponentes, error: proponentesError } = await supabase
-        .from('proponentes')
+      const { data: proponentes, error: proponentesError } = await (supabaseClient
+        .from('proponentes') as any)
         .select('id')
         .eq('usuario_id', usuarioId);
 
@@ -45,11 +47,11 @@ export const recursosService = {
         return [];
       }
 
-      const proponenteIds = proponentes.map(p => p.id);
+      const proponenteIds = proponentes.map((p: any) => p.id);
 
       // Buscar recursos de todos os proponentes do usuário
-      const { data, error } = await supabase
-        .from('recursos')
+      const { data, error } = await (supabaseClient
+        .from('recursos') as any)
         .select('*')
         .in('proponente_id', proponenteIds)
         .order('created_at', { ascending: false });
@@ -63,10 +65,11 @@ export const recursosService = {
   },
 
   // Buscar todos os recursos de um projeto
-  async getByProjeto(projetoId: string): Promise<Recurso[]> {
+  async getByProjeto(projetoId: string, client?: any): Promise<Recurso[]> {
     try {
-      const { data, error } = await supabase
-        .from('recursos')
+      const supabaseClient = client || supabase;
+      const { data, error } = await (supabaseClient
+        .from('recursos') as any)
         .select('*')
         .eq('projeto_id', projetoId)
         .order('created_at', { ascending: false });
@@ -80,10 +83,11 @@ export const recursosService = {
   },
 
   // Buscar todos os recursos de uma prefeitura
-  async getByPrefeitura(prefeituraId: string): Promise<Recurso[]> {
+  async getByPrefeitura(prefeituraId: string, client?: any): Promise<Recurso[]> {
     try {
-      const { data, error } = await supabase
-        .from('recursos')
+      const supabaseClient = client || supabase;
+      const { data, error } = await (supabaseClient
+        .from('recursos') as any)
         .select(`
           *,
           projeto:projetos(id, nome),
@@ -101,10 +105,11 @@ export const recursosService = {
   },
 
   // Buscar recurso por ID
-  async getById(id: string): Promise<Recurso | null> {
+  async getById(id: string, client?: any): Promise<Recurso | null> {
     try {
-      const { data, error } = await supabase
-        .from('recursos')
+      const supabaseClient = client || supabase;
+      const { data, error } = await (supabaseClient
+        .from('recursos') as any)
         .select('*')
         .eq('id', id)
         .single();
@@ -118,24 +123,30 @@ export const recursosService = {
   },
 
   // Criar novo recurso
-  async create(recursoData: CreateRecursoData): Promise<Recurso> {
+  async create(recursoData: CreateRecursoData, client?: any): Promise<Recurso> {
     try {
-      const { data, error } = await supabase
-        .from('recursos')
+      console.log('🚀 Criando recurso/contrarrazão:', recursoData);
+      const supabaseClient = client || supabase;
+      const { data, error } = await (supabaseClient
+        .from('recursos') as any)
         .insert([recursoData])
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Erro Supabase ao criar recurso:', error);
+        throw error;
+      }
+      console.log('✅ Recurso criado com sucesso:', data);
       return data as Recurso;
     } catch (error: any) {
-      console.error('Erro ao criar recurso:', error);
+      console.error('❌ Erro Catch ao criar recurso:', error);
       throw error;
     }
   },
 
   // Atualizar recurso (para responder)
-  async update(id: string, updateData: UpdateRecursoData): Promise<Recurso> {
+  async update(id: string, updateData: UpdateRecursoData, client?: any): Promise<Recurso> {
     try {
       const updatePayload: any = {
         ...updateData,
@@ -148,9 +159,11 @@ export const recursosService = {
       }
 
       console.log('📝 Atualizando recurso:', { id, updatePayload });
+      
+      const supabaseClient = client || supabase;
 
-      const { data, error } = await supabase
-        .from('recursos')
+      const { data, error } = await (supabaseClient
+        .from('recursos') as any)
         .update(updatePayload)
         .eq('id', id)
         .select()
@@ -170,10 +183,11 @@ export const recursosService = {
   },
 
   // Deletar recurso
-  async delete(id: string): Promise<boolean> {
+  async delete(id: string, client?: any): Promise<boolean> {
     try {
-      const { error } = await supabase
-        .from('recursos')
+      const supabaseClient = client || supabase;
+      const { error } = await (supabaseClient
+        .from('recursos') as any)
         .delete()
         .eq('id', id);
 
@@ -186,11 +200,12 @@ export const recursosService = {
   },
 
   // Buscar recursos pendentes por edital
-  async getPendentesByEdital(editalId: string): Promise<{ recursos: number; contraRazoes: number; total: number }> {
+  async getPendentesByEdital(editalId: string, client?: any): Promise<{ recursos: number; contraRazoes: number; total: number }> {
     try {
+      const supabaseClient = client || supabase;
       // Buscar projetos do edital
-      const { data: projetos, error: projetosError } = await supabase
-        .from('projetos')
+      const { data: projetos, error: projetosError } = await (supabaseClient
+        .from('projetos') as any)
         .select('id')
         .eq('edital_id', editalId);
 
@@ -200,19 +215,19 @@ export const recursosService = {
         return { recursos: 0, contraRazoes: 0, total: 0 };
       }
 
-      const projetoIds = projetos.map(p => p.id);
+      const projetoIds = projetos.map((p: any) => p.id);
 
       // Buscar recursos pendentes (apenas status pendente)
-      const { data: recursos, error: recursosError } = await supabase
-        .from('recursos')
+      const { data: recursos, error: recursosError } = await (supabaseClient
+        .from('recursos') as any)
         .select('id, tipo, status')
         .in('projeto_id', projetoIds)
         .eq('status', 'pendente');
 
       if (recursosError) throw recursosError;
 
-      const recursosCount = (recursos || []).filter(r => r.tipo === 'recurso').length;
-      const contraRazoesCount = (recursos || []).filter(r => r.tipo === 'contra_razao').length;
+      const recursosCount = (recursos || []).filter((r: any) => r.tipo === 'recurso').length;
+      const contraRazoesCount = (recursos || []).filter((r: any) => r.tipo === 'contra_razao').length;
 
       return {
         recursos: recursosCount,
@@ -226,18 +241,19 @@ export const recursosService = {
   },
 
   // Buscar recursos pendentes por prefeitura (para dashboard)
-  async getPendentesByPrefeitura(prefeituraId: string): Promise<{ recursos: number; contraRazoes: number; total: number }> {
+  async getPendentesByPrefeitura(prefeituraId: string, client?: any): Promise<{ recursos: number; contraRazoes: number; total: number }> {
     try {
-      const { data, error } = await supabase
-        .from('recursos')
+      const supabaseClient = client || supabase;
+      const { data, error } = await (supabaseClient
+        .from('recursos') as any)
         .select('id, tipo, status')
         .eq('prefeitura_id', prefeituraId)
         .eq('status', 'pendente');
 
       if (error) throw error;
 
-      const recursosCount = (data || []).filter(r => r.tipo === 'recurso').length;
-      const contraRazoesCount = (data || []).filter(r => r.tipo === 'contra_razao').length;
+      const recursosCount = (data || []).filter((r: any) => r.tipo === 'recurso').length;
+      const contraRazoesCount = (data || []).filter((r: any) => r.tipo === 'contra_razao').length;
 
       return {
         recursos: recursosCount,
@@ -251,11 +267,12 @@ export const recursosService = {
   },
 
   // Buscar projetos com recursos pendentes por edital
-  async getProjetosComRecursosPendentes(editalId: string): Promise<Array<{ projeto: any; recurso: Recurso }>> {
+  async getProjetosComRecursosPendentes(editalId: string, client?: any): Promise<Array<{ projeto: any; recurso: Recurso }>> {
     try {
+      const supabaseClient = client || supabase;
       // Buscar projetos do edital
-      const { data: projetos, error: projetosError } = await supabase
-        .from('projetos')
+      const { data: projetos, error: projetosError } = await (supabaseClient
+        .from('projetos') as any)
         .select('*')
         .eq('edital_id', editalId);
 
@@ -265,11 +282,11 @@ export const recursosService = {
         return [];
       }
 
-      const projetoIds = projetos.map(p => p.id);
+      const projetoIds = projetos.map((p: any) => p.id);
 
       // Buscar recursos pendentes
-      const { data: recursos, error: recursosError } = await supabase
-        .from('recursos')
+      const { data: recursos, error: recursosError } = await (supabaseClient
+        .from('recursos') as any)
         .select('*')
         .in('projeto_id', projetoIds)
         .eq('status', 'pendente')
@@ -278,10 +295,10 @@ export const recursosService = {
       if (recursosError) throw recursosError;
 
       // Combinar projetos com seus recursos
-      return (recursos || []).map(recurso => ({
-        projeto: projetos.find(p => p.id === recurso.projeto_id),
+      return (recursos || []).map((recurso: any) => ({
+        projeto: projetos.find((p: any) => p.id === recurso.projeto_id),
         recurso: recurso as Recurso
-      })).filter(item => item.projeto);
+      })).filter((item: any) => item.projeto);
     } catch (error: any) {
       console.error('Erro ao buscar projetos com recursos pendentes:', error);
       return [];
@@ -289,11 +306,12 @@ export const recursosService = {
   },
 
   // Buscar projetos com Contrarrazões pendentes por edital
-  async getProjetosComContraRazoesPendentes(editalId: string): Promise<Array<{ projeto: any; contraRazao: Recurso }>> {
+  async getProjetosComContraRazoesPendentes(editalId: string, client?: any): Promise<Array<{ projeto: any; contraRazao: Recurso }>> {
     try {
+      const supabaseClient = client || supabase;
       // Buscar projetos do edital
-      const { data: projetos, error: projetosError } = await supabase
-        .from('projetos')
+      const { data: projetos, error: projetosError } = await (supabaseClient
+        .from('projetos') as any)
         .select('*')
         .eq('edital_id', editalId);
 
@@ -303,11 +321,11 @@ export const recursosService = {
         return [];
       }
 
-      const projetoIds = projetos.map(p => p.id);
+      const projetoIds = projetos.map((p: any) => p.id);
 
       // Buscar Contrarrazões pendentes
-      const { data: contraRazoes, error: contraRazoesError } = await supabase
-        .from('recursos')
+      const { data: contraRazoes, error: contraRazoesError } = await (supabaseClient
+        .from('recursos') as any)
         .select('*')
         .in('projeto_id', projetoIds)
         .eq('status', 'pendente')
@@ -316,10 +334,10 @@ export const recursosService = {
       if (contraRazoesError) throw contraRazoesError;
 
       // Combinar projetos com suas Contrarrazões
-      return (contraRazoes || []).map(contraRazao => ({
-        projeto: projetos.find(p => p.id === contraRazao.projeto_id),
+      return (contraRazoes || []).map((contraRazao: any) => ({
+        projeto: projetos.find((p: any) => p.id === contraRazao.projeto_id),
         contraRazao: contraRazao as Recurso
-      })).filter(item => item.projeto);
+      })).filter((item: any) => item.projeto);
     } catch (error: any) {
       console.error('Erro ao buscar projetos com Contrarrazões pendentes:', error);
       return [];
@@ -327,11 +345,12 @@ export const recursosService = {
   },
 
   // Buscar TODOS os projetos com recursos por edital (não apenas pendentes)
-  async getProjetosComRecursos(editalId: string): Promise<Array<{ projeto: any; recurso: Recurso }>> {
+  async getProjetosComRecursos(editalId: string, client?: any): Promise<Array<{ projeto: any; recurso: Recurso }>> {
     try {
+      const supabaseClient = client || supabase;
       // Buscar projetos do edital
-      const { data: projetos, error: projetosError } = await supabase
-        .from('projetos')
+      const { data: projetos, error: projetosError } = await (supabaseClient
+        .from('projetos') as any)
         .select('*')
         .eq('edital_id', editalId);
 
@@ -341,11 +360,11 @@ export const recursosService = {
         return [];
       }
 
-      const projetoIds = projetos.map(p => p.id);
+      const projetoIds = projetos.map((p: any) => p.id);
 
       // Buscar TODOS os recursos (não apenas pendentes)
-      const { data: recursos, error: recursosError } = await supabase
-        .from('recursos')
+      const { data: recursos, error: recursosError } = await (supabaseClient
+        .from('recursos') as any)
         .select('*')
         .in('projeto_id', projetoIds)
         .eq('tipo', 'recurso')
@@ -354,10 +373,10 @@ export const recursosService = {
       if (recursosError) throw recursosError;
 
       // Combinar projetos com seus recursos
-      return (recursos || []).map(recurso => ({
-        projeto: projetos.find(p => p.id === recurso.projeto_id),
+      return (recursos || []).map((recurso: any) => ({
+        projeto: projetos.find((p: any) => p.id === recurso.projeto_id),
         recurso: recurso as Recurso
-      })).filter(item => item.projeto);
+      })).filter((item: any) => item.projeto);
     } catch (error: any) {
       console.error('Erro ao buscar projetos com recursos:', error);
       return [];
@@ -365,11 +384,12 @@ export const recursosService = {
   },
 
   // Buscar TODOS os projetos com Contrarrazões por edital (não apenas pendentes)
-  async getProjetosComContraRazoes(editalId: string): Promise<Array<{ projeto: any; contraRazao: Recurso }>> {
+  async getProjetosComContraRazoes(editalId: string, client?: any): Promise<Array<{ projeto: any; contraRazao: Recurso }>> {
     try {
+      const supabaseClient = client || supabase;
       // Buscar projetos do edital
-      const { data: projetos, error: projetosError } = await supabase
-        .from('projetos')
+      const { data: projetos, error: projetosError } = await (supabaseClient
+        .from('projetos') as any)
         .select('*')
         .eq('edital_id', editalId);
 
@@ -379,11 +399,11 @@ export const recursosService = {
         return [];
       }
 
-      const projetoIds = projetos.map(p => p.id);
+      const projetoIds = projetos.map((p: any) => p.id);
 
       // Buscar TODAS as Contrarrazões (não apenas pendentes)
-      const { data: contraRazoes, error: contraRazoesError } = await supabase
-        .from('recursos')
+      const { data: contraRazoes, error: contraRazoesError } = await (supabaseClient
+        .from('recursos') as any)
         .select('*')
         .in('projeto_id', projetoIds)
         .eq('tipo', 'contra_razao')
@@ -392,10 +412,10 @@ export const recursosService = {
       if (contraRazoesError) throw contraRazoesError;
 
       // Combinar projetos com suas Contrarrazões
-      return (contraRazoes || []).map(contraRazao => ({
-        projeto: projetos.find(p => p.id === contraRazao.projeto_id),
+      return (contraRazoes || []).map((contraRazao: any) => ({
+        projeto: projetos.find((p: any) => p.id === contraRazao.projeto_id),
         contraRazao: contraRazao as Recurso
-      })).filter(item => item.projeto);
+      })).filter((item: any) => item.projeto);
     } catch (error: any) {
       console.error('Erro ao buscar projetos com Contrarrazões:', error);
       return [];

@@ -21,6 +21,7 @@ import { ProponenteCadastro } from "./pages/ProponenteCadastro";
 import { ProponenteSolicitarRedefinicaoSenha } from "./pages/ProponenteSolicitarRedefinicaoSenha";
 import { ProponenteRedefinicaoSenha } from "./pages/ProponenteRedefinicaoSenha";
 import { ProponenteEditais } from "./pages/ProponenteEditais";
+import { ProponenteEditalDetalhes } from "./pages/ProponenteEditalDetalhes";
 import { ProponenteProjetos } from "./pages/ProponenteProjetos";
 import { ProponenteProjetoDetalhes } from "./pages/ProponenteProjetoDetalhes";
 import { ProponenteSuporte } from "./pages/ProponenteSuporte";
@@ -94,6 +95,11 @@ const App = () => (
           <Route path="/:nomePrefeitura/proponente/editais" element={
             <AuthGuard>
               <ProponenteEditais />
+            </AuthGuard>
+          } />
+          <Route path="/:nomePrefeitura/proponente/editais/:editalId/detalhes" element={
+            <AuthGuard>
+              <ProponenteEditalDetalhes />
             </AuthGuard>
           } />
           <Route path="/:nomePrefeitura/proponente/editais/:editalId/cadastrar-projeto" element={

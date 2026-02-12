@@ -90,7 +90,7 @@ export const editalService = {
 
   async create(data: CreateEditalData, prefeituraId: string, userId: string): Promise<Edital | null> {
     try {
-      const { anexos, criterios_avaliacao, ...rest } = data;
+      const { anexos, ...rest } = data;
       const editalData = {
         ...rest,
         prefeitura_id: prefeituraId,
@@ -126,7 +126,7 @@ export const editalService = {
   async update(id: string, data: Partial<CreateEditalData>): Promise<Edital | null> {
     try {
       // Filtrar campos que não pertencem à tabela 'editais'
-      const { anexos, criterios_avaliacao, id: _id, created_at: _ca, ...rest } = data as any;
+      const { anexos, id: _id, created_at: _ca, ...rest } = data as any;
       
       const updateData = {
         ...rest,
