@@ -23,6 +23,8 @@ import { useToast } from "@/hooks/use-toast";
 import JSZip from 'jszip';
 import { ModalContatoSuporte } from "@/components/ModalContatoSuporte";
 import { APP_VERSION } from "@/config/version";
+import { FixedHeader } from "@/components/layout/FixedHeader";
+
 
 interface PareceristaLayoutProps {
   children: ReactNode;
@@ -260,196 +262,203 @@ export const PareceristaLayout = ({
 
   return (
     <BaseLayout>
-      <div className="flex h-screen bg-background">
-        {/* Sidebar */}
-        <aside className={cn(
-          "fixed lg:sticky top-0 left-0 z-40 h-screen w-64 border-r bg-white transition-transform",
-          sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
-        )}>
-          <div className="flex flex-col h-full">
-            {/* Logo / Header */}
-            <div className="flex items-center justify-between p-4 border-b">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-green-600 rounded flex items-center justify-center">
-                  <CheckSquare className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <p className="font-semibold text-sm">Parecerista</p>
-                  {prefeitura && (
-                    <p className="text-xs text-gray-500">{prefeitura.municipio}</p>
-                  )}
-                </div>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="lg:hidden"
-                onClick={() => setSidebarOpen(false)}
-              >
-                <X className="h-5 w-5" />
-              </Button>
-            </div>
-
-            {/* Navigation */}
-            {navigation.length > 0 && (
-              <nav className="flex-1 p-4 space-y-1">
-                {navigation.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = location.pathname === item.href;
-                  return (
-                    <Button
-                      key={item.name}
-                      variant={isActive ? "secondary" : "ghost"}
-                      className={cn(
-                        "w-full justify-start",
-                        isActive && "bg-green-50 text-green-700 hover:bg-green-100"
-                      )}
-                      onClick={() => {
-                        navigate(item.href);
-                        setSidebarOpen(false);
-                      }}
-                    >
-                      <Icon className="mr-2 h-4 w-4" />
-                      {item.name}
-                    </Button>
-                  );
-                })}
-                {linkTutorial && (
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start"
-                    onClick={() => {
-                      window.open(linkTutorial, '_blank', 'noopener,noreferrer');
-                      setSidebarOpen(false);
-                    }}
-                  >
-                    <BookOpen className="mr-2 h-4 w-4" />
-                    Tutorial
-                  </Button>
-                )}
-              </nav>
+      <div className="min-h-screen bg-background pt-20">
+        <FixedHeader />
+        <div className="flex bg-background">
+          {/* Sidebar */}
+          <aside 
+            className={cn(
+              "fixed left-0 z-40 w-64 border-r bg-white transition-transform",
+              sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
             )}
-
-            {/* Trocar Edital, Download Regulamento, Suporte e Logout */}
-            <div className="p-4 border-t space-y-2">
-              {editalId && (
-                <>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start"
-                    onClick={handleTrocarEdital}
-                  >
-                    <FileText className="mr-2 h-4 w-4" />
-                    Trocar Edital
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start"
-                    onClick={handleDownloadRegulamento}
-                    disabled={loadingArquivos}
-                  >
-                    <Download className={`mr-2 h-4 w-4 ${loadingArquivos ? 'animate-spin' : ''}`} />
-                    {loadingArquivos ? 'Baixando...' : 'Baixar Regulamento'}
-                  </Button>
-                </>
-              )}
-              {temContatoSuporte && (
-                <Button
-                  variant="outline"
-                  className="w-full justify-start"
-                  onClick={() => setModalSuporteOpen(true)}
-                >
-                  <Headphones className="mr-2 h-4 w-4" />
-                  Suporte
-                </Button>
-              )}
-              <Button
-                variant="ghost"
-                className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
-                onClick={handleLogout}
-              >
-                <LogOut className="mr-2 h-4 w-4" />
-                Sair
-              </Button>
-            </div>
-
-            {/* User Info */}
-            <div className="p-4 border-t">
-              <div className="flex items-center gap-3 mb-3">
-                <Avatar>
-                  <AvatarFallback className="bg-green-600 text-white">
-                    {parecerista.nome.charAt(0).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{parecerista.nome}</p>
-                  <p className="text-xs text-gray-500 truncate">{parecerista.email}</p>
+            style={{ top: '80px', height: 'calc(100vh - 80px)' }}
+          >
+            <div className="flex flex-col h-full">
+              {/* Logo / Header */}
+              <div className="flex items-center justify-between p-4 border-b">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-green-600 rounded flex items-center justify-center">
+                    <CheckSquare className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-sm">Parecerista</p>
+                    {prefeitura && (
+                      <p className="text-xs text-gray-500">{prefeitura.municipio}</p>
+                    )}
+                  </div>
                 </div>
-              </div>
-              <div className="text-center">
-                <p className="text-xs text-muted-foreground">versão {APP_VERSION}</p>
-              </div>
-            </div>
-          </div>
-        </aside>
-
-        {/* Overlay para mobile */}
-        {sidebarOpen && (
-          <div
-            className="fixed inset-0 bg-black/50 z-30 lg:hidden"
-            onClick={() => setSidebarOpen(false)}
-          />
-        )}
-
-        {/* Main Content */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Top Header */}
-          <header className="h-16 border-b bg-background">
-            <div className="flex h-full items-center justify-between px-4">
-              <div className="flex items-center gap-3">
                 <Button
                   variant="ghost"
                   size="icon"
                   className="lg:hidden"
-                  onClick={() => setSidebarOpen(true)}
+                  onClick={() => setSidebarOpen(false)}
                 >
-                  <Menu className="h-6 w-6" />
+                  <X className="h-5 w-5" />
                 </Button>
-                {prefeitura && (
-                  <div>
-                    <p className="text-sm font-medium">{prefeitura.nome}</p>
-                    <p className="text-xs text-gray-500">{prefeitura.municipio} - {prefeitura.estado}</p>
-                  </div>
-                )}
               </div>
-            </div>
-          </header>
 
-          {/* Page Content */}
-          <main className="flex-1 overflow-auto">
-            {(title || description || headerActions) && (
-              <div className="border-b bg-background">
-                <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
-                  <div className="flex items-center justify-between py-6">
-                    <div>
-                      {title && (
-                        <h1 className="text-3xl font-bold tracking-tight">{title}</h1>
-                      )}
-                      {description && (
-                        <p className="text-muted-foreground mt-1">{description}</p>
-                      )}
-                    </div>
-                    {headerActions && <div>{headerActions}</div>}
+              {/* Navigation */}
+              {navigation.length > 0 && (
+                <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+                  {navigation.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = location.pathname === item.href;
+                    return (
+                      <Button
+                        key={item.name}
+                        variant={isActive ? "secondary" : "ghost"}
+                        className={cn(
+                          "w-full justify-start",
+                          isActive && "bg-green-50 text-green-700 hover:bg-green-100"
+                        )}
+                        onClick={() => {
+                          navigate(item.href);
+                          setSidebarOpen(false);
+                        }}
+                      >
+                        <Icon className="mr-2 h-4 w-4" />
+                        {item.name}
+                      </Button>
+                    );
+                  })}
+                  {linkTutorial && (
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start"
+                      onClick={() => {
+                        window.open(linkTutorial, '_blank', 'noopener,noreferrer');
+                        setSidebarOpen(false);
+                      }}
+                    >
+                      <BookOpen className="mr-2 h-4 w-4" />
+                      Tutorial
+                    </Button>
+                  )}
+                </nav>
+              )}
+
+              {/* Trocar Edital, Download Regulamento, Suporte e Logout */}
+              <div className="p-4 border-t space-y-2 bg-white">
+                {editalId && (
+                  <>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start"
+                      onClick={handleTrocarEdital}
+                    >
+                      <FileText className="mr-2 h-4 w-4" />
+                      Trocar Edital
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start"
+                      onClick={handleDownloadRegulamento}
+                      disabled={loadingArquivos}
+                    >
+                      <Download className={`mr-2 h-4 w-4 ${loadingArquivos ? 'animate-spin' : ''}`} />
+                      {loadingArquivos ? 'Baixando...' : 'Baixar Regulamento'}
+                    </Button>
+                  </>
+                )}
+                {temContatoSuporte && (
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start"
+                    onClick={() => setModalSuporteOpen(true)}
+                  >
+                    <Headphones className="mr-2 h-4 w-4" />
+                    Suporte
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
+                  onClick={handleLogout}
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sair
+                </Button>
+              </div>
+
+              {/* User Info */}
+              <div className="p-4 border-t bg-white">
+                <div className="flex items-center gap-3 mb-3">
+                  <Avatar>
+                    <AvatarFallback className="bg-green-600 text-white">
+                      {parecerista.nome.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{parecerista.nome}</p>
+                    <p className="text-xs text-gray-500 truncate">{parecerista.email}</p>
                   </div>
                 </div>
-              </div>
-            )}
-            <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="flex-1 space-y-4 p-4 sm:p-6 lg:p-8">
-                {children}
+                <div className="text-center">
+                  <p className="text-xs text-muted-foreground">versão {APP_VERSION}</p>
+                </div>
               </div>
             </div>
-          </main>
+          </aside>
+
+          {/* Overlay para mobile */}
+          {sidebarOpen && (
+            <div
+              className="fixed inset-0 bg-black/50 z-30 lg:hidden"
+              style={{ top: '80px' }}
+              onClick={() => setSidebarOpen(false)}
+            />
+          )}
+
+          {/* Main Content */}
+          <div className="flex-1 flex flex-col overflow-hidden lg:pl-64 min-h-[calc(100vh-80px)]">
+            {/* Top Header */}
+            <header className="h-16 border-b bg-background">
+              <div className="flex h-full items-center justify-between px-4">
+                <div className="flex items-center gap-3">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="lg:hidden"
+                    onClick={() => setSidebarOpen(true)}
+                  >
+                    <Menu className="h-6 w-6" />
+                  </Button>
+                  {prefeitura && (
+                    <div>
+                      <p className="text-sm font-medium">{prefeitura.nome}</p>
+                      <p className="text-xs text-gray-500">{prefeitura.municipio} - {prefeitura.estado}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </header>
+
+            {/* Page Content */}
+            <main className="flex-1 overflow-auto">
+              {(title || description || headerActions) && (
+                <div className="border-b bg-background">
+                  <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="flex items-center justify-between py-6">
+                      <div>
+                        {title && (
+                          <h1 className="text-3xl font-bold tracking-tight">{title}</h1>
+                        )}
+                        {description && (
+                          <p className="text-muted-foreground mt-1">{description}</p>
+                        )}
+                      </div>
+                      {headerActions && <div>{headerActions}</div>}
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="flex-1 space-y-4 p-4 sm:p-6 lg:p-8">
+                  {children}
+                </div>
+              </div>
+            </main>
+          </div>
         </div>
       </div>
       

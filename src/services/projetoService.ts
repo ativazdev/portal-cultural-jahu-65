@@ -28,13 +28,19 @@ export interface Projeto {
   detalhes_outras_fontes: string;
   venda_produtos: boolean;
   detalhes_venda_produtos: string;
-  status: 'rascunho' | 'submetido' | 'em_avaliacao' | 'aprovado' | 'rejeitado' | 'arquivado';
+  status: 'rascunho' | 'submetido' | 'em_avaliacao' | 'aprovado' | 'rejeitado' | 'arquivado' | 'habilitado' | 'nao_habilitado' | 'aguardando_parecerista' | 'aguardando_avaliacao' | 'avaliado' | 'recebido' | 'em_execucao' | 'concluido' | 'prestacao_enviada' | 'suplente' | 'desclassificado';
   data_submissao: string | null;
+  motivo_rejeicao?: string;
   necessita_comprovante_residencia: boolean;
   numero_inscricao: string;
   created_at: string;
   updated_at: string;
   valor_maximo_projeto: number;
+  anexos_prestacao?: Array<{
+    titulo: string;
+    url: string;
+    tipo: string;
+  }>;
 }
 
 export interface ProjetoWithDetails extends Projeto {
@@ -133,7 +139,7 @@ export const projetoService = {
       const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data || [];
+      return (data as any[]) || [];
     } catch (error) {
       console.error('Erro ao buscar projetos:', error);
       return [];
@@ -157,7 +163,7 @@ export const projetoService = {
         .single();
 
       if (error) throw error;
-      return data;
+      return data as any;
     } catch (error) {
       console.error('Erro ao buscar projeto:', error);
       return null;
@@ -173,21 +179,30 @@ export const projetoService = {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data || [];
+      return (data as any[]) || [];
     } catch (error) {
       console.error('Erro ao buscar projetos do edital:', error);
       return [];
     }
   },
 
-  async updateStatus(id: string, status: Projeto['status']): Promise<boolean> {
+  async updateStatus(id: string, status: Projeto['status'], motivoRejeicao?: string): Promise<boolean> {
     try {
-      const { error } = await supabase
-        .from('projetos')
-        .update({
-          status,
-          updated_at: new Date().toISOString()
-        })
+      // Garantir que ao submeter, o status seja aguardando_parecerista se necessário
+      const finalStatus = status === 'submetido' ? 'aguardando_parecerista' : status;
+      
+      const updateData: any = {
+        status: finalStatus,
+        updated_at: new Date().toISOString()
+      };
+
+      if (motivoRejeicao !== undefined) {
+        updateData.motivo_rejeicao = motivoRejeicao;
+      }
+      
+      const { error } = await (supabase
+        .from('projetos') as any)
+        .update(updateData)
         .eq('id', id);
 
       if (error) throw error;
@@ -214,7 +229,7 @@ export const projetoService = {
 
       if (error) throw error;
 
-      const stats = data?.reduce((acc, projeto) => {
+      const stats = (data as any[])?.reduce((acc, projeto) => {
         acc.total++;
         acc[projeto.status as keyof typeof acc]++;
         acc.valor_total += projeto.valor_solicitado || 0;
@@ -244,15 +259,15 @@ export const projetoService = {
 
       if (error) throw error;
 
-      const categories = data?.reduce((acc, projeto) => {
+      const categories = (data as any[])?.reduce((acc, projeto) => {
         const modalidade = projeto.modalidade || 'Outros';
-        acc[modalidade] = (acc[modalidade] || 0) + 1;
+        acc[modalidade] = ((acc[modalidade] as number) || 0) + 1;
         return acc;
       }, {} as Record<string, number>) || {};
 
       return Object.entries(categories).map(([modalidade, count]) => ({
         modalidade,
-        count
+        count: count as number
       }));
     } catch (error) {
       console.error('Erro ao buscar projetos por modalidade:', error);

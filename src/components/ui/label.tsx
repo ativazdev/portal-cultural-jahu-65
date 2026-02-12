@@ -6,12 +6,20 @@ import { cn } from "@/lib/utils";
 
 const labelVariants = cva("text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70");
 
+interface LabelProps {
+  className?: string;
+  htmlFor?: string;
+  children?: React.ReactNode;
+}
+
 const Label = React.forwardRef<
   React.ElementRef<typeof LabelPrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof LabelPrimitive.Root> & VariantProps<typeof labelVariants>
->(({ className, ...props }, ref) => (
-  <LabelPrimitive.Root ref={ref} className={cn(labelVariants(), className)} {...props} />
-));
+  LabelProps & VariantProps<typeof labelVariants>
+>(({ className, children, ...props }, ref) => (
+  <LabelPrimitive.Root ref={ref} className={cn(labelVariants(), className)} {...props}>
+    {children}
+  </LabelPrimitive.Root>
+))
 Label.displayName = LabelPrimitive.Root.displayName;
 
 export { Label };

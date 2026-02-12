@@ -49,10 +49,14 @@ export const PrefeituraEditais = () => {
   } = useEditaisPrefeitura(prefeitura?.id || '');
 
   // Normalizar editais para garantir que status seja string
-  const editais = editaisPrefeitura.map(e => ({
-    ...e,
-    status: String(e.status || 'rascunho')
-  }));
+  // Use useMemo to prevent creating a new array on every render
+  const editais = useMemo(() => {
+    return editaisPrefeitura.map(e => ({
+      ...e,
+      status: String(e.status || 'rascunho') as Edital['status']
+    }));
+  }, [editaisPrefeitura]);
+
   const loading = loadingPrefeitura;
   const error = errorPrefeitura;
 
@@ -222,6 +226,11 @@ export const PrefeituraEditais = () => {
               <div className="font-mono text-xs font-medium text-blue-600 truncate flex-shrink-0">
                 {item.codigo}
               </div>
+              {item.has_accountability_phase && (
+                <Badge variant="secondary" className="bg-purple-100 text-purple-700 hover:bg-purple-200 border-0 px-1.5 py-0 text-[10px]">
+                  Prestação de Contas
+                </Badge>
+              )}
               {temRecursosPendentes && (
                 <div className="flex items-center gap-0.5 flex-shrink-0" title={`${recursosPendentesPorEdital[item.id]} recursos/Contrarrazões pendentes`}>
                   <AlertCircle className="h-3 w-3 text-red-500" />
@@ -247,8 +256,18 @@ export const PrefeituraEditais = () => {
           </div>
           <div className="flex items-center gap-1">
             <span className="text-gray-500">Prazo:</span>
-            <span className="whitespace-nowrap">{new Date(item.data_final_envio_projeto).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' })}</span>
+            <span className={`whitespace-nowrap ${item.data_prorrogacao ? 'line-through text-gray-400' : ''}`}>
+              {new Date(item.data_final_envio_projeto).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' })}
+            </span>
           </div>
+          {item.data_prorrogacao && (
+             <div className="flex items-center gap-1 text-red-600 font-bold">
+               <span>Prorrogado para:</span>
+               <span className="whitespace-nowrap">
+                 {new Date(item.data_prorrogacao).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' })}
+               </span>
+             </div>
+          )}
         </div>
       )
     },
@@ -282,14 +301,10 @@ export const PrefeituraEditais = () => {
             value={currentStatus} 
             onValueChange={(newStatus) => handleAlterarStatusInline(item, newStatus)}
           >
-            <SelectTrigger className="w-auto min-w-[80px] md:min-w-[100px] max-w-[110px] md:max-w-[130px] h-auto border-0 bg-transparent hover:bg-transparent focus:ring-0 p-0 shadow-none [&>span:first-child]:hidden [&>svg]:hidden">
-              <SelectValue />
-              <div className="flex items-center gap-1 pointer-events-none">
-                <Badge className={`${getStatusColor(currentStatus)} text-xs px-1 py-0.5 md:px-1.5`}>
-                  <span className="truncate max-w-[70px] md:max-w-[90px]">{getStatusLabel(currentStatus)}</span>
-                </Badge>
-                <ChevronDown className="h-3 w-3 opacity-50 flex-shrink-0 hidden md:block" />
-              </div>
+            <SelectTrigger className="w-auto min-w-[80px] md:min-w-[100px] max-w-[110px] md:max-w-[130px] h-auto border-0 bg-transparent hover:bg-transparent focus:ring-0 p-0 shadow-none [&>svg]:h-3 [&>svg]:w-3 [&>svg]:hidden md:[&>svg]:block">
+              <Badge className={`${getStatusColor(currentStatus)} text-xs px-1 py-0.5 md:px-1.5`}>
+                <span className="truncate max-w-[70px] md:max-w-[90px]">{getStatusLabel(currentStatus)}</span>
+              </Badge>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="recebendo_projetos">Recebendo Projetos</SelectItem>
@@ -464,10 +479,6 @@ export const PrefeituraEditais = () => {
       onClick: (item) => {
         setEditalEditando(item);
         setModalAberto(true);
-      },
-      show: (item) => {
-        const status = String(item.status || '').trim().toLowerCase();
-        return status === 'rascunho';
       }
     }
   ];
@@ -502,6 +513,13 @@ export const PrefeituraEditais = () => {
       subtitle: 'Finalizados',
       icon: <FileText className="h-4 w-4" />,
       color: 'gray'
+    },
+    {
+      title: 'Prestação de Contas',
+      value: editais.filter(e => e.has_accountability_phase).length.toString(),
+      subtitle: 'Editais Especiais',
+      icon: <Building2 className="h-4 w-4" />,
+      color: 'purple'
     }
   ];
 
@@ -635,9 +653,13 @@ export const PrefeituraEditais = () => {
 
       {/* Modal de Cadastro/Edição */}
       <EditalModal
+        key={editalEditando ? editalEditando.id : 'novo-edital'}
         open={modalAberto}
         onClose={() => {
           setModalAberto(false);
+          // Pequeno delay para limpar o estado apenas após a animação fechar, se necessário, 
+          // ou limpar imediatamente se não causar problemas visuais.
+          // Aqui limpamos imediatamente para simplicidade.
           setEditalEditando(null);
         }}
         onSave={handleSalvarEdital}

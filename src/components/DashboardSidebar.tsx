@@ -37,7 +37,7 @@ const menuItemsBase = [
 ];
 
 const minhaContaItemsBase = [
-  { title: "Meus projetos", icon: FileText, path: "meus-projetos" },
+  { title: "Meus projetos", icon: FileText, path: "projetos" },
   { title: "Meus proponentes", icon: Users, path: "meus-proponentes" },
   { title: "Alterar meus dados", icon: Settings, path: "alterar-dados" },
 ];

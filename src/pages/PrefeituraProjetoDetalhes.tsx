@@ -39,6 +39,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { PrefeituraLayout } from "@/components/layout/PrefeituraLayout";
+import { SidebarInset } from "@/components/ui/sidebar";
 import { useProjetoDetalhes } from "@/hooks/useProjetoDetalhes";
 import { usePrefeituraAuth } from "@/hooks/usePrefeituraAuth";
 import { usePendencias } from "@/hooks/usePendencias";
@@ -238,6 +239,14 @@ export const PrefeituraProjetoDetalhes = () => {
   const [documentoSelecionado, setDocumentoSelecionado] = useState<string | null>(null);
   const [motivoRejeicaoDoc, setMotivoRejeicaoDoc] = useState('');
 
+  // Estados para habilitação/aprovação de projeto
+  const [showInabilitarProjetoModal, setShowInabilitarProjetoModal] = useState(false);
+  const [motivoInabilitacao, setMotivoInabilitacao] = useState('');
+  const [showDesclassificarProjetoModal, setShowDesclassificarProjetoModal] = useState(false);
+  const [motivoDesclassificacao, setMotivoDesclassificacao] = useState('');
+  const [showSuplenteProjetoModal, setShowSuplenteProjetoModal] = useState(false);
+  const [processandoAcao, setProcessandoAcao] = useState(false);
+
   const {
     projeto,
     loading,
@@ -245,6 +254,89 @@ export const PrefeituraProjetoDetalhes = () => {
     updateStatus,
     refresh
   } = useProjetoDetalhes(projetoId || '');
+
+  // Funções de Habilitação e Aprovação de Projeto
+  const handleHabilitar = async () => {
+    try {
+      setProcessandoAcao(true);
+      const success = await updateStatus('habilitado');
+      if (success) {
+        toast({
+          title: "Projeto Habilitado",
+          description: "O projeto foi habilitado com sucesso.",
+        });
+      }
+    } finally {
+      setProcessandoAcao(false);
+    }
+  };
+
+  const handleInabilitarProjeto = async () => {
+    if (!motivoInabilitacao.trim()) return;
+    try {
+      setProcessandoAcao(true);
+      const success = await updateStatus('nao_habilitado', motivoInabilitacao.trim());
+      if (success) {
+        toast({
+          title: "Projeto Inabilitado",
+          description: "O projeto foi inabilitado com sucesso.",
+        });
+        setShowInabilitarProjetoModal(false);
+        setMotivoInabilitacao('');
+      }
+    } finally {
+      setProcessandoAcao(false);
+    }
+  };
+
+  const handleAprovarProjeto = async () => {
+    try {
+      setProcessandoAcao(true);
+      const success = await updateStatus('aprovado');
+      if (success) {
+        toast({
+          title: "Projeto Aprovado",
+          description: "O projeto foi aprovado com sucesso.",
+        });
+      }
+    } finally {
+      setProcessandoAcao(false);
+    }
+  };
+
+  const handleSuplenteProjeto = async () => {
+    try {
+      setProcessandoAcao(true);
+      const success = await updateStatus('suplente');
+      if (success) {
+        toast({
+          title: "Projeto em Suplência",
+          description: "O projeto foi marcado como suplente.",
+        });
+        setShowSuplenteProjetoModal(false);
+      }
+    } finally {
+      setProcessandoAcao(false);
+    }
+  };
+
+  const handleDesclassificarProjeto = async () => {
+    if (!motivoDesclassificacao.trim()) return;
+    try {
+      setProcessandoAcao(true);
+      const success = await updateStatus('desclassificado', motivoDesclassificacao.trim());
+      if (success) {
+        toast({
+          title: "Projeto Desclassificado",
+          description: "O projeto foi desclassificado com sucesso.",
+        });
+        setShowDesclassificarProjetoModal(false);
+        setMotivoDesclassificacao('');
+      }
+    } finally {
+      setProcessandoAcao(false);
+    }
+  };
 
   const {
     pendencias,
@@ -587,6 +679,8 @@ export const PrefeituraProjetoDetalhes = () => {
       'nao_habilitado': { label: 'Não Habilitado', color: 'bg-red-100 text-red-800', icon: <XCircle className="h-4 w-4" /> },
       'aprovado': { label: 'Aprovado', color: 'bg-green-100 text-green-800', icon: <CheckCircle className="h-4 w-4" /> },
       'rejeitado': { label: 'Rejeitado', color: 'bg-red-100 text-red-800', icon: <XCircle className="h-4 w-4" /> },
+      'suplente': { label: 'Suplente', color: 'bg-blue-100 text-blue-800', icon: <Clock className="h-4 w-4" /> },
+      'desclassificado': { label: 'Desclassificado', color: 'bg-red-100 text-red-800', icon: <XCircle className="h-4 w-4" /> },
       'em_execucao': { label: 'Em Execução', color: 'bg-purple-100 text-purple-800', icon: <PlayCircle className="h-4 w-4" /> },
       'concluido': { label: 'Concluído', color: 'bg-green-100 text-green-800', icon: <CheckCircle className="h-4 w-4" /> }
     };
@@ -2074,6 +2168,36 @@ export const PrefeituraProjetoDetalhes = () => {
                         </div>
                       </div>
                     )}
+                        {projeto?.status === 'habilitado' && (
+                      <div className="mt-6 pt-6 border-t flex flex-wrap gap-4 justify-center">
+                        <Button
+                          variant="default"
+                          className="bg-green-600 hover:bg-green-700"
+                          onClick={handleAprovarProjeto}
+                          disabled={processandoAcao}
+                        >
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                          Aprovar Projeto
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="border-blue-600 text-blue-600 hover:bg-blue-50"
+                          onClick={() => setShowSuplenteProjetoModal(true)}
+                          disabled={processandoAcao}
+                        >
+                          <Clock className="h-4 w-4 mr-2" />
+                          Colocar em Suplência
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          onClick={() => setShowDesclassificarProjetoModal(true)}
+                          disabled={processandoAcao}
+                        >
+                          <XCircle className="h-4 w-4 mr-2" />
+                          Desclassificar Projeto
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 )}
               </CardContent>
@@ -2094,32 +2218,56 @@ export const PrefeituraProjetoDetalhes = () => {
                       Documentos necessários para habilitação do projeto
                     </CardDescription>
                   </div>
-                  {documentos.length === 0 && getStatusConfig(projeto.status).label == 'Habilitado' &&projeto?.proponente?.tipo && (
-                    <Button 
-                      onClick={() => {
-                        if (projeto?.proponente?.tipo) {
-                          gerarDocumentosPadrao(projeto.proponente.tipo)
-                            .then((success) => {
-                              if (success) {
-                                toast({
-                                  title: "Sucesso",
-                                  description: "Documentos de habilitação criados com sucesso!",
-                                });
-                              } else {
-                                toast({
-                                  title: "Erro",
-                                  description: "Erro ao criar documentos de habilitação.",
-                                  variant: "destructive",
-                                });
-                              }
-                            });
-                        }
-                      }}
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Gerar Documentos Padrão
-                    </Button>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {projeto?.status === 'avaliado' && (
+                      <>
+                        <Button
+                          variant="default"
+                          className="bg-green-600 hover:bg-green-700"
+                          onClick={handleHabilitar}
+                          disabled={processandoAcao}
+                        >
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                          Habilitar Projeto
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          onClick={() => setShowInabilitarProjetoModal(true)}
+                          disabled={processandoAcao}
+                        >
+                          <XCircle className="h-4 w-4 mr-2" />
+                          Inabilitar Projeto
+                        </Button>
+                      </>
+                    )}
+                    {projeto?.proponente?.tipo && documentos.length === 0 && (
+                      <Button 
+                        variant="outline"
+                        onClick={() => {
+                          if (projeto?.proponente?.tipo) {
+                            gerarDocumentosPadrao(projeto.proponente.tipo)
+                              .then((success) => {
+                                if (success) {
+                                  toast({
+                                    title: "Sucesso",
+                                    description: "Documentos de habilitação criados com sucesso!",
+                                  });
+                                } else {
+                                  toast({
+                                    title: "Erro",
+                                    description: "Erro ao criar documentos de habilitação.",
+                                    variant: "destructive",
+                                  });
+                                }
+                              });
+                          }
+                        }}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Gerar Documentos Padrão
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -3501,6 +3649,124 @@ export const PrefeituraProjetoDetalhes = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* Modal de Inabilitação de Projeto */}
+      <Dialog open={showInabilitarProjetoModal} onOpenChange={setShowInabilitarProjetoModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Inabilitar Projeto</DialogTitle>
+            <DialogDescription>
+              Informe o motivo da inabilitação do projeto. Esta ação não poderá ser desfeita facilmente.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="motivoInabilitacao">Motivo da Inabilitação</Label>
+              <Textarea
+                id="motivoInabilitacao"
+                placeholder="Descreva detalhadamente o motivo..."
+                value={motivoInabilitacao}
+                onChange={(e) => setMotivoInabilitacao(e.target.value)}
+                className="min-h-[100px]"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowInabilitarProjetoModal(false);
+                setMotivoInabilitacao('');
+              }}
+              disabled={processandoAcao}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleInabilitarProjeto}
+              disabled={!motivoInabilitacao.trim() || processandoAcao}
+            >
+              {processandoAcao ? "Processando..." : "Inabilitar Projeto"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Suplência de Projeto */}
+      <Dialog open={showSuplenteProjetoModal} onOpenChange={setShowSuplenteProjetoModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Marcar como Suplente</DialogTitle>
+            <DialogDescription>
+              Deseja marcar este projeto como suplente?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowSuplenteProjetoModal(false)}
+              disabled={processandoAcao}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="default"
+              className="bg-blue-600 hover:bg-blue-700"
+              onClick={handleSuplenteProjeto}
+              disabled={processandoAcao}
+            >
+              {processandoAcao ? "Processando..." : "Confirmar Suplência"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Desclassificação de Projeto */}
+      <Dialog open={showDesclassificarProjetoModal} onOpenChange={setShowDesclassificarProjetoModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Desclassificar Projeto</DialogTitle>
+            <DialogDescription>
+              Informe o motivo da desclassificação do projeto.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="motivoDesclassificacao">Motivo da Desclassificação</Label>
+              <Textarea
+                id="motivoDesclassificacao"
+                placeholder="Descreva detalhadamente o motivo..."
+                value={motivoDesclassificacao}
+                onChange={(e) => setMotivoDesclassificacao(e.target.value)}
+                className="min-h-[100px]"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowDesclassificarProjetoModal(false);
+                setMotivoDesclassificacao('');
+              }}
+              disabled={processandoAcao}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDesclassificarProjeto}
+              disabled={!motivoDesclassificacao.trim() || processandoAcao}
+            >
+              {processandoAcao ? "Processando..." : "Desclassificar Projeto"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <SidebarInset />
     </PrefeituraLayout>
   );
 };
+
+export default PrefeituraProjetoDetalhes;

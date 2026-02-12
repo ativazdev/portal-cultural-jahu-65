@@ -24,6 +24,8 @@ import { usePrefeituraAuth } from "@/hooks/usePrefeituraAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { ModalContatoSuporte } from "@/components/ModalContatoSuporte";
 import { APP_VERSION } from "@/config/version";
+import { FixedHeader } from "@/components/layout/FixedHeader";
+
 
 interface PrefeituraLayoutProps {
   children: ReactNode;
@@ -157,206 +159,211 @@ export const PrefeituraLayout = ({
 
   return (
     <BaseLayout>
-      <div className="flex h-screen bg-background">
-        {/* Sidebar Mobile */}
-        <div className={cn(
-          "fixed inset-0 z-50 lg:hidden",
-          sidebarOpen ? "block" : "hidden"
-        )}>
-          <div className="fixed inset-0 bg-black/20" onClick={() => setSidebarOpen(false)} />
-          <div className="fixed inset-y-0 left-0 z-50 w-64 bg-background border-r">
-            <div className="flex h-16 items-center justify-between px-4 border-b">
-              <div className="flex items-center space-x-2">
-                <Building2 className="h-8 w-8 text-primary" />
-                <span className="text-lg font-semibold">Prefeitura</span>
+      <div className="min-h-screen bg-background pt-20">
+        <FixedHeader />
+        <div className="flex bg-background">
+          {/* Sidebar Mobile */}
+          <div className={cn(
+            "fixed inset-0 z-40 lg:hidden",
+            sidebarOpen ? "block" : "hidden"
+          )}
+          style={{ top: '80px' }}
+          >
+            <div className="fixed inset-0 bg-black/20" onClick={() => setSidebarOpen(false)} />
+            <div className="fixed inset-y-0 left-0 z-40 w-64 bg-background border-r" style={{ top: '80px', height: 'calc(100vh - 80px)' }}>
+              <div className="flex h-16 items-center justify-between px-4 border-b">
+                <div className="flex items-center space-x-2">
+                  <Building2 className="h-8 w-8 text-primary" />
+                  <span className="text-lg font-semibold">Prefeitura</span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setSidebarOpen(false)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setSidebarOpen(false)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-            <nav className="flex-1 space-y-1 p-4">
-              {navigation.map((item) => {
-                const isActive = location.pathname === item.href;
-                return (
+              <nav className="flex-1 space-y-1 p-4 overflow-y-auto" style={{ height: 'calc(100% - 64px)' }}>
+                {navigation.map((item) => {
+                  const isActive = location.pathname === item.href;
+                  return (
+                    <Button
+                      key={item.name}
+                      variant={isActive ? "secondary" : "ghost"}
+                      className={cn(
+                        "w-full justify-start relative",
+                        isActive && "bg-primary/10 text-primary font-medium"
+                      )}
+                      onClick={() => {
+                        navigate(item.href);
+                        setSidebarOpen(false);
+                      }}
+                    >
+                      {React.createElement(item.icon, { className: "mr-2 h-4 w-4" })}
+                      {item.name}
+                      {item.badge && item.badge > 0 && (
+                        <span className="ml-auto bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                          {item.badge}
+                        </span>
+                      )}
+                    </Button>
+                  );
+                })}
+                {linkTutorial && (
                   <Button
-                    key={item.name}
-                    variant={isActive ? "secondary" : "ghost"}
-                    className={cn(
-                      "w-full justify-start relative",
-                      isActive && "bg-primary/10 text-primary font-medium"
-                    )}
+                    variant="ghost"
+                    className="w-full justify-start"
                     onClick={() => {
-                      navigate(item.href);
+                      window.open(linkTutorial, '_blank', 'noopener,noreferrer');
                       setSidebarOpen(false);
                     }}
                   >
-                    {React.createElement(item.icon, { className: "mr-2 h-4 w-4" })}
-                    {item.name}
-                    {item.badge && item.badge > 0 && (
-                      <span className="ml-auto bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                        {item.badge}
-                      </span>
-                    )}
+                    <BookOpen className="mr-2 h-4 w-4" />
+                    Tutorial
                   </Button>
-                );
-              })}
-              {linkTutorial && (
+                )}
+              </nav>
+              <div className="p-4 border-t space-y-2 bg-background">
+                {temContatoSuporte && (
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      setModalSuporteOpen(true);
+                      setSidebarOpen(false);
+                    }}
+                  >
+                    <Headphones className="mr-2 h-4 w-4" />
+                    Suporte
+                  </Button>
+                )}
                 <Button
                   variant="ghost"
-                  className="w-full justify-start"
-                  onClick={() => {
-                    window.open(linkTutorial, '_blank', 'noopener,noreferrer');
-                    setSidebarOpen(false);
-                  }}
+                  className="w-full justify-start text-destructive hover:text-destructive"
+                  onClick={handleLogout}
                 >
-                  <BookOpen className="mr-2 h-4 w-4" />
-                  Tutorial
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sair
                 </Button>
-              )}
-            </nav>
-            <div className="p-4 border-t space-y-2">
-              {temContatoSuporte && (
-                <Button
-                  variant="outline"
-                  className="w-full justify-start"
-                  onClick={() => {
-                    setModalSuporteOpen(true);
-                    setSidebarOpen(false);
-                  }}
-                >
-                  <Headphones className="mr-2 h-4 w-4" />
-                  Suporte
-                </Button>
-              )}
-              <Button
-                variant="ghost"
-                className="w-full justify-start text-destructive hover:text-destructive"
-                onClick={handleLogout}
-              >
-                <LogOut className="mr-2 h-4 w-4" />
-                Sair
-              </Button>
-              <div className="pt-2 text-center">
-                <p className="text-xs text-muted-foreground">versão {APP_VERSION}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Sidebar Desktop */}
-        <div className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0">
-          <div className="flex flex-col flex-grow bg-background border-r">
-            <div className="flex h-16 items-center px-4 border-b">
-              <div className="flex items-center space-x-2">
-                <Building2 className="h-8 w-8 text-primary" />
-                <div>
-                  <span className="text-lg font-semibold">Prefeitura</span>
-                  <p className="text-xs text-muted-foreground capitalize">
-                    {nomePrefeitura?.replace('-', ' ')}
-                  </p>
+                <div className="pt-2 text-center">
+                  <p className="text-xs text-muted-foreground">versão {APP_VERSION}</p>
                 </div>
               </div>
             </div>
-            <nav className="flex-1 space-y-1 p-4">
-              {navigation.map((item) => {
-                const isActive = location.pathname === item.href;
-                return (
+          </div>
+
+          {/* Sidebar Desktop */}
+          <div className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0" style={{ top: '80px', height: 'calc(100vh - 80px)' }}>
+            <div className="flex flex-col flex-grow bg-background border-r">
+              <div className="flex h-16 items-center px-4 border-b">
+                <div className="flex items-center space-x-2">
+                  <Building2 className="h-8 w-8 text-primary" />
+                  <div>
+                    <span className="text-lg font-semibold">Prefeitura</span>
+                    <p className="text-xs text-muted-foreground capitalize">
+                      {nomePrefeitura?.replace('-', ' ')}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <nav className="flex-1 space-y-1 p-4 overflow-y-auto">
+                {navigation.map((item) => {
+                  const isActive = location.pathname === item.href;
+                  return (
+                    <Button
+                      key={item.name}
+                      variant={isActive ? "secondary" : "ghost"}
+                      className={cn(
+                        "w-full justify-start relative",
+                        isActive && "bg-primary/10 text-primary font-medium"
+                      )}
+                      onClick={() => navigate(item.href)}
+                    >
+                      {React.createElement(item.icon, { className: "mr-2 h-4 w-4" })}
+                      {item.name}
+                      {item.badge && item.badge > 0 && (
+                        <span className="ml-auto bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                          {item.badge}
+                        </span>
+                      )}
+                    </Button>
+                  );
+                })}
+                {linkTutorial && (
                   <Button
-                    key={item.name}
-                    variant={isActive ? "secondary" : "ghost"}
-                    className={cn(
-                      "w-full justify-start relative",
-                      isActive && "bg-primary/10 text-primary font-medium"
-                    )}
-                    onClick={() => navigate(item.href)}
+                    variant="ghost"
+                    className="w-full justify-start"
+                    onClick={() => window.open(linkTutorial, '_blank', 'noopener,noreferrer')}
                   >
-                    {React.createElement(item.icon, { className: "mr-2 h-4 w-4" })}
-                    {item.name}
-                    {item.badge && item.badge > 0 && (
-                      <span className="ml-auto bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                        {item.badge}
-                      </span>
-                    )}
+                    <BookOpen className="mr-2 h-4 w-4" />
+                    Tutorial
                   </Button>
-                );
-              })}
-              {linkTutorial && (
+                )}
+              </nav>
+              <div className="p-4 border-t space-y-2 bg-background">
+                {temContatoSuporte && (
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start"
+                    onClick={() => setModalSuporteOpen(true)}
+                  >
+                    <Headphones className="mr-2 h-4 w-4" />
+                    Suporte
+                  </Button>
+                )}
                 <Button
                   variant="ghost"
-                  className="w-full justify-start"
-                  onClick={() => window.open(linkTutorial, '_blank', 'noopener,noreferrer')}
+                  className="w-full justify-start text-destructive hover:text-destructive"
+                  onClick={handleLogout}
                 >
-                  <BookOpen className="mr-2 h-4 w-4" />
-                  Tutorial
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sair
                 </Button>
-              )}
-            </nav>
-            <div className="p-4 border-t space-y-2">
-              {temContatoSuporte && (
-                <Button
-                  variant="outline"
-                  className="w-full justify-start"
-                  onClick={() => setModalSuporteOpen(true)}
-                >
-                  <Headphones className="mr-2 h-4 w-4" />
-                  Suporte
-                </Button>
-              )}
+                <div className="pt-2 text-center">
+                  <p className="text-xs text-muted-foreground">versão {APP_VERSION}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Main Content */}
+          <div className="lg:pl-64 flex flex-col flex-1 min-h-[calc(100vh-80px)]">
+            {/* Header Mobile */}
+            <div className="lg:hidden flex h-16 items-center justify-between px-4 border-b bg-background">
               <Button
                 variant="ghost"
-                className="w-full justify-start text-destructive hover:text-destructive"
-                onClick={handleLogout}
+                size="icon"
+                onClick={() => setSidebarOpen(true)}
               >
-                <LogOut className="mr-2 h-4 w-4" />
-                Sair
+                <Menu className="h-4 w-4" />
               </Button>
-              <div className="pt-2 text-center">
-                <p className="text-xs text-muted-foreground">versão {APP_VERSION}</p>
+              <div className="flex items-center space-x-2">
+                <Building2 className="h-6 w-6 text-primary" />
+                <span className="font-semibold">Prefeitura</span>
               </div>
+              {isAuthenticated && <UserProfile />}
             </div>
+
+            {/* Page Header */}
+            {title && (
+              <PageHeader 
+                title={title} 
+                description={description}
+                className="hidden lg:block"
+              >
+                <div className="flex items-center space-x-4">
+                  {headerActions}
+                  {isAuthenticated && <UserProfile />}
+                </div>
+              </PageHeader>
+            )}
+
+            {/* Page Content */}
+            <PageContent>
+              {children}
+            </PageContent>
           </div>
-        </div>
-
-        {/* Main Content */}
-        <div className="lg:pl-64 flex flex-col flex-1">
-          {/* Header Mobile */}
-          <div className="lg:hidden flex h-16 items-center justify-between px-4 border-b bg-background">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setSidebarOpen(true)}
-            >
-              <Menu className="h-4 w-4" />
-            </Button>
-            <div className="flex items-center space-x-2">
-              <Building2 className="h-6 w-6 text-primary" />
-              <span className="font-semibold">Prefeitura</span>
-            </div>
-            {isAuthenticated && <UserProfile />}
-          </div>
-
-          {/* Page Header */}
-          {title && (
-            <PageHeader 
-              title={title} 
-              description={description}
-              className="hidden lg:block"
-            >
-              <div className="flex items-center space-x-4">
-                {headerActions}
-                {isAuthenticated && <UserProfile />}
-              </div>
-            </PageHeader>
-          )}
-
-          {/* Page Content */}
-          <PageContent>
-            {children}
-          </PageContent>
         </div>
       </div>
       

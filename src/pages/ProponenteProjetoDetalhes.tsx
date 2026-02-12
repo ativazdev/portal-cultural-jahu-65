@@ -50,7 +50,7 @@ import { useMovimentacoesFinanceiras } from "@/hooks/useMovimentacoesFinanceiras
 import { useContasMonitoradas } from "@/hooks/useContasMonitoradas";
 import { useDocumentosHabilitacao } from "@/hooks/useDocumentosHabilitacao";
 import { ProjetoWithDetails } from "@/services/projetoService";
-import { getAuthenticatedSupabaseClient } from "@/integrations/supabase/client";
+import { supabase, getAuthenticatedSupabaseClient } from "@/integrations/supabase/client";
 
 // Opções para múltipla escolha
 const publicoPrioritarioOptions = [
@@ -551,6 +551,54 @@ export const ProponenteProjetoDetalhes = () => {
       return false;
     }
     return true;
+  };
+
+  const handleEnviarPrestacaoSimplificada = async () => {
+    if (!novaPrestacaoRelatorio || !novaPrestacaoFinanceiro) {
+        toast({ title: "Atenção", description: "Anexe os dois arquivos obrigatórios.", variant: "destructive" });
+        return;
+    }
+
+    setCarregandoPrestacao(true);
+    try {
+        // 1. Upload Arquivos
+        const uploadFile = async (file: File, prefix: string) => {
+            const fileName = `${prefix}-${projetoId}-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '-')}`;
+            const { error } = await supabase.storage.from('prestacao_contas').upload(fileName, file);
+            if (error) throw error;
+            const { data } = supabase.storage.from('prestacao_contas').getPublicUrl(fileName);
+            return data.publicUrl;
+        };
+
+        const relatorioUrl = await uploadFile(novaPrestacaoRelatorio, 'relatorio');
+        const planilhaUrl = await uploadFile(novaPrestacaoFinanceiro, 'planilha');
+
+        const anexosPrestacao = [
+            { titulo: "Relatório de Execução", url: relatorioUrl, tipo: 'pdf' },
+            { titulo: "Planilha Orçamentária", url: planilhaUrl, tipo: 'pdf' }
+        ];
+
+        // 2. Atualizar projeto
+        const authClient = getAuthenticatedSupabaseClient('proponente');
+        const { error: updateError } = await authClient
+            .from('projetos')
+            .update({ 
+                anexos_prestacao: anexosPrestacao,
+                status: 'prestacao_enviada' // Atualizar status para indicar envio
+            })
+            .eq('id', projetoId);
+
+        if (updateError) throw updateError;
+
+        toast({ title: "Sucesso", description: "Prestação de Contas enviada com sucesso!" });
+        refresh(); // Recarregar dados do projeto
+
+    } catch (error: any) {
+        console.error('Erro ao enviar prestação de contas:', error);
+        toast({ title: "Erro", description: error.message || "Falha ao enviar prestação de contas.", variant: "destructive" });
+    } finally {
+        setCarregandoPrestacao(false);
+    }
   };
 
   const handleSalvarEdicaoProjeto = async (tipo: string = '') => {
@@ -1437,18 +1485,8 @@ export const ProponenteProjetoDetalhes = () => {
   };
 
   const getAbasPermitidas = (status: string) => {
-    const abasPorStatus: { [key: string]: string[] } = {
-      'aprovado': ['informacoes', 'avaliacao', 'documentacao', 'pendencias','prestacao','openbanking'],
-      'aguardando_avaliacao': ['informacoes', 'avaliacao'],
-      'recebido': ['informacoes', 'avaliacao'],
-      'em_avaliacao': ['informacoes', 'avaliacao'],
-      'avaliado': ['informacoes', 'avaliacao'],
-      'rejeitado': ['informacoes', 'avaliacao', 'pendencias'],
-      'em_execucao': ['informacoes', 'avaliacao', 'documentacao', 'pendencias', 'prestacao', 'openbanking'],
-      'concluido': ['informacoes', 'avaliacao', 'documentacao', 'pendencias', 'prestacao', 'openbanking'],
-      'rascunho': ['informacoes', 'avaliacao', 'documentacao', 'pendencias', 'prestacao', 'openbanking']
-    };
-    return abasPorStatus[status] || abasPorStatus['rascunho'];
+    // Todas as abas devem estar visíveis para todos os projetos
+    return ['informacoes', 'avaliacao', 'documentacao', 'pendencias', 'prestacao', 'openbanking'];
   };
 
   const handleVincularMovimentacao = async () => {
@@ -2256,8 +2294,8 @@ export const ProponenteProjetoDetalhes = () => {
               </Card>
             </div>
 
-            {/* Grid com Valor e Financiamento e Orçamento lado a lado */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Grid com Valor e Financiamento e Orçamento lado a lado (Condicional Orçamento) */}
+            <div className={`grid grid-cols-1 md:grid-cols-2 gap-4`}>
               {/* Valor e Financiamento */}
               <Card>
                 <CardHeader>
@@ -2330,6 +2368,7 @@ export const ProponenteProjetoDetalhes = () => {
               </Card>
 
               {/* Orçamento */}
+              {true && (
               <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">
@@ -2377,6 +2416,7 @@ export const ProponenteProjetoDetalhes = () => {
                   )}
                 </CardContent>
               </Card>
+              )}
             </div>
 
             {/* Equipe */}
@@ -3139,207 +3179,151 @@ export const ProponenteProjetoDetalhes = () => {
           <TabsContent value="prestacao" className="space-y-6">
             <Card>
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <CreditCard className="h-5 w-5" />
-                      Prestação de Contas
-                    </CardTitle>
-                    <CardDescription>
-                      Relatórios de execução financeira e prestação de contas
-                    </CardDescription>
-                  </div>
-                  <Button onClick={() => setShowNovaPrestacaoModal(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Nova Prestação
-                  </Button>
-                </div>
+                <CardTitle className="flex items-center gap-2">
+                  <CreditCard className="h-5 w-5" />
+                  Prestação de Contas
+                </CardTitle>
+                <CardDescription>
+                  Envie o Relatório de Execução e a Planilha Orçamentária do projeto.
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                {loadingPrestacoes ? (
-                  <div className="text-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                    <p className="text-sm text-gray-500 mt-2">Carregando prestações de contas...</p>
-                  </div>
-                ) : prestacoes.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <CreditCard className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>Nenhuma prestação de contas disponível no momento.</p>
-                    <p className="text-sm">As prestações de contas aparecerão aqui quando o projeto for aprovado e executado.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {prestacoes.map((prestacao) => {
-                      return (
-                        <div key={prestacao.id} className="border rounded-lg p-4">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-2">
-                                <h4 className="font-medium">{prestacao.tipo || 'Prestação de Contas'}</h4>
-                                <Badge 
-                                  variant={
-                                    prestacao.status === 'aprovado' ? 'default' :
-                                    prestacao.status === 'rejeitado' ? 'destructive' :
-                                    prestacao.status === 'em_analise' ? 'secondary' :
-                                    prestacao.status === 'exigencia' ? 'destructive' :
-                                    'outline'
-                                  }
-                                >
-                                  {prestacao.status || 'Pendente'}
-                                </Badge>
+                <div className="space-y-6">
+                  {/* Se já houver anexos de prestação no projeto (novo modelo) */}
+                  {projeto?.anexos_prestacao && projeto.anexos_prestacao.length > 0 ? (
+                    <div className="space-y-4">
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                        <h4 className="flex items-center gap-2 font-medium text-green-800 mb-2">
+                          <CheckCircle className="h-5 w-5" /> Prestação de Contas Enviada
+                        </h4>
+                        <p className="text-sm text-green-700 mb-4">
+                          Os documentos foram enviados com sucesso e o status foi atualizado.
+                        </p>
+                        <div className="grid gap-2">
+                          {projeto.anexos_prestacao.map((anexo: any, index: number) => (
+                            <div key={index} className="flex items-center justify-between bg-white p-3 rounded border shadow-sm">
+                              <div className="flex items-center gap-2">
+                                <FileText className="h-4 w-4 text-blue-600" />
+                                <span className="font-medium text-sm">{anexo.titulo}</span>
                               </div>
-                              
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                                <div>
-                                  <span className="text-gray-500">Valor Executado:</span>
-                                  <p className="font-medium">
-                                    R$ {prestacao.valor_executado?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
-                                  </p>
-                                </div>
-                                <div>
-                                  <span className="text-gray-500">Data de Entrega:</span>
-                                  <p className="font-medium">
-                                    {prestacao.data_entrega ? new Date(prestacao.data_entrega).toLocaleDateString('pt-BR') : 'Não informado'}
-                                  </p>
-                                </div>
-                                <div>
-                                  <span className="text-gray-500">Prazo de Entrega:</span>
-                                  <p className="font-medium">
-                                    {prestacao.prazo_entrega ? new Date(prestacao.prazo_entrega).toLocaleDateString('pt-BR') : 'Não informado'}
-                                  </p>
-                                </div>
-                                <div>
-                                  <span className="text-gray-500">Data de Análise:</span>
-                                  <p className="font-medium">
-                                    {prestacao.data_analise ? new Date(prestacao.data_analise).toLocaleDateString('pt-BR') : 'Não analisado'}
-                                  </p>
-                                </div>
-                              </div>
-
-                              {prestacao.analisado_por && (
-                                <div className="mt-3">
-                                  <span className="text-gray-500 text-sm">Analisado por:</span>
-                                  <p className="text-sm font-medium mt-1">
-                                    {prestacao.analisado_por_nome || 'Usuário não identificado'}
-                                  </p>
-                                </div>
-                              )}
-
-                              {prestacao.relatorio_atividades && (
-                                <div className="mt-3">
-                                  <span className="text-gray-500 text-sm">Relatório de Atividades:</span>
-                                  <div className="mt-1">
-                                    {prestacao.relatorio_atividades.startsWith('http') ? (
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => window.open(prestacao.relatorio_atividades, '_blank')}
-                                        className="flex items-center gap-2"
-                                      >
-                                        <ExternalLink className="h-4 w-4" />
-                                        Ver Relatório de Atividades
-                                      </Button>
-                                    ) : (
-                                      <p className="text-sm">{prestacao.relatorio_atividades}</p>
-                                    )}
-                                  </div>
-                                </div>
-                              )}
-
-                              {prestacao.relatorio_financeiro && (
-                                <div className="mt-3">
-                                  <span className="text-gray-500 text-sm">Relatório Financeiro:</span>
-                                  <div className="mt-1">
-                                    {prestacao.relatorio_financeiro.startsWith('http') ? (
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => window.open(prestacao.relatorio_financeiro, '_blank')}
-                                        className="flex items-center gap-2"
-                                      >
-                                        <ExternalLink className="h-4 w-4" />
-                                        Ver Relatório Financeiro
-                                      </Button>
-                                    ) : (
-                                      <p className="text-sm">{prestacao.relatorio_financeiro}</p>
-                                    )}
-                                  </div>
-                                </div>
-                              )}
-
-                            
-
-                              {prestacao.comprovantes_url && (
-                                <div className="mt-3">
-                                  <span className="text-gray-500 text-sm">Comprovantes:</span>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => window.open(prestacao.comprovantes_url, '_blank')}
-                                    className="flex items-center gap-2"
-                                  >
-                                    <ExternalLink className="h-4 w-4" />
-                                    Ver Comprovantes
-                                  </Button>
-                                </div>
-                              )}
-
-{prestacao.parecer_analise && (
-                              <div className="mt-3">
-                                <span className="text-gray-500 text-sm">Parecer de Análise:</span>
-                                <p className="text-sm mt-1">{prestacao.parecer_analise}</p>
-                              </div>
-                            )}
-
-                            {prestacao.exigencia && (
-                              <div className="mt-3">
-                                <span className="text-gray-500 text-sm">Exigência:</span>
-                                <p className="text-sm mt-1">{prestacao.exigencia}</p>
-                              </div>
-                            )}
-
-                            {prestacao.motivo_rejeicao && (
-                              <div className="mt-3">
-                                <span className="text-gray-500 text-sm">Motivo da Rejeição:</span>
-                                <p className="text-sm mt-1">{prestacao.motivo_rejeicao}</p>
-                              </div>
-                            )}
-
-                            </div>
-
-                            {/* Botões de Ação - Apenas para Proponente */}
-                            <div className="flex flex-col gap-2 ml-4">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  setPrestacaoSelecionada(prestacao.id);
-                                  setShowVinculacaoModal(true);
-                                }}
-                                className="flex items-center gap-2"
-                              >
-                                <Plus className="h-4 w-4" />
-                                Vincular Movimentação
+                              <Button variant="outline" size="sm" onClick={() => window.open(anexo.url, '_blank')} className="h-8">
+                                <Download className="h-3.5 w-3.5 mr-2" />
+                                Baixar
                               </Button>
-                              
-                              {(prestacao.status === 'pendente' || prestacao.status === 'em_analise') && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleExcluirPrestacao(prestacao.id)}
-                                  className="flex items-center gap-2 text-red-600 hover:text-red-700"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                  Excluir
-                                </Button>
-                              )}
                             </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    /* Formulário de Envio Simplificado */
+                    <div className="space-y-6">
+                      <div className="bg-amber-50 border border-amber-200 rounded-md p-4 space-y-4">
+                        <div className="flex items-center gap-2 text-amber-800 font-semibold border-b border-amber-200 pb-2">
+                          <AlertTriangle className="w-5 h-5" /> 
+                          <h4 className="text-sm">Documentação Obrigatória para Finalização</h4>
+                        </div>
+                        
+                        <div className="grid md:grid-cols-2 gap-6">
+                          <div className="space-y-2">
+                            <Label className="text-sm font-semibold flex items-center gap-1.5">
+                              <FileText className="w-4 h-4 text-slate-500" />
+                              Relatório de Execução (PDF) <span className="text-red-500">*</span>
+                            </Label>
+                            <Input 
+                              type="file" 
+                              accept=".pdf" 
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) setNovaPrestacaoRelatorio(file);
+                              }}
+                              className="bg-white border-amber-200"
+                            />
+                            {novaPrestacaoRelatorio && (
+                              <p className="text-[11px] text-green-600 font-medium flex items-center gap-1">
+                                <CheckCircle className="h-3 w-3" /> Selecionado: {novaPrestacaoRelatorio.name}
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label className="text-sm font-semibold flex items-center gap-1.5">
+                              <BarChart3 className="w-4 h-4 text-slate-500" />
+                              Planilha de Gastos (PDF) <span className="text-red-500">*</span>
+                            </Label>
+                            <Input 
+                              type="file" 
+                              accept=".pdf"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) setNovaPrestacaoFinanceiro(file);
+                              }}
+                              className="bg-white border-amber-200"
+                            />
+                            {novaPrestacaoFinanceiro && (
+                              <p className="text-[11px] text-green-600 font-medium flex items-center gap-1">
+                                <CheckCircle className="h-3 w-3" /> Selecionado: {novaPrestacaoFinanceiro.name}
+                              </p>
+                            )}
                           </div>
                         </div>
-                      );
-                    })}
-                  </div>
-                )}
+
+                        <div className="bg-amber-100/50 p-3 rounded-md">
+                          <p className="text-xs text-amber-800 leading-relaxed">
+                            <strong>Nota:</strong> Certifique-se de que os arquivos estão em formato <strong>PDF</strong> e contêm todas as informações solicitadas no edital. O envio mudará o status do projeto para <strong>"Prestação Enviada"</strong>.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end">
+                         <Button 
+                            onClick={handleEnviarPrestacaoSimplificada}
+                            disabled={carregandoPrestacao || !novaPrestacaoRelatorio || !novaPrestacaoFinanceiro}
+                            className="bg-blue-600 hover:bg-blue-700 text-white min-w-[200px] h-11"
+                         >
+                            {carregandoPrestacao ? (
+                                <>
+                                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                                    Enviando Documentos...
+                                </>
+                            ) : (
+                                <>
+                                    <Upload className="w-5 h-5 mr-2" />
+                                    Finalizar Prestação de Contas
+                                </>
+                            )}
+                         </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Histórico Legal se existir */}
+                  {prestacoes.length > 0 && !projeto?.anexos_prestacao && (
+                    <div className="mt-8 pt-6 border-t border-slate-100">
+                      <h3 className="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
+                         <History className="w-4 h-4" /> Histórico de Envios
+                      </h3>
+                      <div className="grid gap-3">
+                         {prestacoes.map((p) => (
+                           <div key={p.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border text-sm">
+                             <div className="flex items-center gap-3">
+                               <div className="p-2 bg-white rounded shadow-sm">
+                                 <FileText className="w-4 h-4 text-slate-400" />
+                               </div>
+                               <div>
+                                 <p className="font-medium text-slate-800">{p.descricao || 'Envio de Prestação'}</p>
+                                 <p className="text-[11px] text-slate-500">{new Date(p.created_at).toLocaleDateString()}</p>
+                               </div>
+                             </div>
+                             <Badge variant={p.status === 'aprovado' ? 'default' : p.status === 'rejeitado' ? 'destructive' : 'secondary'}>
+                               {p.status}
+                             </Badge>
+                           </div>
+                         ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </TabsContent>

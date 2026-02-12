@@ -235,7 +235,7 @@ export const DashboardMain = () => {
                               className={`w-full ${status.corBotao}`}
                             >
                               <FileText className="h-4 w-4 mr-2" />
-                              Inscrever Projeto
+                              Inscrever-se Projeto
                             </Button>
                           );
                         })()}

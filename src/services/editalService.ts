@@ -1,5 +1,17 @@
 import { supabase } from "@/integrations/supabase/client";
 
+export interface Anexo {
+  titulo: string;
+  url: string;
+  tipo: string;
+}
+
+export interface CriterioAvaliacao {
+  id: string;
+  descricao: string;
+  peso: number;
+}
+
 export interface Edital {
   id: string;
   prefeitura_id: string;
@@ -9,12 +21,16 @@ export interface Edital {
   data_abertura: string;
   data_final_envio_projeto: string;
   horario_final_envio_projeto: string;
-  status: 'rascunho' | 'ativo' | 'arquivado';
+  status: 'recebendo_projetos' | 'avaliacao' | 'recurso' | 'contra_razao' | 'em_execucao' | 'finalizado' | 'rascunho' | 'arquivado';
   total_projetos: number;
   valor_maximo: number;
   prazo_avaliacao: number;
   modalidades: string[];
-  regulamento: string[];
+  regulamento: string[]; // Mantido para compatibilidade
+  anexos: Anexo[];
+  has_accountability_phase: boolean;
+  data_prorrogacao?: string;
+  criterios_avaliacao?: CriterioAvaliacao[];
   created_at: string;
   updated_at: string;
   created_by: string;
@@ -31,7 +47,13 @@ export interface CreateEditalData {
   prazo_avaliacao: number;
   modalidades: string[];
   regulamento: string[];
+  anexos: Anexo[];
+  has_accountability_phase: boolean;
+  data_prorrogacao?: string;
+  criterios_avaliacao?: CriterioAvaliacao[];
 }
+
+export type UpdateEditalData = Partial<CreateEditalData>;
 
 export const editalService = {
   async getAll(prefeituraId: string): Promise<Edital[]> {
@@ -68,21 +90,32 @@ export const editalService = {
 
   async create(data: CreateEditalData, prefeituraId: string, userId: string): Promise<Edital | null> {
     try {
+      const { anexos, criterios_avaliacao, ...rest } = data;
       const editalData = {
-        ...data,
+        ...rest,
         prefeitura_id: prefeituraId,
         created_by: userId,
         status: 'rascunho',
         total_projetos: 0
       };
 
-      const { data: edital, error } = await supabase
-        .from('editais')
+      console.log('Criando edital com payload:', editalData);
+
+      const { data: edital, error } = await (supabase
+        .from('editais') as any)
         .insert(editalData)
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro detalhado do Supabase ao criar edital:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint
+        });
+        throw error;
+      }
       return edital;
     } catch (error) {
       console.error('Erro ao criar edital:', error);
@@ -92,17 +125,32 @@ export const editalService = {
 
   async update(id: string, data: Partial<CreateEditalData>): Promise<Edital | null> {
     try {
-      const { data: edital, error } = await supabase
-        .from('editais')
-        .update({
-          ...data,
-          updated_at: new Date().toISOString()
-        })
+      // Filtrar campos que não pertencem à tabela 'editais'
+      const { anexos, criterios_avaliacao, id: _id, created_at: _ca, ...rest } = data as any;
+      
+      const updateData = {
+        ...rest,
+        updated_at: new Date().toISOString()
+      };
+
+      console.log(`Atualizando edital ${id} com payload:`, updateData);
+
+      const { data: edital, error } = await (supabase
+        .from('editais') as any)
+        .update(updateData)
         .eq('id', id)
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro detalhado do Supabase ao atualizar edital:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint
+        });
+        throw error;
+      }
       return edital;
     } catch (error) {
       console.error('Erro ao atualizar edital:', error);
@@ -112,8 +160,8 @@ export const editalService = {
 
   async updateStatus(id: string, status: Edital['status']): Promise<boolean> {
     try {
-      const { error } = await supabase
-        .from('editais')
+      const { error } = await (supabase
+        .from('editais') as any)
         .update({
           status,
           updated_at: new Date().toISOString()
@@ -138,8 +186,8 @@ export const editalService = {
 
   async delete(id: string): Promise<boolean> {
     try {
-      const { error } = await supabase
-        .from('editais')
+      const { error } = await (supabase
+        .from('editais') as any)
         .delete()
         .eq('id', id);
 
@@ -165,7 +213,7 @@ export const editalService = {
 
       if (error) throw error;
 
-      const stats = data?.reduce((acc, edital) => {
+      const stats = (data as any[])?.reduce((acc, edital) => {
         acc.total++;
         acc[edital.status as keyof typeof acc]++;
         return acc;
@@ -180,6 +228,22 @@ export const editalService = {
     } catch (error) {
       console.error('Erro ao buscar estatísticas dos editais:', error);
       return { total: 0, abertos: 0, fechados: 0, arquivados: 0 };
+    }
+  },
+
+  async getAnexos(editalId: string): Promise<any[]> {
+    try {
+      const { data, error } = await supabase
+        .from('arquivos_edital')
+        .select('*')
+        .eq('edital_id', editalId)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Erro ao buscar anexos do edital:', error);
+      return [];
     }
   }
 };

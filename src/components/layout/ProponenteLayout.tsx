@@ -21,6 +21,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ModalContatoSuporte } from "@/components/ModalContatoSuporte";
 import { APP_VERSION } from "@/config/version";
 import { supabase } from "@/integrations/supabase/client";
+import { FixedHeader } from "@/components/layout/FixedHeader";
+
 
 interface ProponenteLayoutProps {
   children: ReactNode;
@@ -126,260 +128,273 @@ export const ProponenteLayout = ({
 
   return (
     <BaseLayout>
-      <div className="flex h-screen bg-background">
-        {/* Sidebar Mobile */}
-        {sidebarOpen && (
-          <div className="fixed inset-0 z-50 lg:hidden">
-            <div className="fixed inset-0 bg-black/20" onClick={() => setSidebarOpen(false)} />
-            <div className="fixed inset-y-0 left-0 z-50 w-64 bg-background border-r">
-              <div className="flex h-16 items-center justify-between px-4 border-b">
-                <div className="flex items-center space-x-2">
-                  <User className="h-8 w-8 text-primary" />
-                  <span className="text-lg font-semibold">Proponente</span>
+      <div className="min-h-screen bg-background pt-20">
+        <FixedHeader />
+        <div className="flex bg-background">
+          {/* Sidebar Mobile */}
+          {sidebarOpen && (
+            <div className="fixed inset-0 z-50 lg:hidden">
+              <div 
+                className="fixed inset-0 bg-black/50" 
+                style={{ top: '80px' }}
+                onClick={() => setSidebarOpen(false)} 
+              />
+              <div 
+                className="fixed inset-y-0 left-0 w-64 bg-white border-r flex flex-col"
+                style={{ top: '80px', height: 'calc(100vh - 80px)' }}
+              >
+                <div className="flex h-16 items-center justify-between px-4 border-b">
+                  <div className="flex items-center space-x-2">
+                    <User className="h-8 w-8 text-primary" />
+                    <span className="text-lg font-semibold">Proponente</span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setSidebarOpen(false)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setSidebarOpen(false)}
-                >
-                  <X className="h-6 w-6" />
-                </Button>
-              </div>
 
-              <nav className="flex-1 space-y-1 p-4">
-                {navigation.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = location.pathname === item.href;
-                  return (
+                <nav className="flex-1 space-y-1 p-4 overflow-y-auto">
+                  {navigation.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = location.pathname === item.href;
+                    return (
+                      <button
+                        key={item.name}
+                        onClick={() => {
+                          navigate(item.href);
+                          setSidebarOpen(false);
+                        }}
+                        className={cn(
+                          "flex items-center gap-3 px-3 py-2 rounded-lg w-full transition-colors",
+                          isActive
+                            ? "bg-primary text-primary-foreground"
+                            : "text-gray-700 hover:bg-gray-100"
+                        )}
+                      >
+                        <Icon className="h-5 w-5" />
+                        <span>{item.name}</span>
+                      </button>
+                    );
+                  })}
+                  {linkTutorial && (
                     <button
-                      key={item.name}
                       onClick={() => {
-                        navigate(item.href);
+                        window.open(linkTutorial, '_blank', 'noopener,noreferrer');
                         setSidebarOpen(false);
                       }}
                       className={cn(
                         "flex items-center gap-3 px-3 py-2 rounded-lg w-full transition-colors",
-                        isActive
-                          ? "bg-primary text-primary-foreground"
-                          : "text-gray-700 hover:bg-gray-100"
+                        "text-gray-700 hover:bg-gray-100"
                       )}
                     >
-                      <Icon className="h-5 w-5" />
-                      <span>{item.name}</span>
+                      <BookOpen className="h-5 w-5" />
+                      <span>Tutorial</span>
                     </button>
-                  );
-                })}
-                {linkTutorial && (
-                  <button
-                    onClick={() => {
-                      window.open(linkTutorial, '_blank', 'noopener,noreferrer');
-                      setSidebarOpen(false);
-                    }}
-                    className={cn(
-                      "flex items-center gap-3 px-3 py-2 rounded-lg w-full transition-colors",
-                      "text-gray-700 hover:bg-gray-100"
-                    )}
-                  >
-                    <BookOpen className="h-5 w-5" />
-                    <span>Tutorial</span>
-                  </button>
-                )}
-              </nav>
+                  )}
+                </nav>
 
-              <div className="p-4 border-t">
-                <div className="flex items-center gap-3 mb-3">
-                  <Avatar>
-                    <AvatarFallback>{proponente.nome.charAt(0).toUpperCase()}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{proponente.nome}</p>
-                    <p className="text-xs text-gray-500 truncate">{proponente.email}</p>
+                <div className="p-4 border-t bg-white">
+                  <div className="flex items-center gap-3 mb-3">
+                    <Avatar>
+                      <AvatarFallback>{proponente.nome.charAt(0).toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{proponente.nome}</p>
+                      <p className="text-xs text-gray-500 truncate">{proponente.email}</p>
+                    </div>
                   </div>
-                </div>
-                <div className="space-y-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full"
-                    onClick={() => {
-                      navigate(`/${nomePrefeitura}/proponente/perfil`);
-                      setSidebarOpen(false);
-                    }}
-                  >
-                    <Settings className="mr-2 h-4 w-4" />
-                    Editar Perfil
-                  </Button>
-                  {temContatoSuporte && (
+                  <div className="space-y-2">
                     <Button
                       variant="outline"
                       size="sm"
                       className="w-full"
                       onClick={() => {
-                        setModalSuporteOpen(true);
+                        navigate(`/${nomePrefeitura}/proponente/perfil`);
                         setSidebarOpen(false);
                       }}
                     >
-                      <Headphones className="mr-2 h-4 w-4" />
-                      Suporte
+                      <Settings className="mr-2 h-4 w-4" />
+                      Editar Perfil
                     </Button>
-                  )}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full"
-                    onClick={handleLogout}
-                  >
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Sair
-                  </Button>
-                </div>
-                <div className="pt-2 text-center">
-                  <p className="text-xs text-muted-foreground">versão {APP_VERSION}</p>
+                    {temContatoSuporte && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                        onClick={() => {
+                          setModalSuporteOpen(true);
+                          setSidebarOpen(false);
+                        }}
+                      >
+                        <Headphones className="mr-2 h-4 w-4" />
+                        Suporte
+                      </Button>
+                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={handleLogout}
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Sair
+                    </Button>
+                  </div>
+                  <div className="pt-2 text-center">
+                    <p className="text-xs text-muted-foreground">versão {APP_VERSION}</p>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Sidebar Desktop */}
-        <div className="hidden lg:flex lg:flex-col lg:w-64 lg:border-r">
-          <div className="flex h-16 items-center px-4 border-b">
-            <div className="flex items-center space-x-2">
-              <User className="h-8 w-8 text-primary" />
-              <span className="text-lg font-semibold">Proponente</span>
+          {/* Sidebar Desktop */}
+          <div 
+            className="hidden lg:flex lg:flex-col lg:w-64 lg:border-r lg:fixed lg:left-0 z-30 bg-white"
+            style={{ top: '80px', height: 'calc(100vh - 80px)' }}
+          >
+            <div className="flex h-16 items-center px-4 border-b">
+              <div className="flex items-center space-x-2">
+                <User className="h-8 w-8 text-primary" />
+                <span className="text-lg font-semibold">Proponente</span>
+              </div>
             </div>
-          </div>
 
-          <nav className="flex-1 space-y-1 p-4">
-            {navigation.map((item) => {
-              const Icon = item.icon;
-              const isActive = location.pathname === item.href;
-              return (
+            <nav className="flex-1 space-y-1 p-4 overflow-y-auto">
+              {navigation.map((item) => {
+                const Icon = item.icon;
+                const isActive = location.pathname === item.href;
+                return (
+                  <button
+                    key={item.name}
+                    onClick={() => navigate(item.href)}
+                    className={cn(
+                      "flex items-center gap-3 px-3 py-2 rounded-lg w-full transition-colors",
+                      isActive
+                        ? "bg-primary text-primary-foreground"
+                        : "text-gray-700 hover:bg-gray-100"
+                    )}
+                  >
+                    <Icon className="h-5 w-5" />
+                    <span>{item.name}</span>
+                  </button>
+                );
+              })}
+              {linkTutorial && (
                 <button
-                  key={item.name}
-                  onClick={() => navigate(item.href)}
+                  onClick={() => window.open(linkTutorial, '_blank', 'noopener,noreferrer')}
                   className={cn(
                     "flex items-center gap-3 px-3 py-2 rounded-lg w-full transition-colors",
-                    isActive
-                      ? "bg-primary text-primary-foreground"
-                      : "text-gray-700 hover:bg-gray-100"
+                    "text-gray-700 hover:bg-gray-100"
                   )}
                 >
-                  <Icon className="h-5 w-5" />
-                  <span>{item.name}</span>
+                  <BookOpen className="h-5 w-5" />
+                  <span>Tutorial</span>
                 </button>
-              );
-            })}
-            {linkTutorial && (
-              <button
-                onClick={() => window.open(linkTutorial, '_blank', 'noopener,noreferrer')}
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2 rounded-lg w-full transition-colors",
-                  "text-gray-700 hover:bg-gray-100"
-                )}
-              >
-                <BookOpen className="h-5 w-5" />
-                <span>Tutorial</span>
-              </button>
-            )}
-          </nav>
+              )}
+            </nav>
 
-          <div className="p-4 border-t">
-            <div className="flex items-center gap-3 mb-3">
-              <Avatar>
-                <AvatarFallback>{proponente.nome.charAt(0).toUpperCase()}</AvatarFallback>
-              </Avatar>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{proponente.nome}</p>
-                <p className="text-xs text-gray-500 truncate">{proponente.email}</p>
+            <div className="p-4 border-t bg-white">
+              <div className="flex items-center gap-3 mb-3">
+                <Avatar>
+                  <AvatarFallback>{proponente.nome.charAt(0).toUpperCase()}</AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{proponente.nome}</p>
+                  <p className="text-xs text-gray-500 truncate">{proponente.email}</p>
+                </div>
               </div>
-            </div>
-            <div className="space-y-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full"
-                onClick={() => navigate(`/${nomePrefeitura}/proponente/perfil`)}
-              >
-                <Settings className="mr-2 h-4 w-4" />
-                Editar Perfil
-              </Button>
-              {temContatoSuporte && (
+              <div className="space-y-2">
                 <Button
                   variant="outline"
                   size="sm"
                   className="w-full"
-                  onClick={() => setModalSuporteOpen(true)}
+                  onClick={() => navigate(`/${nomePrefeitura}/proponente/perfil`)}
                 >
-                  <Headphones className="mr-2 h-4 w-4" />
-                  Suporte
+                  <Settings className="mr-2 h-4 w-4" />
+                  Editar Perfil
                 </Button>
-              )}
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full"
-                onClick={handleLogout}
-              >
-                <LogOut className="mr-2 h-4 w-4" />
-                Sair
-              </Button>
-            </div>
-            <div className="pt-2 text-center">
-              <p className="text-xs text-muted-foreground">versão {APP_VERSION}</p>
+                {temContatoSuporte && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => setModalSuporteOpen(true)}
+                  >
+                    <Headphones className="mr-2 h-4 w-4" />
+                    Suporte
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={handleLogout}
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sair
+                </Button>
+              </div>
+              <div className="pt-2 text-center">
+                <p className="text-xs text-muted-foreground">versão {APP_VERSION}</p>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Main Content */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Top Header */}
-          <header className="h-16 border-b bg-background">
-            <div className="flex h-full items-center justify-between px-4">
-              <div className="flex items-center gap-3">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="lg:hidden"
-                  onClick={() => setSidebarOpen(true)}
-                >
-                  <Menu className="h-6 w-6" />
-                </Button>
-                {prefeitura && (
-                  <div>
-                    <p className="text-sm font-medium">{prefeitura.nome}</p>
-                    <p className="text-xs text-gray-500">{prefeitura.municipio} - {prefeitura.estado}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </header>
-
-          {/* Page Content */}
-          <main className="flex-1 overflow-auto">
-            {(title || description || headerActions) && (
-              <div className="border-b bg-background">
-                <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
-                  <div className="flex items-center justify-between py-6">
+          {/* Main Content */}
+          <div className="flex-1 flex flex-col overflow-hidden lg:pl-64 min-h-[calc(100vh-80px)]">
+            {/* Top Header */}
+            <header className="h-16 border-b bg-background">
+              <div className="flex h-full items-center justify-between px-4">
+                <div className="flex items-center gap-3">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="lg:hidden"
+                    onClick={() => setSidebarOpen(true)}
+                  >
+                    <Menu className="h-6 w-6" />
+                  </Button>
+                  {prefeitura && (
                     <div>
-                      {title && (
-                        <h1 className="text-3xl font-bold tracking-tight">{title}</h1>
-                      )}
-                      {description && (
-                        <p className="text-muted-foreground mt-1">{description}</p>
-                      )}
+                      <p className="text-sm font-medium">{prefeitura.nome}</p>
+                      <p className="text-xs text-gray-500">{prefeitura.municipio} - {prefeitura.estado}</p>
                     </div>
-                    {headerActions && <div>{headerActions}</div>}
-                  </div>
+                  )}
                 </div>
               </div>
-            )}
-            <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="flex-1 space-y-4 p-4 sm:p-6 lg:p-8">
-                {children}
+            </header>
+
+            {/* Page Content */}
+            <main className="flex-1 overflow-auto">
+              {(title || description || headerActions) && (
+                <div className="border-b bg-background">
+                  <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="flex items-center justify-between py-6">
+                      <div>
+                        {title && (
+                          <h1 className="text-3xl font-bold tracking-tight">{title}</h1>
+                        )}
+                        {description && (
+                          <p className="text-muted-foreground mt-1">{description}</p>
+                        )}
+                      </div>
+                      {headerActions && <div>{headerActions}</div>}
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="flex-1 space-y-4 p-4 sm:p-6 lg:p-8">
+                  {children}
+                </div>
               </div>
-            </div>
-          </main>
+            </main>
+          </div>
         </div>
       </div>
       

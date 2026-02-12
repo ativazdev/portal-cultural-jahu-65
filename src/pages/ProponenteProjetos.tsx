@@ -83,9 +83,12 @@ export const ProponenteProjetos = () => {
             id,
             nome,
             codigo,
+            codigo,
             data_abertura,
             data_final_envio_projeto,
-            valor_maximo
+            data_prorrogacao,
+            valor_maximo,
+            has_accountability_phase
           )
         `)
         .in('proponente_id', proponenteIds)
@@ -120,7 +123,9 @@ export const ProponenteProjetos = () => {
       'aprovado': { label: 'Aprovado', color: 'bg-green-100 text-green-800', icon: <CheckCircle className="h-4 w-4" /> },
       'rejeitado': { label: 'Rejeitado', color: 'bg-red-100 text-red-800', icon: <XCircle className="h-4 w-4" /> },
       'em_execucao': { label: 'Em Execução', color: 'bg-purple-100 text-purple-800', icon: <PlayCircle className="h-4 w-4" /> },
-      'concluido': { label: 'Concluído', color: 'bg-green-100 text-green-800', icon: <CheckCircle className="h-4 w-4" /> }
+      'concluido': { label: 'Concluído', color: 'bg-green-100 text-green-800', icon: <CheckCircle className="h-4 w-4" /> },
+      'suplente': { label: 'Suplente', color: 'bg-blue-100 text-blue-800', icon: <Clock className="h-4 w-4" /> },
+      'desclassificado': { label: 'Desclassificado', color: 'bg-red-100 text-red-800', icon: <XCircle className="h-4 w-4" /> }
     };
     return configs[status] || configs['rascunho'];
   };
@@ -193,13 +198,22 @@ export const ProponenteProjetos = () => {
                             <span className="text-orange-600 font-medium">Rascunho não enviado</span>
                           )}
                         </div>
+
+                        {/* New Badge for Accountability */}
+                        {edital?.has_accountability_phase && (
+                           <div className="mt-2">
+                              <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+                                 Prestação de Contas
+                              </Badge>
+                           </div>
+                        )}
                         {edital && (edital.data_abertura || edital.data_final_envio_projeto) && (
                           <div className="flex items-center gap-4 text-xs text-gray-400 pt-2 border-t">
                             {edital.data_abertura && (
                               <span>Abertura: {new Date(edital.data_abertura).toLocaleDateString('pt-BR')}</span>
                             )}
-                            {edital.data_final_envio_projeto && (
-                              <span>Encerramento: {new Date(edital.data_final_envio_projeto).toLocaleDateString('pt-BR')}</span>
+                            {(edital.data_final_envio_projeto || edital.data_prorrogacao) && (
+                              <span>Encerramento: {new Date(edital.data_prorrogacao || edital.data_final_envio_projeto).toLocaleDateString('pt-BR')}</span>
                             )}
                             {edital.valor_maximo && (
                               <span className="font-medium text-gray-600">
