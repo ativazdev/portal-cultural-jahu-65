@@ -2541,7 +2541,7 @@ export const PrefeituraProjetoDetalhes = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {loadingPrestacoes ? (
+                {(loadingPrestacoes) ? (
                   <div className="text-center py-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
                     <p className="text-sm text-gray-500 mt-2">Carregando prestações de contas...</p>
@@ -2552,14 +2552,48 @@ export const PrefeituraProjetoDetalhes = () => {
                     <p>Erro ao carregar prestações de contas</p>
                     <p className="text-sm">{errorPrestacoes}</p>
                   </div>
-                ) : prestacoes.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <CreditCard className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>Nenhuma prestação de contas disponível no momento.</p>
-                    <p className="text-sm">As prestações de contas aparecerão aqui quando o projeto for aprovado e executado.</p>
-                  </div>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="space-y-6">
+                    {/* Arquivos da Fase de Prestação de Contas (Matching Proponente View) */}
+                    {projeto?.anexos_prestacao && projeto.anexos_prestacao.length > 0 && (
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+                        <h4 className="flex items-center gap-2 font-medium text-green-800 mb-2">
+                          <CheckCircle className="h-5 w-5" /> 
+                          Prestação de Contas Enviada (Fase de Prestação)
+                        </h4>
+                        <p className="text-sm text-green-700 mb-4">
+                          Os documentos da fase de prestação de contas foram submetidos pelo proponente.
+                        </p>
+                        <div className="grid gap-2">
+                          {projeto.anexos_prestacao.map((anexo: any, index: number) => (
+                            <div key={index} className="flex items-center justify-between bg-white p-3 rounded border shadow-sm">
+                              <div className="flex items-center gap-2">
+                                <FileText className="h-4 w-4 text-blue-600" />
+                                <span className="font-medium text-sm text-gray-700">{anexo.titulo}</span>
+                              </div>
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => window.open(anexo.url, '_blank')} 
+                                className="h-8 hover:bg-blue-50 hover:text-blue-700"
+                              >
+                                <Download className="h-3.5 w-3.5 mr-2" />
+                                Baixar
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {projeto.anexos_prestacao.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500">
+                        <CreditCard className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                        <p>Nenhuma prestação de contas detalhada no momento.</p>
+                        <p className="text-sm">Prestações recorrentes aparecerão aqui quando geradas pelo sistema.</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
                     {prestacoes.map((prestacao) => {
                       const openBankingConfig = getOpenBankingStatusConfig(prestacao.status_open_banking || 'nao_monitorado');
                       return (
@@ -2766,6 +2800,8 @@ export const PrefeituraProjetoDetalhes = () => {
                     })}
                   </div>
                 )}
+                  </div>
+                )} 
               </CardContent>
             </Card>
           </TabsContent>

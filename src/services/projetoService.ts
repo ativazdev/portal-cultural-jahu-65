@@ -152,7 +152,7 @@ export const projetoService = {
         .from('projetos')
         .select(`
           *,
-          edital:edital_id (nome, codigo, valor_maximo),
+          edital:edital_id (nome, codigo, valor_maximo, has_accountability_phase),
           proponente:proponente_id (*),
           equipe:equipe_projeto (*),
           atividades:atividades_projeto (*),
