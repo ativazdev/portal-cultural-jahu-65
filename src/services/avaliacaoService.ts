@@ -51,8 +51,8 @@ export interface UpdateAvaliacaoData {
 export const avaliacaoService = {
   async getByProjeto(projetoId: string): Promise<Avaliacao[]> {
     try {
-      const { data, error } = await supabase
-        .from('avaliacoes')
+      const { data, error } = await (supabase
+        .from('avaliacoes' as any) as any)
         .select(`
           *,
           parecerista_nome:pareceristas(nome)
@@ -74,8 +74,8 @@ export const avaliacaoService = {
 
   async getById(id: string): Promise<Avaliacao | null> {
     try {
-      const { data, error } = await supabase
-        .from('avaliacoes')
+      const { data, error } = await (supabase
+        .from('avaliacoes' as any) as any)
         .select(`
           *,
           parecerista_nome:pareceristas(nome)
@@ -86,8 +86,8 @@ export const avaliacaoService = {
       if (error) throw error;
       
       return {
-        ...data,
-        parecerista_nome: data.parecerista_nome?.nome || 'Parecerista não encontrado'
+        ...(data as any),
+        parecerista_nome: (data as any).parecerista_nome?.nome || 'Parecerista não encontrado'
       };
     } catch (error) {
       console.error('Erro ao buscar avaliação:', error);
@@ -190,14 +190,20 @@ export const avaliacaoService = {
 
   async getAvaliacaoFinal(projetoId: string): Promise<any | null> {
     try {
-      const { data, error } = await supabase
-        .from('avaliacoes_final')
+      // Usando select e limit(1) em vez de single() para ser mais resiliente a erros de schema cache/406
+      const { data, error } = await (supabase
+        .from('avaliacoes_final' as any) as any)
         .select('*')
         .eq('projeto_id', projetoId)
-        .single();
+        .limit(1);
 
-      if (error && error.code !== 'PGRST116') throw error;
-      return data || null;
+      if (error) {
+        // Se a tabela não existe ou há erro de cache, logar e retornar null silenciosamente
+        console.warn('Erro ao buscar avaliação final (pode ser schema cache):', error.message);
+        return null;
+      }
+      
+      return data && data.length > 0 ? data[0] : null;
     } catch (error) {
       console.error('Erro ao buscar avaliação final:', error);
       return null;

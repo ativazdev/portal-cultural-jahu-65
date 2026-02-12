@@ -239,7 +239,11 @@ export const editalService = {
         .eq('edital_id', editalId)
         .order('created_at', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        // Se a tabela não existe, retornar vazio em vez de crashar
+        console.warn('Tabela arquivos_edital não encontrada:', error.message);
+        return [];
+      }
       return data || [];
     } catch (error) {
       console.error('Erro ao buscar anexos do edital:', error);

@@ -51,6 +51,7 @@ import { useDocumentosHabilitacao } from "@/hooks/useDocumentosHabilitacao";
 import { ProjetoWithDetails } from "@/services/projetoService";
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
+import { editalService, Anexo } from "@/services/editalService";
 
 // Helpers (datas e Gantt)
 const formatarData = (data: string | Date) => {
@@ -254,6 +255,84 @@ export const PrefeituraProjetoDetalhes = () => {
     updateStatus,
     refresh
   } = useProjetoDetalhes(projetoId || '');
+
+  const [editalAnexos, setEditalAnexos] = useState<Anexo[]>([]);
+  const [loadingAnexosEdital, setLoadingAnexosEdital] = useState(false);
+
+  useEffect(() => {
+    const fetchEditalAnexos = async () => {
+      // Priorizar os dados que já vieram com o projeto (carregados pelo hook useProjetoDetalhes)
+      if (projeto?.edital) {
+        const editalData = projeto.edital as any;
+        let combinedAnexos: Anexo[] = [...(editalData.anexos || [])];
+        
+        // Se não houver anexos no array, tentar buscar no regulamento (legado)
+        if (combinedAnexos.length === 0 && editalData.regulamento && Array.isArray(editalData.regulamento)) {
+          editalData.regulamento.forEach((url: string, i: number) => {
+            if (url) {
+              combinedAnexos.push({
+                titulo: `Regulamento ${i + 1}`,
+                url,
+                tipo: 'pdf'
+              });
+            }
+          });
+        }
+        
+        if (combinedAnexos.length > 0) {
+          setEditalAnexos(combinedAnexos);
+          return;
+        }
+      }
+
+      // Se ainda não temos anexos (ou se veio incompleto), tentar o fetch tradicional
+      if (projeto?.edital_id) {
+        try {
+          setLoadingAnexosEdital(true);
+          const edital = await editalService.getById(projeto.edital_id);
+          let combinedAnexos: Anexo[] = [...(edital?.anexos || [])];
+          
+          if (combinedAnexos.length === 0 && edital?.regulamento && Array.isArray(edital.regulamento)) {
+            edital.regulamento.forEach((url: string, i: number) => {
+              if (url) {
+                combinedAnexos.push({
+                  titulo: `Regulamento ${i + 1}`,
+                  url,
+                  tipo: 'pdf'
+                });
+              }
+            });
+          }
+          setEditalAnexos(combinedAnexos);
+        } catch (error) {
+          console.error('Erro ao buscar anexos do edital:', error);
+        } finally {
+          setLoadingAnexosEdital(false);
+        }
+      }
+    };
+
+    fetchEditalAnexos();
+  }, [projeto?.edital_id, projeto?.edital]);
+
+  const handleDownload = async (url: string, fileName: string) => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      console.error('Erro ao baixar arquivo:', error);
+      // Fallback para abrir em nova aba se o fetch falhar (ex: CORS)
+      window.open(url, '_blank');
+    }
+  };
 
   // Funções de Habilitação e Aprovação de Projeto
   const handleHabilitar = async () => {
@@ -2212,10 +2291,10 @@ export const PrefeituraProjetoDetalhes = () => {
                   <div>
                     <CardTitle className="flex items-center gap-2">
                       <FolderOpen className="h-5 w-5" />
-                      Documentos de Habilitação
+                      Anexos do Edital
                     </CardTitle>
                     <CardDescription>
-                      Documentos necessários para habilitação do projeto
+                      Documentos e modelos do edital e arquivos de habilitação/complementares do proponente
                     </CardDescription>
                   </div>
                   <div className="flex items-center gap-2">
@@ -2240,7 +2319,7 @@ export const PrefeituraProjetoDetalhes = () => {
                         </Button>
                       </>
                     )}
-                    {projeto?.proponente?.tipo && documentos.length === 0 && (
+                    {/*projeto?.proponente?.tipo && documentos.length === 0 && (
                       <Button 
                         variant="outline"
                         onClick={() => {
@@ -2266,139 +2345,194 @@ export const PrefeituraProjetoDetalhes = () => {
                         <Plus className="h-4 w-4 mr-2" />
                         Gerar Documentos Padrão
                       </Button>
-                    )}
+                    )*/}
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
-                {loadingDocumentos ? (
-                  <div className="text-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                    <p className="mt-2 text-gray-500">Carregando documentos...</p>
-                  </div>
-                ) : errorDocumentos ? (
-                  <div className="text-center py-8 text-red-500">
-                    <FolderOpen className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>Erro ao carregar documentos: {errorDocumentos}</p>
-                    <Button onClick={refreshDocumentos} className="mt-4">
-                      Tentar Novamente
-                    </Button>
-                  </div>
-                ) : documentos.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <FolderOpen className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>Nenhum documento disponível no momento.</p>
-                    {projeto?.proponente?.tipo ? (
-                      <>
-                        <p className="text-sm">Clique em "Gerar Documentos Padrão" para criar os documentos necessários.</p>
-                        <p className="text-xs text-gray-400 mt-2">
-                          Tipo de proponente: {projeto.proponente.tipo}
-                        </p>
-                      </>
-                    ) : (
-                      <p className="text-sm">Os documentos aparecerão aqui quando necessário.</p>
-                    )}
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {documentos.map((doc) => {
-                      const statusMap = {
-                        'pendente': { label: 'Pendente', color: 'bg-gray-100 text-gray-800', icon: <Clock className="h-4 w-4" /> },
-                        'enviado': { label: 'Enviado', color: 'bg-blue-100 text-blue-800', icon: <Upload className="h-4 w-4" /> },
-                        'aprovado': { label: 'Aprovado', color: 'bg-green-100 text-green-800', icon: <CheckCircle className="h-4 w-4" /> },
-                        'rejeitado': { label: 'Rejeitado', color: 'bg-red-100 text-red-800', icon: <XCircle className="h-4 w-4" /> }
-                      };
-                      const statusConfig = statusMap[doc.status as keyof typeof statusMap] || statusMap.pendente;
-
-                      return (
-                        <div key={doc.id} className="border rounded-lg p-4 bg-gray-50">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-2">
-                                <h4 className="font-medium text-gray-900">{doc.nome}</h4>
-                                {doc.obrigatorio && (
-                                  <Badge variant="outline" className="text-xs">Obrigatório</Badge>
+              <CardContent className="space-y-8">
+                {/* Seção 1: Modelos e Referências do Edital */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold flex items-center gap-2 text-gray-700">
+                    <FileText className="h-4 w-4" />
+                    Modelos e Referências do Edital
+                  </h3>
+                  
+                  {loadingAnexosEdital ? (
+                    <div className="text-center py-4">
+                      <Loader2 className="h-6 w-6 animate-spin mx-auto text-blue-600" />
+                      <p className="mt-1 text-xs text-gray-500">Carregando anexos...</p>
+                    </div>
+                  ) : editalAnexos.length === 0 ? (
+                    <div className="text-center py-4 bg-gray-50 rounded-lg border border-dashed">
+                      <p className="text-sm text-gray-500">Nenhum anexo disponível para este edital.</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {editalAnexos.map((anexo, index) => {
+                        const jaEnviado = documentos.some(d => d.nome === anexo.titulo && d.status === 'enviado');
+                        return (
+                          <div key={index} className={`flex items-center justify-between p-3 rounded-lg border shadow-sm ${jaEnviado ? 'bg-green-50 border-green-200' : 'bg-white'}`}>
+                            <div className="flex items-center gap-3 truncate pr-4">
+                              <div className={`${jaEnviado ? 'bg-green-100' : 'bg-blue-50'} p-2 rounded`}>
+                                {jaEnviado ? (
+                                  <Check className="h-4 w-4 text-green-600" />
+                                ) : (
+                                  <FileText className="h-4 w-4 text-blue-600" />
                                 )}
-                                <Badge className={statusConfig.color}>
-                                  {statusConfig.icon}
-                                  <span className="ml-1">{statusConfig.label}</span>
+                              </div>
+                              <div className="truncate">
+                                <p className="font-medium text-sm truncate">{anexo.titulo}</p>
+                                <p className="text-xs text-gray-500">Modelo/Referência</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {jaEnviado && (
+                                <Badge variant="secondary" className="bg-green-100 text-green-800 text-[10px] h-5">
+                                  Enviado
                                 </Badge>
-                              </div>
-                              
-                              {doc.descricao && (
-                                <p className="text-sm text-gray-600 mb-2">{doc.descricao}</p>
                               )}
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => handleDownload(anexo.url, anexo.titulo)}
+                                className="shrink-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 h-8"
+                              >
+                                <Download className="h-4 w-4 mr-1" />
+                                Baixar
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
 
-                              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm text-gray-600">
-                                <div>
-                                  <span className="font-medium">Tipo:</span>
-                                  <p>{doc.tipo || 'Não informado'}</p>
+                <div className="border-t pt-6 space-y-4">
+                  <h3 className="text-sm font-semibold flex items-center gap-2 text-gray-700">
+                    <Upload className="h-4 w-4" />
+                    Documentos Enviados pelo Proponente
+                  </h3>
+
+                  {loadingDocumentos ? (
+                    <div className="text-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                      <p className="mt-2 text-gray-500">Carregando documentos...</p>
+                    </div>
+                  ) : errorDocumentos ? (
+                    <div className="text-center py-8 text-red-500">
+                      <FolderOpen className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>Erro ao carregar documentos: {errorDocumentos}</p>
+                      <Button onClick={refreshDocumentos} className="mt-4">
+                        Tentar Novamente
+                      </Button>
+                    </div>
+                  ) : documentos.length === 0 ? (
+                    <div className="text-center py-8 bg-gray-50 rounded-lg border border-dashed text-gray-500">
+                      <FolderOpen className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>Nenhum documento disponível no momento.</p>
+                      {projeto?.proponente?.tipo && (
+                        <p className="text-sm mt-1">O proponente ainda não enviou os documentos de habilitação.</p>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {documentos.map((doc) => {
+                        const statusMap = {
+                          'pendente': { label: 'Pendente', color: 'bg-gray-100 text-gray-800', icon: <Clock className="h-4 w-4" /> },
+                          'enviado': { label: 'Enviado', color: 'bg-blue-100 text-blue-800', icon: <Upload className="h-4 w-4" /> },
+                          'aprovado': { label: 'Aprovado', color: 'bg-green-100 text-green-800', icon: <CheckCircle className="h-4 w-4" /> },
+                          'rejeitado': { label: 'Rejeitado', color: 'bg-red-100 text-red-800', icon: <XCircle className="h-4 w-4" /> }
+                        };
+                        const statusConfig = statusMap[doc.status as keyof typeof statusMap] || statusMap.pendente;
+
+                        return (
+                          <div key={doc.id} className={`border rounded-lg p-4 bg-white shadow-sm ${doc.tipo === 'complementar' ? 'border-l-4 border-l-blue-400' : ''}`}>
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <h4 className="font-medium text-gray-900">{doc.nome}</h4>
+                                  {doc.obrigatorio && doc.tipo !== 'complementar' && (
+                                    <Badge variant="outline" className="text-xs">Obrigatório</Badge>
+                                  )}
+                                  {doc.tipo === 'complementar' && (
+                                    <Badge variant="secondary" className="bg-blue-100 text-blue-800 text-xs">Documento Complementar</Badge>
+                                  )}
+                                  <Badge className={statusConfig.color}>
+                                    {statusConfig.icon}
+                                    <span className="ml-1">{statusConfig.label}</span>
+                                  </Badge>
                                 </div>
-                                {doc.data_solicitacao && (
-                                  <div>
-                                    <span className="font-medium">Data de Solicitação:</span>
-                                    <p>{new Date(doc.data_solicitacao).toLocaleDateString('pt-BR')}</p>
-                                  </div>
+                                
+                                {doc.descricao && (
+                                  <p className="text-sm text-gray-600 mb-2">{doc.descricao}</p>
                                 )}
-                                {doc.data_upload && (
+
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm text-gray-600">
                                   <div>
-                                    <span className="font-medium">Data de Upload:</span>
-                                    <p>{new Date(doc.data_upload).toLocaleDateString('pt-BR')}</p>
+                                    <span className="font-medium">Tipo:</span>
+                                    <p>{doc.tipo === 'complementar' ? 'Complementar' : (doc.tipo || 'Habilitação')}</p>
+                                  </div>
+                                  {doc.data_upload && (
+                                    <div>
+                                      <span className="font-medium">Data de Upload:</span>
+                                      <p>{new Date(doc.data_upload).toLocaleDateString('pt-BR')}</p>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {doc.arquivo_nome && (
+                                  <div className="mt-3">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => doc.arquivo_url && handleDownload(doc.arquivo_url, doc.arquivo_nome || 'documento')}
+                                      className="flex items-center gap-2"
+                                    >
+                                      <Download className="h-4 w-4" />
+                                      {doc.arquivo_nome}
+                                      {doc.arquivo_tamanho && (
+                                        <span className="text-xs text-gray-500">
+                                          ({(doc.arquivo_tamanho / 1024).toFixed(2)} KB)
+                                        </span>
+                                      )}
+                                    </Button>
                                   </div>
                                 )}
                               </div>
-
-                              {doc.arquivo_nome && (
-                                <div className="mt-3">
+                              {/* Botões de Ação */}
+                              {doc.status === 'enviado' && (
+                                <div className="flex flex-col gap-2 ml-4">
                                   <Button
-                                    variant="outline"
+                                    variant="default"
                                     size="sm"
-                                    onClick={() => doc.arquivo_url && window.open(doc.arquivo_url, '_blank')}
+                                    onClick={() => handleAprovarDocumento(doc.id)}
+                                    className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
+                                  >
+                                    <CheckCircle className="h-4 w-4" />
+                                    Aprovar
+                                  </Button>
+                                  <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() => {
+                                      setDocumentoSelecionado(doc.id);
+                                      setShowRejeicaoDocModal(true);
+                                    }}
                                     className="flex items-center gap-2"
                                   >
-                                    <Download className="h-4 w-4" />
-                                    {doc.arquivo_nome}
-                                    {doc.arquivo_tamanho && (
-                                      <span className="text-xs text-gray-500">
-                                        ({(doc.arquivo_tamanho / 1024).toFixed(2)} KB)
-                                      </span>
-                                    )}
+                                    <XCircle className="h-4 w-4" />
+                                    Rejeitar
                                   </Button>
                                 </div>
                               )}
                             </div>
-                            {/* Botões de Ação */}
-                            {doc.status === 'enviado' && (
-                              <div className="flex flex-col gap-2 ml-4">
-                                <Button
-                                  variant="default"
-                                  size="sm"
-                                  onClick={() => handleAprovarDocumento(doc.id)}
-                                  className="flex items-center gap-2"
-                                >
-                                  <CheckCircle className="h-4 w-4" />
-                                  Aprovar
-                                </Button>
-                                <Button
-                                  variant="destructive"
-                                  size="sm"
-                                  onClick={() => {
-                                    setDocumentoSelecionado(doc.id);
-                                    setShowRejeicaoDocModal(true);
-                                  }}
-                                  className="flex items-center gap-2"
-                                >
-                                  <XCircle className="h-4 w-4" />
-                                  Rejeitar
-                                </Button>
-                              </div>
-                            )}
                           </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -2471,7 +2605,7 @@ export const PrefeituraProjetoDetalhes = () => {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => window.open(pendencia.arquivo, '_blank')}
+                                  onClick={() => pendencia.arquivo && handleDownload(pendencia.arquivo, 'pendencia')}
                                   className="text-blue-600 hover:text-blue-700"
                                 >
                                   <ExternalLink className="h-4 w-4 mr-2" />

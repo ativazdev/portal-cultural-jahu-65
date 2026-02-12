@@ -37,7 +37,8 @@ import {
   Check,
   Search,
   Loader2,
-  Pencil
+  Pencil,
+  History as HistoryIcon
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ProponenteLayout } from "@/components/layout/ProponenteLayout";
@@ -50,6 +51,7 @@ import { useMovimentacoesFinanceiras } from "@/hooks/useMovimentacoesFinanceiras
 import { useContasMonitoradas } from "@/hooks/useContasMonitoradas";
 import { useDocumentosHabilitacao } from "@/hooks/useDocumentosHabilitacao";
 import { ProjetoWithDetails } from "@/services/projetoService";
+import { editalService, Anexo } from "@/services/editalService";
 import { supabase, getAuthenticatedSupabaseClient } from "@/integrations/supabase/client";
 
 // Opções para múltipla escolha
@@ -247,6 +249,18 @@ const traduzirCotas = (cotas: string) => {
   return cotasMap[cotas] || cotas;
 };
 
+const traduzirDeficiencia = (deficiencia: string) => {
+  const deficiencias: { [key: string]: string } = {
+    'fisica': 'Física',
+    'auditiva': 'Auditiva',
+    'visual': 'Visual',
+    'intelectual': 'Intelectual',
+    'multipla': 'Múltipla',
+    'outra': 'Outra',
+  };
+  return deficiencias[deficiencia] || deficiencia;
+};
+
 const traduzirFuncaoArtistica = (funcao: string) => {
   const funcoes: { [key: string]: string } = {
     'artista': 'Artista, artesão(a), brincante, criador(a)',
@@ -259,18 +273,6 @@ const traduzirFuncaoArtistica = (funcao: string) => {
     'outro': 'Outro',
   };
   return funcoes[funcao] || funcao;
-};
-
-const traduzirDeficiencia = (deficiencia: string) => {
-  const deficiencias: { [key: string]: string } = {
-    'auditiva': 'Auditiva',
-    'fisica': 'Física',
-    'intelectual': 'Intelectual',
-    'multipla': 'Múltipla',
-    'visual': 'Visual',
-    'outro': 'Outro',
-  };
-  return deficiencias[deficiencia] || deficiencia;
 };
 
 // Utilitários para orçamento
@@ -410,6 +412,18 @@ export const ProponenteProjetoDetalhes = () => {
   const [documentoParaUpload, setDocumentoParaUpload] = useState<string | null>(null);
   const [arquivoDoc, setArquivoDoc] = useState<File | null>(null);
   const [enviandoDocumento, setEnviandoDocumento] = useState(false);
+  const [editalAnexos, setEditalAnexos] = useState<Anexo[]>([]);
+  const [loadingAnexosEdital, setLoadingAnexosEdital] = useState(false);
+  const [showNovoDocComplementarModal, setShowNovoDocComplementarModal] = useState(false);
+  const [novoDocComplementarNome, setNovoDocComplementarNome] = useState('');
+  const [novoDocComplementarArquivo, setNovoDocComplementarArquivo] = useState<File | null>(null);
+  const [enviandoDocComplementar, setEnviandoDocComplementar] = useState(false);
+
+  // Estados para Upload de Documentos Gerênricos (Baseados em Anexos/Modelos)
+  const [modelParaUpload, setModelParaUpload] = useState<Anexo | null>(null);
+  const [enviandoModel, setEnviandoModel] = useState(false);
+  const [showModelUploadModal, setShowModelUploadModal] = useState(false);
+  const [arquivoModel, setArquivoModel] = useState<File | null>(null);
 
   // Estados para OpenBanking
   const [contaSelecionada, setContaSelecionada] = useState<string | null>(null);
@@ -462,12 +476,24 @@ export const ProponenteProjetoDetalhes = () => {
     loading: loadingMovimentacoes
   } = useMovimentacoesFinanceiras(projetoId || '', contaSelecionada || undefined);
 
-  // Carregar projeto editado quando projeto mudar
   useEffect(() => {
-    if (projeto) {
-      setProjetoEditado(projeto);
+    if (projeto?.edital) {
+      const editalData = projeto.edital as any;
+      let combinedAnexos: Anexo[] = [...(editalData.anexos || [])];
+      
+      // Se não tem anexos novos, mas tem regulamento legado, converte
+      if (combinedAnexos.length === 0 && editalData.regulamento && editalData.regulamento.length > 0) {
+        editalData.regulamento.forEach((url: string, i: number) => {
+          combinedAnexos.push({
+            titulo: `Regulamento ${i + 1}`,
+            url,
+            tipo: 'pdf'
+          });
+        });
+      }
+      setEditalAnexos(combinedAnexos);
     }
-  }, [projeto]);
+  }, [projeto?.edital]);
 
   // Carregar proponentes quando modal abrir
   useEffect(() => {
@@ -502,6 +528,7 @@ export const ProponenteProjetoDetalhes = () => {
     carregarProponentes();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showEditProponente, proponente?.id, prefeitura?.id]);
+
 
   // Carregar equipe quando modal abrir
   useEffect(() => {
@@ -580,8 +607,8 @@ export const ProponenteProjetoDetalhes = () => {
 
         // 2. Atualizar projeto
         const authClient = getAuthenticatedSupabaseClient('proponente');
-        const { error: updateError } = await authClient
-            .from('projetos')
+        const { error: updateError } = await (authClient
+            .from('projetos' as any) as any)
             .update({ 
                 anexos_prestacao: anexosPrestacao,
                 status: 'prestacao_enviada' // Atualizar status para indicar envio
@@ -720,8 +747,8 @@ export const ProponenteProjetoDetalhes = () => {
     try {
       const authClient = getAuthenticatedSupabaseClient('proponente');
       // Deletar todos os membros atuais
-      const { error: deleteError } = await authClient
-        .from('equipe_projeto')
+      const { error: deleteError } = await (authClient
+        .from('equipe_projeto' as any) as any)
         .delete()
         .eq('projeto_id', projetoId);
 
@@ -729,8 +756,8 @@ export const ProponenteProjetoDetalhes = () => {
 
       // Inserir novos membros
       if (equipeTemp.length > 0) {
-        const { error: insertError } = await authClient
-          .from('equipe_projeto')
+        const { error: insertError } = await (authClient
+          .from('equipe_projeto' as any) as any)
           .insert(
             equipeTemp.map(membro => ({
               projeto_id: projetoId,
@@ -1274,6 +1301,25 @@ export const ProponenteProjetoDetalhes = () => {
     }
   };
 
+  const handleDownload = async (url: string, fileName: string) => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      console.error('Erro ao baixar arquivo:', error);
+      // Fallback para abrir em nova aba se o fetch falhar (ex: CORS)
+      window.open(url, '_blank');
+    }
+  };
+
   const handleUploadDocumento = async () => {
     if (!documentoParaUpload || !arquivoDoc) return;
 
@@ -1348,6 +1394,132 @@ export const ProponenteProjetoDetalhes = () => {
       });
     } finally {
       setEnviandoDocumento(false);
+    }
+  };
+
+  const handleUploadDocComplementar = async () => {
+    if (!novoDocComplementarNome.trim() || !novoDocComplementarArquivo) {
+      toast({
+        title: "Atenção",
+        description: "Preencha o nome do documento e selecione um arquivo.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setEnviandoDocComplementar(true);
+      const authClient = getAuthenticatedSupabaseClient('proponente');
+      
+      const fileExt = novoDocComplementarArquivo.name.split('.').pop();
+      const fileName = `extra-${projetoId}-${Date.now()}.${fileExt}`;
+      
+      const { data: uploadData, error: uploadError } = await authClient.storage
+        .from('documentos_habilitacao')
+        .upload(fileName, novoDocComplementarArquivo);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = authClient.storage
+        .from('documentos_habilitacao')
+        .getPublicUrl(fileName);
+
+      // Criar o registro do documento diretamente na tabela
+      const { error: insertError } = await (authClient
+        .from('documentos_habilitacao' as any) as any)
+        .insert({
+          projeto_id: projetoId!,
+          nome: novoDocComplementarNome,
+          status: 'enviado',
+          arquivo_url: publicUrl,
+          arquivo_nome: novoDocComplementarArquivo.name,
+          arquivo_tamanho: novoDocComplementarArquivo.size,
+          data_upload: new Date().toISOString(),
+          tipo: 'complementar'
+        });
+
+      if (insertError) throw insertError;
+
+      toast({
+        title: "Sucesso",
+        description: "Documento complementar enviado com sucesso!",
+      });
+
+      setShowNovoDocComplementarModal(false);
+      setNovoDocComplementarNome('');
+      setNovoDocComplementarArquivo(null);
+      refreshDocumentos();
+    } catch (error: any) {
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao enviar documento complementar",
+        variant: "destructive",
+      });
+    } finally {
+      setEnviandoDocComplementar(false);
+    }
+  };
+
+  const handleUploadGeneric = async () => {
+    if (!modelParaUpload || !arquivoModel || !projetoId) {
+      toast({
+        title: "Atenção",
+        description: "Selecione um arquivo para enviar.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setEnviandoModel(true);
+      const authClient = getAuthenticatedSupabaseClient('proponente');
+      
+      const fileExt = arquivoModel.name.split('.').pop();
+      const fileName = `model-${projetoId}-${Date.now()}.${fileExt}`;
+      
+      const { data: uploadData, error: uploadError } = await authClient.storage
+        .from('documentos_habilitacao')
+        .upload(fileName, arquivoModel);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = authClient.storage
+        .from('documentos_habilitacao')
+        .getPublicUrl(fileName);
+
+      // Criar o registro do documento diretamente na tabela
+      const { error: insertError } = await (authClient
+        .from('documentos_habilitacao' as any) as any)
+        .insert({
+          projeto_id: projetoId,
+          nome: modelParaUpload.titulo,
+          status: 'enviado',
+          arquivo_url: publicUrl,
+          arquivo_nome: arquivoModel.name,
+          arquivo_tamanho: arquivoModel.size,
+          data_upload: new Date().toISOString(),
+          tipo: 'habilitacao'
+        });
+
+      if (insertError) throw insertError;
+
+      toast({
+        title: "Sucesso",
+        description: "Documento enviado com sucesso!",
+      });
+
+      setShowModelUploadModal(false);
+      setModelParaUpload(null);
+      setArquivoModel(null);
+      refreshDocumentos();
+    } catch (error: any) {
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao enviar documento",
+        variant: "destructive",
+      });
+    } finally {
+      setEnviandoModel(false);
     }
   };
 
@@ -2110,10 +2282,10 @@ export const ProponenteProjetoDetalhes = () => {
                               <span className="text-xs text-gray-500 font-medium block">Inscrição Estadual:</span>
                               <p className="text-sm text-gray-700">{projeto.proponente.inscricao_estadual}</p>
                             </div>
-                            {projeto.proponente.inscricao_municipal && (
+                            {((projeto.proponente as any)?.inscricao_municipal) && (
                               <div className="space-y-1">
                                 <span className="text-xs text-gray-500 font-medium block">Inscrição Municipal:</span>
-                                <p className="text-sm text-gray-700">{projeto.proponente.inscricao_municipal}</p>
+                                <p className="text-sm text-gray-700">{(projeto.proponente as any).inscricao_municipal}</p>
                               </div>
                             )}
                           </div>
@@ -2121,79 +2293,79 @@ export const ProponenteProjetoDetalhes = () => {
                       )}
 
                       {/* Representante Legal */}
-                      {(projeto.proponente.nome_responsavel || projeto.proponente.cpf_responsavel || projeto.proponente.cargo_responsavel) && (
+                      {((projeto.proponente as any).nome_responsavel || (projeto.proponente as any).cpf_responsavel || (projeto.proponente as any).cargo_responsavel) && (
                         <div className="pt-4 border-t">
                           <h4 className="text-sm font-semibold text-gray-700 mb-3">Representante Legal</h4>
                           <div className="space-y-4">
                             {/* Dados Básicos */}
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                              {projeto.proponente.nome_responsavel && (
+                              {(projeto.proponente as any).nome_responsavel && (
                                 <div className="space-y-1">
                                   <span className="text-xs text-gray-500 font-medium block">Nome:</span>
-                                  <p className="text-sm text-gray-700">{projeto.proponente.nome_responsavel}</p>
+                                  <p className="text-sm text-gray-700">{(projeto.proponente as any).nome_responsavel}</p>
                                 </div>
                               )}
-                              {projeto.proponente.cpf_responsavel && (
+                              {(projeto.proponente as any).cpf_responsavel && (
                                 <div className="space-y-1">
                                   <span className="text-xs text-gray-500 font-medium block">CPF:</span>
-                                  <p className="text-sm text-gray-700">{projeto.proponente.cpf_responsavel}</p>
+                                  <p className="text-sm text-gray-700">{(projeto.proponente as any).cpf_responsavel}</p>
                                 </div>
                               )}
-                              {projeto.proponente.rg_responsavel && (
+                              {(projeto.proponente as any).rg_responsavel && (
                                 <div className="space-y-1">
                                   <span className="text-xs text-gray-500 font-medium block">RG:</span>
-                                  <p className="text-sm text-gray-700">{projeto.proponente.rg_responsavel}</p>
+                                  <p className="text-sm text-gray-700">{(projeto.proponente as any).rg_responsavel}</p>
                                 </div>
                               )}
-                              {projeto.proponente.data_nascimento_responsavel && (
+                              {(projeto.proponente as any).data_nascimento_responsavel && (
                                 <div className="space-y-1">
                                   <span className="text-xs text-gray-500 font-medium block">Data de Nascimento:</span>
-                                  <p className="text-sm text-gray-700">{formatarData(projeto.proponente.data_nascimento_responsavel)}</p>
+                                  <p className="text-sm text-gray-700">{formatarData((projeto.proponente as any).data_nascimento_responsavel)}</p>
                                 </div>
                               )}
-                              {projeto.proponente.cargo_responsavel && (
+                              {(projeto.proponente as any).cargo_responsavel && (
                                 <div className="space-y-1">
                                   <span className="text-xs text-gray-500 font-medium block">Cargo:</span>
-                                  <p className="text-sm text-gray-700">{projeto.proponente.cargo_responsavel}</p>
+                                  <p className="text-sm text-gray-700">{(projeto.proponente as any).cargo_responsavel}</p>
                                 </div>
                               )}
                             </div>
 
                             {/* Contato */}
-                            {(projeto.proponente.email_responsavel || projeto.proponente.telefone_responsavel) && (
+                            {((projeto.proponente as any).email_responsavel || (projeto.proponente as any).telefone_responsavel) && (
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
-                                {projeto.proponente.email_responsavel && (
+                                {(projeto.proponente as any).email_responsavel && (
                                   <div className="space-y-1">
                                     <span className="text-xs text-gray-500 font-medium block">Email:</span>
-                                    <p className="text-sm text-gray-700">{projeto.proponente.email_responsavel}</p>
+                                    <p className="text-sm text-gray-700">{(projeto.proponente as any).email_responsavel}</p>
                                   </div>
                                 )}
-                                {projeto.proponente.telefone_responsavel && (
+                                {(projeto.proponente as any).telefone_responsavel && (
                                   <div className="space-y-1">
                                     <span className="text-xs text-gray-500 font-medium block">Telefone:</span>
-                                    <p className="text-sm text-gray-700">{projeto.proponente.telefone_responsavel}</p>
+                                    <p className="text-sm text-gray-700">{(projeto.proponente as any).telefone_responsavel}</p>
                                   </div>
                                 )}
                               </div>
                             )}
 
                             {/* Endereço */}
-                            {projeto.proponente.endereco_responsavel && (
+                            {(projeto.proponente as any).endereco_responsavel && (
                               <div className="pt-4 border-t">
                                 <h5 className="text-xs font-semibold text-gray-600 mb-2">Endereço</h5>
                                 <div className="space-y-1">
                                   <p className="text-sm text-gray-700">
                                     {[
-                                      projeto.proponente.endereco_responsavel,
-                                      projeto.proponente.numero_responsavel,
-                                      projeto.proponente.complemento_responsavel
+                                      (projeto.proponente as any).endereco_responsavel,
+                                      (projeto.proponente as any).numero_responsavel,
+                                      (projeto.proponente as any).complemento_responsavel
                                     ].filter(Boolean).join(', ')}
                                   </p>
                                   <p className="text-sm text-gray-700">
                                     {[
-                                      projeto.proponente.cidade_responsavel,
-                                      projeto.proponente.estado_responsavel,
-                                      projeto.proponente.cep_responsavel
+                                      (projeto.proponente as any).cidade_responsavel,
+                                      (projeto.proponente as any).estado_responsavel,
+                                      (projeto.proponente as any).cep_responsavel
                                     ].filter(Boolean).join(' - ')}
                                   </p>
                                 </div>
@@ -2201,56 +2373,56 @@ export const ProponenteProjetoDetalhes = () => {
                             )}
 
                             {/* Dados Pessoais */}
-                            {(projeto.proponente.comunidade_tradicional_responsavel || projeto.proponente.genero_responsavel || projeto.proponente.raca_responsavel || projeto.proponente.escolaridade_responsavel || projeto.proponente.renda_mensal_responsavel) && (
+                            {((projeto.proponente as any).comunidade_tradicional_responsavel || (projeto.proponente as any).genero_responsavel || (projeto.proponente as any).raca_responsavel || (projeto.proponente as any).escolaridade_responsavel || (projeto.proponente as any).renda_mensal_responsavel) && (
                               <div className="pt-4 border-t">
                                 <h5 className="text-xs font-semibold text-gray-600 mb-3">Dados Pessoais</h5>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                  {projeto.proponente.comunidade_tradicional_responsavel && (
+                                  {(projeto.proponente as any).comunidade_tradicional_responsavel && (
                                     <div className="space-y-1">
                                       <span className="text-xs text-gray-500 font-medium block">Comunidade Tradicional:</span>
-                                      <p className="text-sm text-gray-700">{traduzirComunidade(projeto.proponente.comunidade_tradicional_responsavel)}</p>
+                                      <p className="text-sm text-gray-700">{traduzirComunidade((projeto.proponente as any).comunidade_tradicional_responsavel)}</p>
                                     </div>
                                   )}
-                                  {projeto.proponente.genero_responsavel && (
+                                  {(projeto.proponente as any).genero_responsavel && (
                                     <div className="space-y-1">
                                       <span className="text-xs text-gray-500 font-medium block">Gênero:</span>
-                                      <p className="text-sm text-gray-700">{traduzirGenero(projeto.proponente.genero_responsavel)}</p>
+                                      <p className="text-sm text-gray-700">{traduzirGenero((projeto.proponente as any).genero_responsavel)}</p>
                                     </div>
                                   )}
-                                  {projeto.proponente.raca_responsavel && (
+                                  {(projeto.proponente as any).raca_responsavel && (
                                     <div className="space-y-1">
                                       <span className="text-xs text-gray-500 font-medium block">Raça/Cor:</span>
-                                      <p className="text-sm text-gray-700">{traduzirRaca(projeto.proponente.raca_responsavel)}</p>
+                                      <p className="text-sm text-gray-700">{traduzirRaca((projeto.proponente as any).raca_responsavel)}</p>
                                     </div>
                                   )}
-                                  {projeto.proponente.escolaridade_responsavel && (
+                                  {(projeto.proponente as any).escolaridade_responsavel && (
                                     <div className="space-y-1">
                                       <span className="text-xs text-gray-500 font-medium block">Escolaridade:</span>
-                                      <p className="text-sm text-gray-700">{traduzirEscolaridade(projeto.proponente.escolaridade_responsavel)}</p>
+                                      <p className="text-sm text-gray-700">{traduzirEscolaridade((projeto.proponente as any).escolaridade_responsavel)}</p>
                                     </div>
                                   )}
-                                  {projeto.proponente.renda_mensal_responsavel && (
+                                  {(projeto.proponente as any).renda_mensal_responsavel && (
                                     <div className="space-y-1">
                                       <span className="text-xs text-gray-500 font-medium block">Renda Mensal:</span>
-                                      <p className="text-sm text-gray-700">{traduzirRenda(projeto.proponente.renda_mensal_responsavel)}</p>
+                                      <p className="text-sm text-gray-700">{traduzirRenda((projeto.proponente as any).renda_mensal_responsavel)}</p>
                                     </div>
                                   )}
-                                  {projeto.proponente.pcd_responsavel && (
+                                  {(projeto.proponente as any).pcd_responsavel && (
                                     <div className="space-y-1">
                                       <span className="text-xs text-gray-500 font-medium block">PCD:</span>
-                                      <p className="text-sm text-gray-700">Sim{projeto.proponente.tipo_deficiencia_responsavel && ` - ${traduzirDeficiencia(projeto.proponente.tipo_deficiencia_responsavel)}`}</p>
+                                      <p className="text-sm text-gray-700">Sim{(projeto.proponente as any).tipo_deficiencia_responsavel && ` - ${traduzirDeficiencia((projeto.proponente as any).tipo_deficiencia_responsavel)}`}</p>
                                     </div>
                                   )}
-                                  {projeto.proponente.programa_social_responsavel && (
+                                  {(projeto.proponente as any).programa_social_responsavel && (
                                     <div className="space-y-1">
                                       <span className="text-xs text-gray-500 font-medium block">Programa Social:</span>
-                                      <p className="text-sm text-gray-700">{traduzirProgramaSocial(projeto.proponente.programa_social_responsavel)}</p>
+                                      <p className="text-sm text-gray-700">{traduzirProgramaSocial((projeto.proponente as any).programa_social_responsavel)}</p>
                                     </div>
                                   )}
-                                  {projeto.proponente.concorre_cotas_responsavel && (
+                                  {(projeto.proponente as any).concorre_cotas_responsavel && (
                                     <div className="space-y-1">
                                       <span className="text-xs text-gray-500 font-medium block">Concorre Cotas:</span>
-                                      <p className="text-sm text-gray-700">Sim{projeto.proponente.tipo_cotas_responsavel && ` - ${traduzirCotas(projeto.proponente.tipo_cotas_responsavel)}`}</p>
+                                      <p className="text-sm text-gray-700">Sim{(projeto.proponente as any).tipo_cotas_responsavel && ` - ${traduzirCotas((projeto.proponente as any).tipo_cotas_responsavel)}`}</p>
                                     </div>
                                   )}
                                 </div>
@@ -2258,20 +2430,20 @@ export const ProponenteProjetoDetalhes = () => {
                             )}
 
                             {/* Atividade Artística */}
-                            {(projeto.proponente.funcao_artistica_responsavel || projeto.proponente.profissao_responsavel) && (
+                            {((projeto.proponente as any).funcao_artistica_responsavel || (projeto.proponente as any).profissao_responsavel) && (
                               <div className="pt-4 border-t">
                                 <h5 className="text-xs font-semibold text-gray-600 mb-3">Atividade Profissional</h5>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                  {projeto.proponente.funcao_artistica_responsavel && (
+                                  {(projeto.proponente as any).funcao_artistica_responsavel && (
                                     <div className="space-y-1">
                                       <span className="text-xs text-gray-500 font-medium block">Função Artística:</span>
-                                      <p className="text-sm text-gray-700">{traduzirFuncaoArtistica(projeto.proponente.funcao_artistica_responsavel)}</p>
+                                      <p className="text-sm text-gray-700">{traduzirFuncaoArtistica((projeto.proponente as any).funcao_artistica_responsavel)}</p>
                                     </div>
                                   )}
-                                  {projeto.proponente.profissao_responsavel && (
+                                  {(projeto.proponente as any).profissao_responsavel && (
                                     <div className="space-y-1">
                                       <span className="text-xs text-gray-500 font-medium block">Profissão:</span>
-                                      <p className="text-sm text-gray-700">{projeto.proponente.profissao_responsavel}</p>
+                                      <p className="text-sm text-gray-700">{(projeto.proponente as any).profissao_responsavel}</p>
                                     </div>
                                   )}
                                 </div>
@@ -2279,10 +2451,10 @@ export const ProponenteProjetoDetalhes = () => {
                             )}
 
                             {/* Currículo */}
-                            {projeto.proponente.mini_curriculo_responsavel && (
+                            {(projeto.proponente as any).mini_curriculo_responsavel && (
                               <div className="pt-4 border-t">
                                 <span className="text-xs text-gray-500 font-medium block mb-2">Mini Currículo:</span>
-                                <p className="text-sm text-gray-700 whitespace-pre-wrap">{projeto.proponente.mini_curriculo_responsavel}</p>
+                                 <p className="text-sm text-gray-700 whitespace-pre-wrap">{(projeto.proponente as any).mini_curriculo_responsavel}</p>
                               </div>
                             )}
                           </div>
@@ -2962,124 +3134,229 @@ export const ProponenteProjetoDetalhes = () => {
           <TabsContent value="documentacao" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FolderOpen className="h-5 w-5" />
-                  Documentos de Habilitação
-                </CardTitle>
-                <CardDescription>
-                  Envie os documentos necessários para habilitação do projeto
-                </CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <FolderOpen className="h-5 w-5" />
+                      Anexos do Edital
+                    </CardTitle>
+                    <CardDescription>
+                      Documentos e modelos do edital e arquivos de habilitação/complementares
+                    </CardDescription>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const nome = prompt("Nome do documento:");
+                        if (nome && projetoId) {
+                          (supabase.from('documentos_habilitacao' as any) as any).insert({
+                            projeto_id: projetoId,
+                            nome: nome,
+                            status: 'pendente',
+                            obrigatorio: false,
+                            tipo: 'Complementar'
+                          }).then(() => refreshDocumentos());
+                        }
+                      }}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Novo Documento Complementar
+                    </Button>
+                    {/*projeto?.proponente?.tipo && documentos.length === 0 && (
+                      <Button 
+                        variant="outline"
+                        size="sm"
+                        onClick={async () => {
+                          const { data: configs } = await (supabase
+                            .from('configuracoes_habilitacao' as any) as any)
+                            .select('*')
+                            .eq('tipo_proponente', (projeto.proponente as any).tipo);
+                          
+                          if (configs && (configs as any[]).length > 0) {
+                            const docs = (configs as any[]).map(c => ({
+                              projeto_id: projetoId,
+                              nome: c.nome_documento,
+                              descricao: c.descricao,
+                              obrigatorio: c.obrigatorio,
+                              status: 'pendente',
+                              tipo: 'Habilitação'
+                            }));
+                            await (supabase.from('documentos_habilitacao' as any) as any).insert(docs);
+                            refreshDocumentos();
+                          }
+                        }}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Gerar Documentos Padrão
+                      </Button>
+                    )*/}
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent>
-                {loadingDocumentos ? (
-                  <div className="text-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                    <p className="mt-2 text-gray-500">Carregando documentos...</p>
-                  </div>
-                ) : documentos.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <FolderOpen className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>Nenhum documento disponível no momento.</p>
-                    <p className="text-sm">Os documentos aparecerão aqui quando necessário.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {documentos.map((doc) => {
-                      const statusMap = {
-                        'pendente': { label: 'Pendente', color: 'bg-gray-100 text-gray-800', icon: <Clock className="h-4 w-4" /> },
-                        'enviado': { label: 'Enviado', color: 'bg-blue-100 text-blue-800', icon: <Upload className="h-4 w-4" /> },
-                        'aprovado': { label: 'Aprovado', color: 'bg-green-100 text-green-800', icon: <CheckCircle className="h-4 w-4" /> },
-                        'rejeitado': { label: 'Rejeitado', color: 'bg-red-100 text-red-800', icon: <XCircle className="h-4 w-4" /> }
-                      };
-                      const statusConfig = statusMap[doc.status as keyof typeof statusMap] || statusMap.pendente;
-
-                      return (
-                        <div key={doc.id} className="border rounded-lg p-4 bg-gray-50">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-2">
-                                <h4 className="font-medium text-gray-900">{doc.nome}</h4>
-                                {doc.obrigatorio && (
-                                  <Badge variant="outline" className="text-xs">Obrigatório</Badge>
-                                )}
-                                <Badge className={statusConfig.color}>
-                                  {statusConfig.icon}
-                                  <span className="ml-1">{statusConfig.label}</span>
-                                </Badge>
-                              </div>
-                              
-                              {doc.descricao && (
-                                <p className="text-sm text-gray-600 mb-2">{doc.descricao}</p>
-                              )}
-
-                              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm text-gray-600">
-                                <div>
-                                  <span className="font-medium">Tipo:</span>
-                                  <p>{doc.tipo || 'Não informado'}</p>
-                                </div>
-                                {doc.data_solicitacao && (
-                                  <div>
-                                    <span className="font-medium">Data de Solicitação:</span>
-                                    <p>{formatarData(doc.data_solicitacao)}</p>
-                                  </div>
-                                )}
-                                {doc.data_upload && (
-                                  <div>
-                                    <span className="font-medium">Data de Upload:</span>
-                                    <p>{new Date(doc.data_upload).toLocaleDateString('pt-BR')}</p>
-                                  </div>
+              <CardContent className="space-y-8">
+                {/* Seção 1: Modelos e Referências do Edital */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold flex items-center gap-2 text-gray-700">
+                    <FileText className="h-4 w-4" />
+                    Modelos e Referências do Edital
+                  </h3>
+                  
+                  {loadingAnexosEdital ? (
+                    <div className="text-center py-4">
+                      <Loader2 className="h-6 w-6 animate-spin mx-auto text-blue-600" />
+                      <p className="mt-1 text-xs text-gray-500">Carregando anexos...</p>
+                    </div>
+                  ) : editalAnexos.length === 0 ? (
+                    <div className="text-center py-4 bg-gray-50 rounded-lg border border-dashed">
+                      <p className="text-sm text-gray-500">Nenhum anexo disponível para este edital.</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {editalAnexos.map((anexo, index) => {
+                        const jaEnviado = documentos.some(d => d.nome === anexo.titulo && d.status === 'enviado');
+                        return (
+                          <div key={index} className={`flex items-center justify-between p-3 rounded-lg border shadow-sm ${jaEnviado ? 'bg-green-50 border-green-200' : 'bg-white'}`}>
+                            <div className="flex items-center gap-3 truncate pr-4">
+                              <div className={`${jaEnviado ? 'bg-green-100' : 'bg-blue-50'} p-2 rounded`}>
+                                {jaEnviado ? (
+                                  <Check className="h-4 w-4 text-green-600" />
+                                ) : (
+                                  <FileText className="h-4 w-4 text-blue-600" />
                                 )}
                               </div>
-
-                              {doc.arquivo_nome && (
-                                <div className="mt-3">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => doc.arquivo_url && window.open(doc.arquivo_url, '_blank')}
-                                    className="flex items-center gap-2"
-                                  >
-                                    <Download className="h-4 w-4" />
-                                    {doc.arquivo_nome}
-                                    {doc.arquivo_tamanho && (
-                                      <span className="text-xs text-gray-500">
-                                        ({(doc.arquivo_tamanho / 1024).toFixed(2)} KB)
-                                      </span>
-                                    )}
-                                  </Button>
-                                </div>
-                              )}
-
-                              {/* Motivo de Rejeição */}
-                              {doc.status === 'rejeitado' && doc.motivo_rejeicao && (
-                                <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-md">
-                                  <Label className="text-sm font-semibold text-red-800">Motivo de Rejeição</Label>
-                                  <p className="text-sm text-red-700 mt-1">{doc.motivo_rejeicao}</p>
-                                </div>
-                              )}
-
-                              {/* Botão de Upload para Proponente */}
-                              {(doc.status === 'pendente' || doc.status === 'rejeitado') && (
-                                <div className="mt-3">
-                                  <Button
-                                    onClick={() => {
-                                      setDocumentoParaUpload(doc.id);
-                                      setShowUploadDocModal(true);
-                                    }}
-                                    variant="outline"
-                                  >
-                                    <Upload className="mr-2 h-4 w-4" />
-                                    {doc.status === 'rejeitado' ? 'Enviar Novo Arquivo' : 'Enviar Documento'}
-                                  </Button>
-                                </div>
-                              )}
+                              <div className="truncate">
+                                <p className="font-medium text-sm truncate">{anexo.titulo}</p>
+                                <p className="text-xs text-gray-500">Modelo/Referência</p>
+                              </div>
+                            </div>
+                            <div className="flex flex-col sm:flex-row gap-2 shrink-0">
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => handleDownload(anexo.url, anexo.titulo)}
+                                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 h-8"
+                              >
+                                <Download className="h-4 w-4 mr-1" />
+                                Baixar
+                              </Button>
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => {
+                                  setModelParaUpload(anexo);
+                                  setShowModelUploadModal(true);
+                                }}
+                                className={`h-8 ${jaEnviado ? 'border-green-600 text-green-600 hover:bg-green-50' : 'border-blue-600 text-blue-600 hover:bg-blue-50'}`}
+                              >
+                                <Upload className="h-4 w-4 mr-1" />
+                                {jaEnviado ? 'Reenviar' : 'Fazer Upload'}
+                              </Button>
                             </div>
                           </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                <div className="border-t pt-6 space-y-4">
+                  <h3 className="text-sm font-semibold flex items-center gap-2 text-gray-700">
+                    <Upload className="h-4 w-4" />
+                    Documentos de Habilitação do Proponente
+                  </h3>
+
+                  {loadingDocumentos ? (
+                    <div className="text-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                      <p className="mt-2 text-gray-500">Carregando documentos...</p>
+                    </div>
+                  ) : documentos.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      <FolderOpen className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>Nenhum documento disponível no momento.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {documentos.map((doc) => {
+                        const statusMap = {
+                          'pendente': { label: 'Pendente', color: 'bg-gray-100 text-gray-800', icon: <Clock className="h-4 w-4" /> },
+                          'enviado': { label: 'Enviado', color: 'bg-blue-100 text-blue-800', icon: <Upload className="h-4 w-4" /> },
+                          'aprovado': { label: 'Aprovado', color: 'bg-green-100 text-green-800', icon: <CheckCircle className="h-4 w-4" /> },
+                          'rejeitado': { label: 'Rejeitado', color: 'bg-red-100 text-red-800', icon: <XCircle className="h-4 w-4" /> }
+                        };
+                        const statusConfig = statusMap[doc.status as keyof typeof statusMap] || statusMap.pendente;
+
+                        return (
+                          <div key={doc.id} className="border rounded-lg p-4 bg-gray-50">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <h4 className="font-medium text-gray-900">{doc.nome}</h4>
+                                  {doc.obrigatorio && (
+                                    <Badge variant="outline" className="text-xs">Obrigatório</Badge>
+                                  )}
+                                  <Badge className={statusConfig.color}>
+                                    {statusConfig.icon}
+                                    <span className="ml-1">{statusConfig.label}</span>
+                                  </Badge>
+                                </div>
+                                
+                                {doc.descricao && (
+                                  <p className="text-sm text-gray-600 mb-2">{doc.descricao}</p>
+                                )}
+
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm text-gray-600">
+                                  <div>
+                                    <span className="font-medium">Tipo:</span>
+                                    <p>{doc.tipo || 'Não informado'}</p>
+                                  </div>
+                                  {doc.data_upload && (
+                                    <div>
+                                      <span className="font-medium">Data de Upload:</span>
+                                      <p>{new Date(doc.data_upload).toLocaleDateString('pt-BR')}</p>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {doc.arquivo_nome && (
+                                  <div className="mt-3">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => doc.arquivo_url && handleDownload(doc.arquivo_url, doc.arquivo_nome || 'documento')}
+                                      className="flex items-center gap-2"
+                                    >
+                                      <Download className="h-4 w-4" />
+                                      {doc.arquivo_nome}
+                                    </Button>
+                                  </div>
+                                )}
+
+                                {(doc.status === 'pendente' || doc.status === 'rejeitado') && (
+                                  <div className="mt-3">
+                                    <Button
+                                      onClick={() => {
+                                        setDocumentoParaUpload(doc.id);
+                                        setShowUploadDocModal(true);
+                                      }}
+                                      variant="outline"
+                                      size="sm"
+                                    >
+                                      <Upload className="mr-2 h-4 w-4" />
+                                      {doc.status === 'rejeitado' ? 'Enviar Novo Arquivo' : 'Enviar Documento'}
+                                    </Button>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -3301,7 +3578,7 @@ export const ProponenteProjetoDetalhes = () => {
                   {prestacoes.length > 0 && !projeto?.anexos_prestacao && (
                     <div className="mt-8 pt-6 border-t border-slate-100">
                       <h3 className="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
-                         <History className="w-4 h-4" /> Histórico de Envios
+                         <HistoryIcon className="w-4 h-4" /> Histórico de Envios
                       </h3>
                       <div className="grid gap-3">
                          {prestacoes.map((p) => (
@@ -3311,7 +3588,7 @@ export const ProponenteProjetoDetalhes = () => {
                                  <FileText className="w-4 h-4 text-slate-400" />
                                </div>
                                <div>
-                                 <p className="font-medium text-slate-800">{p.descricao || 'Envio de Prestação'}</p>
+                                 <p className="font-medium text-slate-800">{(p as any).tipo || (p as any).descricao || 'Envio de Prestação'}</p>
                                  <p className="text-[11px] text-slate-500">{new Date(p.created_at).toLocaleDateString()}</p>
                                </div>
                              </div>
@@ -5244,6 +5521,53 @@ export const ProponenteProjetoDetalhes = () => {
                   Carregando...
                 </>
               ) : 'Criar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal para Upload de Documento Gerérico (Baseado em Modelo do Edital) */}
+      <Dialog open={showModelUploadModal} onOpenChange={setShowModelUploadModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Enviar Documento: {modelParaUpload?.titulo}</DialogTitle>
+            <DialogDescription>
+              Selecione o arquivo para enviar baseado no modelo do edital.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Arquivo</Label>
+              <Input
+                type="file"
+                onChange={(e) => setArquivoModel(e.target.files?.[0] || null)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowModelUploadModal(false);
+                setModelParaUpload(null);
+                setArquivoModel(null);
+              }}
+              disabled={enviandoModel}
+            >
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleUploadGeneric}
+              disabled={enviandoModel || !arquivoModel}
+            >
+              {enviandoModel ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Enviando...
+                </>
+              ) : (
+                'Enviar'
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
