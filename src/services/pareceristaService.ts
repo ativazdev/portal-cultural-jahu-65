@@ -86,7 +86,7 @@ export const pareceristaService = {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'src': (supabase as any).supabaseUrl, // Used only for constructing the URL
+          'apikey': (supabase as any).supabaseKey,
           'Authorization': `Bearer ${session?.access_token || (supabase as any).supabaseKey}`,
         },
         body: JSON.stringify({

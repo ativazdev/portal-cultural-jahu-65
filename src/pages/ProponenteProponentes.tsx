@@ -11,19 +11,20 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Plus, Edit, Loader2, ChevronLeft, ChevronRight, Check, Search } from "lucide-react";
+import { Plus, Edit, Loader2, Search, User, UserCircle, Users } from "lucide-react";
 import { getAuthenticatedSupabaseClient } from "@/integrations/supabase/client";
 import { useProponenteAuth } from "@/hooks/useProponenteAuth";
 import {
   DadosBasicosPF, EnderecoPF, DadosPessoaisPF, PCDPF, FormacaoPF,
   ProgramasSociaisPF, CotasPF, ArtisticoPF, ColetivoPF, ExperienciaPF, BancarioPF,
-  DadosEmpresaPJ, EnderecoPJ, InscricoesPJ, ResponsavelPJ, BancarioPJ
+  DadosEmpresaPJ, EnderecoPJ, InscricoesPJ, ResponsavelPJ, BancarioPJ,
+  DadosBasicosColetivo, RepresentanteColetivo, EnderecoColetivo, MembrosColetivo, BancarioColetivo
 } from "@/components/proponente/StepForms";
 
 interface Proponente {
   id: string;
   nome: string;
-  tipo: 'PF' | 'PJ';
+  tipo: 'PF' | 'PJ' | 'COLETIVO';
   cpf?: string;
   cnpj?: string;
   rg?: string;
@@ -204,17 +205,12 @@ export const ProponenteProponentes = () => {
   const [isLoadingProponentes, setIsLoadingProponentes] = useState(true);
   const [proponentes, setProponentes] = useState<Proponente[]>([]);
   const [proponentesFiltrados, setProponentesFiltrados] = useState<Proponente[]>([]);
-  const [tipoRegistro, setTipoRegistro] = useState<"PF" | "PJ" | "">("");
+  const [tipoRegistro, setTipoRegistro] = useState<"PF" | "PJ" | "COLETIVO" | "">("");
   const [proponenteEditando, setProponenteEditando] = useState<Proponente | null>(null);
   
   // Estados de filtro
   const [filtroTexto, setFiltroTexto] = useState("");
-  const [filtroTipo, setFiltroTipo] = useState<"todos" | "PF" | "PJ">("todos");
-  
-  // Estados de step
-  const [currentStep, setCurrentStep] = useState(1);
-  const totalStepsPF = 11;
-  const totalStepsPJ = 5;
+  const [filtroTipo, setFiltroTipo] = useState<"todos" | "PF" | "PJ" | "COLETIVO">("todos");
   
   // Estados do formulário
   const [formData, setFormData] = useState<any>({
@@ -255,6 +251,14 @@ export const ProponenteProponentes = () => {
     quantidadePessoas: "",
     membrosColetivo: "",
     profissao: "",
+
+    // Dados Coletivo
+    nomeGrupo: "",
+    anoCriacao: "",
+    nomeRepresentanteColetivo: "",
+    cpfRepresentanteColetivo: "",
+    telefoneRepresentanteColetivo: "",
+    emailRepresentanteColetivo: "",
     
     // Dados PJ
     cnpj: "",
@@ -371,7 +375,6 @@ export const ProponenteProponentes = () => {
   const handleRegistrarPF = () => {
     setTipoRegistro("PF");
     setProponenteEditando(null);
-    setCurrentStep(1);
     setFormData({
       nome: "", nomeArtistico: "", telefone: "", cep: "", endereco: "", numero: "", complemento: "", cidade: "", estado: "",
       cpf: "", rg: "", dataNascimento: "", miniCurriculo: "",
@@ -404,15 +407,14 @@ export const ProponenteProponentes = () => {
   const handleRegistrarPJ = () => {
     setTipoRegistro("PJ");
     setProponenteEditando(null);
-    setCurrentStep(1);
-    setFormData({
+    const initialData = {
       nome: "", nomeArtistico: "", telefone: "", cep: "", endereco: "", numero: "", complemento: "", cidade: "", estado: "",
       cpf: "", rg: "", dataNascimento: "", miniCurriculo: "",
       comunidadeTradicional: "", outraComunidade: "",
-      genero: "", raca: "", pcd: false, tipoDeficiencia: "", outraDeficiencia: "",
+      genero: "", raca: "", pcd: "nao", tipoDeficiencia: "", outraDeficiencia: "",
       escolaridade: "", rendaMensal: "",
       programaSocial: "", outroProgramaSocial: "",
-      concorreCotas: false, tipoCotas: "",
+      concorreCotas: "nao", tipoCotas: "",
       funcaoArtistica: "", outraFuncaoArtistica: "",
       representaColetivo: false, nomeColetivo: "", anoColetivo: "", quantidadePessoas: "", membrosColetivo: "", profissao: "",
       cnpj: "", razaoSocial: "", nomeFantasia: "", inscricaoEstadual: "", inscricaoMunicipal: "",
@@ -422,14 +424,49 @@ export const ProponenteProponentes = () => {
       cidadeResponsavel: "", estadoResponsavel: "",
       comunidadeTradicionalResponsavel: "", outraComunidadeResponsavel: "",
       generoResponsavel: "", racaResponsavel: "",
-      pcdResponsavel: "", tipoDeficienciaResponsavel: "", outraDeficienciaResponsavel: "",
+      pcdResponsavel: "nao", tipoDeficienciaResponsavel: "", outraDeficienciaResponsavel: "",
       escolaridadeResponsavel: "", rendaMensalResponsavel: "",
       programaSocialResponsavel: "", outroProgramaSocialResponsavel: "",
-      concorreCotasResponsavel: "", tipoCotasResponsavel: "",
+      concorreCotasResponsavel: "nao", tipoCotasResponsavel: "",
       funcaoArtisticaResponsavel: "", outraFuncaoArtisticaResponsavel: "",
       profissaoResponsavel: "", miniCurriculoResponsavel: "",
       enderecoSede: "", numeroSede: "", complementoSede: "",
       banco: "", agencia: "", conta: "", tipoConta: "", pix: "",
+      nomeGrupo: "", anoCriacao: "",
+    };
+    setFormData(initialData);
+    setIsModalRegistroAberto(true);
+  };
+
+  const handleRegistrarColetivo = () => {
+    setTipoRegistro("COLETIVO");
+    setProponenteEditando(null);
+    setFormData({
+      nome: "", nomeArtistico: "", telefone: "", cep: "", endereco: "", numero: "", complemento: "", cidade: "", estado: "",
+      cpf: "", rg: "", dataNascimento: "", miniCurriculo: "",
+      comunidadeTradicional: "", outraComunidade: "",
+      genero: "", raca: "", pcd: "nao", tipoDeficiencia: "", outraDeficiencia: "",
+      escolaridade: "", rendaMensal: "",
+      programaSocial: "", outroProgramaSocial: "",
+      concorreCotas: "nao", tipoCotas: "",
+      funcaoArtistica: "", outraFuncaoArtistica: "",
+      representaColetivo: false, nomeColetivo: "", anoColetivo: "", quantidadePessoas: "", membrosColetivo: "", profissao: "",
+      cnpj: "", razaoSocial: "", nomeFantasia: "", inscricaoEstadual: "", inscricaoMunicipal: "",
+      nomeResponsavel: "", cpfResponsavel: "", rgResponsavel: "", dataNascimentoResponsavel: "",
+      telefoneResponsavel: "", emailResponsavel: "", cargoResponsavel: "",
+      cepResponsavel: "", enderecoResponsavel: "", numeroResponsavel: "", complementoResponsavel: "",
+      cidadeResponsavel: "", estadoResponsavel: "",
+      comunidadeTradicionalResponsavel: "", outraComunidadeResponsavel: "",
+      generoResponsavel: "", racaResponsavel: "",
+      pcdResponsavel: "nao", tipoDeficienciaResponsavel: "", outraDeficienciaResponsavel: "",
+      escolaridadeResponsavel: "", rendaMensalResponsavel: "",
+      programaSocialResponsavel: "", outroProgramaSocialResponsavel: "",
+      concorreCotasResponsavel: "nao", tipoCotasResponsavel: "",
+      funcaoArtisticaResponsavel: "", outraFuncaoArtisticaResponsavel: "",
+      profissaoResponsavel: "", miniCurriculoResponsavel: "",
+      enderecoSede: "", numeroSede: "", complementoSede: "",
+      banco: "", agencia: "", conta: "", tipoConta: "", pix: "",
+      nomeGrupo: "", anoCriacao: "",
     });
     setIsModalRegistroAberto(true);
   };
@@ -437,8 +474,7 @@ export const ProponenteProponentes = () => {
   // Função para editar proponente
   const handleEditarProponente = (proponente: Proponente) => {
     setProponenteEditando(proponente);
-    setTipoRegistro(proponente.tipo === "PF" ? "PF" : "PJ");
-    setCurrentStep(1);
+    setTipoRegistro(proponente.tipo === "PF" ? "PF" : proponente.tipo === "PJ" ? "PJ" : "COLETIVO");
     setFormData({
       nome: proponente.nome || "",
       nomeArtistico: proponente.nome_artistico || "",
@@ -472,9 +508,7 @@ export const ProponenteProponentes = () => {
       representaColetivo: proponente.representa_coletivo || false,
       nomeColetivo: proponente.nome_coletivo || "",
       anoColetivo: proponente.ano_coletivo || "",
-      quantidadePessoas: "",
-      membrosColetivo: "",
-      profissao: "",
+      profissao: proponente.profissao || "",
       cnpj: proponente.cnpj || "",
       razaoSocial: proponente.razao_social || "",
       nomeFantasia: proponente.tipo === "PJ" ? (proponente.nome || "") : "", // Para PJ, nome contém o nome fantasia
@@ -518,6 +552,14 @@ export const ProponenteProponentes = () => {
       conta: proponente.conta || "",
       tipoConta: proponente.tipo_conta || "",
       pix: proponente.pix || "",
+      nomeGrupo: proponente.nome_grupo || "",
+      anoCriacao: proponente.ano_criacao?.toString() || "",
+      quantidadePessoas: proponente.quantidade_pessoas?.toString() || "",
+      membrosColetivo: proponente.membros_coletivo || "",
+      nomeRepresentanteColetivo: proponente.nome_responsavel || "",
+      cpfRepresentanteColetivo: proponente.cpf_responsavel || "",
+      telefoneRepresentanteColetivo: (proponente as any).telefone_responsavel || "",
+      emailRepresentanteColetivo: (proponente as any).email_responsavel || "",
     });
     setIsModalEdicaoAberto(true);
   };
@@ -586,202 +628,8 @@ export const ProponenteProponentes = () => {
   };
 
   // Função de validação do step atual
-  const validarStepAtual = (): { valido: boolean; mensagem?: string } => {
-    if (tipoRegistro === 'PF') {
-      switch (currentStep) {
-        case 1: // Dados Básicos
-          if (!formData.nome?.trim()) return { valido: false, mensagem: "Nome completo é obrigatório" };
-          if (!formData.cpf?.trim()) return { valido: false, mensagem: "CPF é obrigatório" };
-          if (!formData.rg?.trim()) return { valido: false, mensagem: "RG é obrigatório" };
-          if (!formData.dataNascimento) return { valido: false, mensagem: "Data de nascimento é obrigatória" };
-          if (!formData.telefone?.trim()) return { valido: false, mensagem: "Telefone é obrigatório" };
-          break;
-        case 2: // Endereço
-          if (!formData.cep?.trim()) return { valido: false, mensagem: "CEP é obrigatório" };
-          if (!formData.endereco?.trim()) return { valido: false, mensagem: "Logradouro é obrigatório" };
-          if (!formData.numero?.trim()) return { valido: false, mensagem: "Número é obrigatório" };
-          if (!formData.cidade?.trim()) return { valido: false, mensagem: "Cidade é obrigatória" };
-          if (!formData.estado) return { valido: false, mensagem: "Estado é obrigatório" };
-          break;
-        case 3: // Dados Pessoais
-          if (!formData.comunidadeTradicional) return { valido: false, mensagem: "Comunidade tradicional é obrigatória" };
-          if (formData.comunidadeTradicional === "outra" && !formData.outraComunidade?.trim()) {
-            return { valido: false, mensagem: "Especifique qual comunidade tradicional" };
-          }
-          if (!formData.genero) return { valido: false, mensagem: "Identidade de gênero é obrigatória" };
-          if (!formData.raca) return { valido: false, mensagem: "Raça, cor ou etnia é obrigatória" };
-          break;
-        case 4: // PCD
-          if (formData.pcd === undefined || formData.pcd === null || formData.pcd === "") {
-            return { valido: false, mensagem: "Informação sobre PCD é obrigatória" };
-          }
-          if (formData.pcd === "sim" && !formData.tipoDeficiencia) {
-            return { valido: false, mensagem: "Tipo de deficiência é obrigatório quando PCD é sim" };
-          }
-          if (formData.pcd === "sim" && formData.tipoDeficiencia === "outro" && !formData.outraDeficiencia?.trim()) {
-            return { valido: false, mensagem: "Especifique qual tipo de deficiência" };
-          }
-          break;
-        case 5: // Formação
-          if (!formData.escolaridade) return { valido: false, mensagem: "Escolaridade é obrigatória" };
-          if (!formData.rendaMensal) return { valido: false, mensagem: "Renda mensal é obrigatória" };
-          break;
-        case 6: // Programas Sociais
-          if (!formData.programaSocial) return { valido: false, mensagem: "Programa social é obrigatório" };
-          if (formData.programaSocial === "outro" && !formData.outroProgramaSocial?.trim()) {
-            return { valido: false, mensagem: "Especifique qual programa social" };
-          }
-          break;
-        case 7: // Cotas
-          if (formData.concorreCotas === undefined || formData.concorreCotas === null || formData.concorreCotas === "") {
-            return { valido: false, mensagem: "Informação sobre cotas é obrigatória" };
-          }
-          if (formData.concorreCotas === "sim" && !formData.tipoCotas) {
-            return { valido: false, mensagem: "Tipo de cotas é obrigatório quando concorre a cotas" };
-          }
-          break;
-        case 8: // Artístico
-          if (!formData.funcaoArtistica) return { valido: false, mensagem: "Função artística é obrigatória" };
-          if (formData.funcaoArtistica === "outro" && !formData.outraFuncaoArtistica?.trim()) {
-            return { valido: false, mensagem: "Especifique qual função artística" };
-          }
-          if (!formData.profissao?.trim()) return { valido: false, mensagem: "Profissão é obrigatória" };
-          break;
-        case 9: // Coletivo (opcional, sem validação obrigatória)
-          break;
-        case 10: // Experiência
-          if (!formData.miniCurriculo?.trim()) return { valido: false, mensagem: "Mini currículo é obrigatório" };
-          break;
-        case 11: // Bancário
-          if (!formData.banco?.trim()) return { valido: false, mensagem: "Banco é obrigatório" };
-          if (!formData.agencia?.trim()) return { valido: false, mensagem: "Agência é obrigatória" };
-          if (!formData.conta?.trim()) return { valido: false, mensagem: "Conta é obrigatória" };
-          if (!formData.tipoConta) return { valido: false, mensagem: "Tipo de conta é obrigatório" };
-          if (!formData.pix?.trim()) return { valido: false, mensagem: "Chave PIX é obrigatória" };
-          break;
-      }
-    } else if (tipoRegistro === 'PJ') {
-      switch (currentStep) {
-        case 1: // Dados da Empresa
-          if (!formData.razaoSocial?.trim()) return { valido: false, mensagem: "Razão social é obrigatória" };
-          if (!formData.nomeFantasia?.trim()) return { valido: false, mensagem: "Nome fantasia é obrigatório" };
-          if (!formData.cnpj?.trim()) return { valido: false, mensagem: "CNPJ é obrigatório" };
-          break;
-        case 2: // Endereço da Sede
-          if (!formData.cep?.trim()) return { valido: false, mensagem: "CEP é obrigatório" };
-          if (!formData.enderecoSede?.trim()) return { valido: false, mensagem: "Logradouro da sede é obrigatório" };
-          if (!formData.numeroSede?.trim()) return { valido: false, mensagem: "Número da sede é obrigatório" };
-          if (!formData.cidade?.trim()) return { valido: false, mensagem: "Cidade é obrigatória" };
-          if (!formData.estado) return { valido: false, mensagem: "Estado é obrigatório" };
-          break;
-        case 3: // Inscrições (opcional, sem validação obrigatória)
-          break;
-        case 4: // Responsável Legal
-          if (!formData.nomeResponsavel?.trim()) return { valido: false, mensagem: "Nome completo do responsável é obrigatório" };
-          if (!formData.cpfResponsavel?.trim()) return { valido: false, mensagem: "CPF do responsável é obrigatório" };
-          if (!formData.rgResponsavel?.trim()) return { valido: false, mensagem: "RG do responsável é obrigatório" };
-          if (!formData.dataNascimentoResponsavel) return { valido: false, mensagem: "Data de nascimento do responsável é obrigatória" };
-          if (!formData.telefoneResponsavel?.trim()) return { valido: false, mensagem: "Telefone do responsável é obrigatório" };
-          if (!formData.emailResponsavel?.trim()) return { valido: false, mensagem: "Email do responsável é obrigatório" };
-          if (!formData.cargoResponsavel?.trim()) return { valido: false, mensagem: "Cargo do responsável é obrigatório" };
-          if (!formData.cepResponsavel?.trim()) return { valido: false, mensagem: "CEP do responsável é obrigatório" };
-          if (!formData.enderecoResponsavel?.trim()) return { valido: false, mensagem: "Logradouro do responsável é obrigatório" };
-          if (!formData.numeroResponsavel?.trim()) return { valido: false, mensagem: "Número do endereço do responsável é obrigatório" };
-          if (!formData.cidadeResponsavel?.trim()) return { valido: false, mensagem: "Cidade do responsável é obrigatória" };
-          if (!formData.estadoResponsavel) return { valido: false, mensagem: "Estado do responsável é obrigatório" };
-          if (!formData.comunidadeTradicionalResponsavel) return { valido: false, mensagem: "Comunidade tradicional do responsável é obrigatória" };
-          if (formData.comunidadeTradicionalResponsavel === "outra" && !formData.outraComunidadeResponsavel?.trim()) {
-            return { valido: false, mensagem: "Especifique qual comunidade tradicional do responsável" };
-          }
-          if (!formData.generoResponsavel) return { valido: false, mensagem: "Identidade de gênero do responsável é obrigatória" };
-          if (!formData.racaResponsavel) return { valido: false, mensagem: "Raça, cor ou etnia do responsável é obrigatória" };
-          if (formData.pcdResponsavel === undefined || formData.pcdResponsavel === null || formData.pcdResponsavel === "") {
-            return { valido: false, mensagem: "Informação sobre PCD do responsável é obrigatória" };
-          }
-          if (formData.pcdResponsavel === "sim" && !formData.tipoDeficienciaResponsavel) {
-            return { valido: false, mensagem: "Tipo de deficiência do responsável é obrigatório quando PCD é sim" };
-          }
-          if (formData.pcdResponsavel === "sim" && formData.tipoDeficienciaResponsavel === "outro" && !formData.outraDeficienciaResponsavel?.trim()) {
-            return { valido: false, mensagem: "Especifique qual tipo de deficiência do responsável" };
-          }
-          if (!formData.escolaridadeResponsavel) return { valido: false, mensagem: "Escolaridade do responsável é obrigatória" };
-          if (!formData.rendaMensalResponsavel) return { valido: false, mensagem: "Renda mensal do responsável é obrigatória" };
-          if (!formData.programaSocialResponsavel) return { valido: false, mensagem: "Programa social do responsável é obrigatório" };
-          if (formData.programaSocialResponsavel === "outro" && !formData.outroProgramaSocialResponsavel?.trim()) {
-            return { valido: false, mensagem: "Especifique qual programa social do responsável" };
-          }
-          if (formData.concorreCotasResponsavel === undefined || formData.concorreCotasResponsavel === null || formData.concorreCotasResponsavel === "") {
-            return { valido: false, mensagem: "Informação sobre cotas do responsável é obrigatória" };
-          }
-          if (formData.concorreCotasResponsavel === "sim" && !formData.tipoCotasResponsavel) {
-            return { valido: false, mensagem: "Tipo de cotas do responsável é obrigatório quando concorre a cotas" };
-          }
-          if (!formData.funcaoArtisticaResponsavel) return { valido: false, mensagem: "Função artística do responsável é obrigatória" };
-          if (formData.funcaoArtisticaResponsavel === "outro" && !formData.outraFuncaoArtisticaResponsavel?.trim()) {
-            return { valido: false, mensagem: "Especifique qual função artística do responsável" };
-          }
-          if (!formData.profissaoResponsavel?.trim()) return { valido: false, mensagem: "Profissão do responsável é obrigatória" };
-          if (!formData.miniCurriculoResponsavel?.trim()) return { valido: false, mensagem: "Mini currículo do responsável é obrigatório" };
-          break;
-        case 5: // Bancário
-          if (!formData.banco?.trim()) return { valido: false, mensagem: "Banco é obrigatório" };
-          if (!formData.agencia?.trim()) return { valido: false, mensagem: "Agência é obrigatória" };
-          if (!formData.conta?.trim()) return { valido: false, mensagem: "Conta é obrigatória" };
-          if (!formData.tipoConta) return { valido: false, mensagem: "Tipo de conta é obrigatório" };
-          if (!formData.pix?.trim()) return { valido: false, mensagem: "Chave PIX é obrigatória" };
-          break;
-      }
-    }
-    
-    return { valido: true };
-  };
-
-  // Funções de navegação de steps
-  const nextStep = () => {
-    const validacao = validarStepAtual();
-    if (!validacao.valido) {
-      toast({
-        title: "Campos obrigatórios",
-        description: validacao.mensagem,
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    const maxSteps = tipoRegistro === 'PF' ? totalStepsPF : totalStepsPJ;
-    if (currentStep < maxSteps) {
-      setCurrentStep(currentStep + 1);
-    }
-  };
-
-  const prevStep = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
-    }
-  };
-
-  const goToStep = (step: number) => {
-    const maxSteps = tipoRegistro === 'PF' ? totalStepsPF : totalStepsPJ;
-    if (step >= 1 && step <= maxSteps) {
-      // Se está tentando avançar para um step futuro, validar o step atual primeiro
-      if (step > currentStep) {
-        const validacao = validarStepAtual();
-        if (!validacao.valido) {
-          toast({
-            title: "Campos obrigatórios",
-            description: validacao.mensagem,
-            variant: "destructive",
-          });
-          return;
-        }
-      }
-      setCurrentStep(step);
-    }
-  };
-
-  // Reset step quando abrir modal
+  // Reset modal
   const resetModal = () => {
-    setCurrentStep(1);
     setIsModalRegistroAberto(false);
   };
 
@@ -794,7 +642,7 @@ export const ProponenteProponentes = () => {
         const data = await response.json();
         
         if (!data.erro) {
-          if (tipoEndereco === 'PF') {
+          if (tipoEndereco === 'PF' || tipoEndereco === ('COLETIVO' as any)) {
             setFormData((prev: any) => ({
               ...prev,
               endereco: data.logradouro || prev.endereco,
@@ -868,7 +716,7 @@ export const ProponenteProponentes = () => {
     
     // Buscar CEP automaticamente - precisamos saber se é PF, PJ ou Responsável
     if (field === 'cep' && valorFormatado.length === 9) {
-      buscarCEP(valorFormatado, tipoRegistro as 'PF' | 'PJ');
+      buscarCEP(valorFormatado, tipoRegistro as any);
     } else if (field === 'cepResponsavel' && valorFormatado.length === 9) {
       buscarCEP(valorFormatado, 'RESPONSAVEL');
     }
@@ -988,6 +836,26 @@ export const ProponenteProponentes = () => {
       if (!formData.conta?.trim()) return { valido: false, mensagem: "Conta é obrigatória" };
       if (!formData.tipoConta) return { valido: false, mensagem: "Tipo de conta é obrigatório" };
       if (!formData.pix?.trim()) return { valido: false, mensagem: "Chave PIX é obrigatória" };
+    } else if (tipoRegistro === 'COLETIVO') {
+      // Validação Coletivo
+      if (!formData.nomeGrupo?.trim()) return { valido: false, mensagem: "Nome do grupo é obrigatório" };
+      if (!formData.anoCriacao?.trim()) return { valido: false, mensagem: "Ano de criação/fundação é obrigatório" };
+      if (!formData.quantidadePessoas?.trim() && !formData.quantidadePessoas) return { valido: false, mensagem: "Quantidade de pessoas é obrigatória" };
+      if (!formData.nomeRepresentanteColetivo?.trim()) return { valido: false, mensagem: "Nome do representante é obrigatório" };
+      if (!formData.cpfRepresentanteColetivo?.trim()) return { valido: false, mensagem: "CPF do representante é obrigatório" };
+      if (!formData.telefoneRepresentanteColetivo?.trim()) return { valido: false, mensagem: "Telefone do representante é obrigatório" };
+      if (!formData.emailRepresentanteColetivo?.trim()) return { valido: false, mensagem: "Email do representante é obrigatório" };
+      if (!formData.cep?.trim()) return { valido: false, mensagem: "CEP é obrigatório" };
+      if (!formData.endereco?.trim()) return { valido: false, mensagem: "Endereço é obrigatório" };
+      if (!formData.numero?.trim()) return { valido: false, mensagem: "Número é obrigatório" };
+      if (!formData.cidade?.trim()) return { valido: false, mensagem: "Cidade é obrigatória" };
+      if (!formData.estado) return { valido: false, mensagem: "Estado é obrigatório" };
+      if (!formData.membrosColetivo?.trim()) return { valido: false, mensagem: "Lista de membros é obrigatória" };
+      if (!formData.banco?.trim()) return { valido: false, mensagem: "Banco é obrigatório" };
+      if (!formData.agencia?.trim()) return { valido: false, mensagem: "Agência é obrigatória" };
+      if (!formData.conta?.trim()) return { valido: false, mensagem: "Conta é obrigatória" };
+      if (!formData.tipoConta) return { valido: false, mensagem: "Tipo de conta é obrigatório" };
+      if (!formData.pix?.trim()) return { valido: false, mensagem: "Chave PIX é obrigatória" };
     }
     
     return { valido: true };
@@ -1050,9 +918,24 @@ export const ProponenteProponentes = () => {
         dadosProponente.representa_coletivo = formData.representaColetivo;
         dadosProponente.nome_coletivo = formData.nomeColetivo;
         dadosProponente.ano_coletivo = formData.anoColetivo;
-        // dadosProponente.quantidade_pessoas = formData.quantidadePessoas ? parseInt(formData.quantidadePessoas) : null; // Coluna não existe na tabela
-        // dadosProponente.membros_coletivo = formData.membrosColetivo; // Coluna não existe na tabela
-        // dadosProponente.profissao = formData.profissao; // Coluna não existe na tabela
+        dadosProponente.quantidade_pessoas = formData.quantidadePessoas ? parseInt(formData.quantidadePessoas) : null;
+        dadosProponente.membros_coletivo = formData.membrosColetivo;
+        dadosProponente.profissao = formData.profissao;
+      } else if (tipoRegistro === "COLETIVO") {
+        dadosProponente.nome = formData.nomeGrupo;
+        dadosProponente.nome_grupo = formData.nomeGrupo;
+        dadosProponente.ano_criacao = formData.anoCriacao ? parseInt(formData.anoCriacao) : null;
+        dadosProponente.quantidade_pessoas = formData.quantidadePessoas ? parseInt(formData.quantidadePessoas) : null;
+        dadosProponente.membros_coletivo = formData.membrosColetivo;
+        dadosProponente.nome_responsavel = formData.nomeRepresentanteColetivo;
+        dadosProponente.cpf_responsavel = formData.cpfRepresentanteColetivo;
+        // Reutilizar campos de endereço e bancários comuns
+        dadosProponente.endereco = formData.endereco;
+        dadosProponente.banco = formData.banco;
+        dadosProponente.agencia = formData.agencia;
+        dadosProponente.conta = formData.conta;
+        dadosProponente.tipo_conta = formData.tipoConta;
+        dadosProponente.pix = formData.pix;
       } else if (tipoRegistro === "PJ") {
         dadosProponente.nome = formData.nomeFantasia; // Nome fantasia vai para a coluna nome
         dadosProponente.razao_social = formData.razaoSocial;
@@ -1189,6 +1072,17 @@ export const ProponenteProponentes = () => {
         dadosProponente.representa_coletivo = formData.representaColetivo;
         dadosProponente.nome_coletivo = formData.nomeColetivo;
         dadosProponente.ano_coletivo = formData.anoColetivo;
+      } else if (tipoRegistro === "COLETIVO") {
+        dadosProponente.nome = formData.nomeGrupo;
+        dadosProponente.nome_grupo = formData.nomeGrupo;
+        dadosProponente.ano_criacao = formData.anoCriacao ? parseInt(formData.anoCriacao) : null;
+        dadosProponente.quantidade_pessoas = formData.quantidadePessoas ? parseInt(formData.quantidadePessoas) : null;
+        dadosProponente.membros_coletivo = formData.membrosColetivo;
+        dadosProponente.nome_responsavel = formData.nomeRepresentanteColetivo;
+        dadosProponente.cpf_responsavel = formData.cpfRepresentanteColetivo;
+        // Campos comuns (telefone, endereço, bancários) são tratados acima ou abaixo
+        dadosProponente.telefone_responsavel = formData.telefoneRepresentanteColetivo;
+        dadosProponente.email_responsavel = formData.emailRepresentanteColetivo;
       } else if (tipoRegistro === "PJ") {
         dadosProponente.nome = formData.nomeFantasia; // Nome fantasia vai para a coluna nome
         dadosProponente.razao_social = formData.razaoSocial;
@@ -1294,31 +1188,65 @@ export const ProponenteProponentes = () => {
                 <SelectItem value="todos">Todos</SelectItem>
                 <SelectItem value="PF">Pessoa Física</SelectItem>
                 <SelectItem value="PJ">Pessoa Jurídica</SelectItem>
+                <SelectItem value="COLETIVO">Coletivo</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          {/* Seção de registro de novos proponentes */}
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center bg-gray-50">
-            <div className="flex flex-col items-center space-y-6">
-              <Plus className="h-12 w-12 text-gray-400" />
-              <h3 className="text-lg font-medium text-gray-700">Registrar Novo Proponente</h3>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Button 
-                  onClick={handleRegistrarPF}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Pessoa Física
-                </Button>
-                <Button 
-                  onClick={handleRegistrarPJ}
-                  className="bg-green-600 hover:bg-green-700 text-white"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Pessoa Jurídica
-                </Button>
-              </div>
+          {/* Seção de registro de novos proponentes - Novo Design */}
+          <div className="space-y-6 py-4">
+            <h2 className="text-2xl font-bold text-gray-900">Tipos de cadastro de proponentes:</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {/* PF Card */}
+              <Card 
+                className="cursor-pointer hover:shadow-2xl transition-all group border-gray-100 shadow-md rounded-3xl overflow-hidden"
+                onClick={handleRegistrarPF}
+              >
+                <CardContent className="flex flex-col items-center p-10 space-y-8">
+                  <div className="w-40 h-40 rounded-full bg-blue-100 flex items-center justify-center group-hover:scale-105 transition-transform duration-300">
+                    <div className="w-32 h-32 rounded-full bg-blue-400 flex items-center justify-center overflow-hidden shadow-inner">
+                      <User className="w-20 h-20 text-white" />
+                    </div>
+                  </div>
+                  <p className="font-bold text-center text-base md:text-lg text-gray-900 leading-tight flex items-center justify-center h-16 uppercase">
+                    PESSOA FÍSICA OU MICROEMPREENDEDOR INDIVIDUAL – MEI
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* PJ Card */}
+              <Card 
+                className="cursor-pointer hover:shadow-2xl transition-all group border-gray-100 shadow-md rounded-3xl overflow-hidden"
+                onClick={handleRegistrarPJ}
+              >
+                <CardContent className="flex flex-col items-center p-10 space-y-8">
+                  <div className="w-40 h-40 rounded-full bg-yellow-100 flex items-center justify-center group-hover:scale-105 transition-transform duration-300">
+                    <div className="w-32 h-32 rounded-full bg-yellow-400 flex items-center justify-center overflow-hidden shadow-inner">
+                      <UserCircle className="w-20 h-20 text-white" />
+                    </div>
+                  </div>
+                  <p className="font-bold text-center text-base md:text-lg text-gray-900 leading-tight flex items-center justify-center h-16 uppercase">
+                    PESSOA JURÍDICA
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* Coletivo Card */}
+              <Card 
+                className="cursor-pointer hover:shadow-2xl transition-all group border-gray-100 shadow-md rounded-3xl overflow-hidden"
+                onClick={handleRegistrarColetivo}
+              >
+                <CardContent className="flex flex-col items-center p-10 space-y-8">
+                  <div className="w-40 h-40 rounded-full bg-purple-100 flex items-center justify-center group-hover:scale-105 transition-transform duration-300">
+                    <div className="w-32 h-32 rounded-full bg-purple-400 flex items-center justify-center overflow-hidden shadow-inner">
+                      <Users className="w-20 h-20 text-white" />
+                    </div>
+                  </div>
+                  <p className="font-bold text-center text-base md:text-lg text-gray-900 leading-tight flex items-center justify-center h-16 uppercase">
+                    COLETIVO SEM CONSTITUIÇÃO JURÍDICA
+                  </p>
+                </CardContent>
+              </Card>
             </div>
           </div>
 
@@ -1348,10 +1276,14 @@ export const ProponenteProponentes = () => {
                           <div className="flex items-center gap-2">
                             <span className="text-sm text-gray-500">Proponente</span>
                             <Badge 
-                              variant={proponente.tipo === "PF" ? "default" : "secondary"}
-                              className={`text-xs ${proponente.tipo === "PF" ? "bg-blue-600 text-white" : "bg-green-600 text-white"}`}
+                              variant={proponente.tipo === "PF" ? "default" : proponente.tipo === "PJ" ? "secondary" : "outline"}
+                              className={`text-xs ${
+                                proponente.tipo === "PF" ? "bg-blue-600 text-white" : 
+                                proponente.tipo === "PJ" ? "bg-green-600 text-white" : 
+                                "bg-purple-600 text-white border-none"
+                              }`}
                             >
-                              {proponente.tipo === "PF" ? "Pessoa Física" : "Pessoa Jurídica"}
+                              {proponente.tipo === "PF" ? "Pessoa Física" : proponente.tipo === "PJ" ? "Pessoa Jurídica" : "Coletivo"}
                             </Badge>
                           </div>
                           
@@ -1708,7 +1640,44 @@ export const ProponenteProponentes = () => {
                             </>
                           )}
 
-                          {/* Dados Bancários */}
+                          {/* Dados Coletivo */}
+                          {proponente.tipo === "COLETIVO" && (
+                            <div className="pt-2 border-t">
+                              <h4 className="text-sm font-semibold text-gray-700 mb-2">Dados do Coletivo</h4>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                {proponente.nome_grupo && (
+                                  <div>
+                                    <span className="text-xs text-gray-500 font-medium">Nome do Grupo:</span>
+                                    <p className="text-sm text-gray-700">{proponente.nome_grupo}</p>
+                                  </div>
+                                )}
+                                {proponente.ano_criacao && (
+                                  <div>
+                                    <span className="text-xs text-gray-500 font-medium">Ano de Criação:</span>
+                                    <p className="text-sm text-gray-700">{proponente.ano_criacao}</p>
+                                  </div>
+                                )}
+                                {proponente.quantidade_pessoas && (
+                                  <div>
+                                    <span className="text-xs text-gray-500 font-medium">Quantidade de Pessoas:</span>
+                                    <p className="text-sm text-gray-700">{proponente.quantidade_pessoas}</p>
+                                  </div>
+                                )}
+                                {proponente.nome_responsavel && (
+                                  <div>
+                                    <span className="text-xs text-gray-500 font-medium">Representante:</span>
+                                    <p className="text-sm text-gray-700">{proponente.nome_responsavel}</p>
+                                  </div>
+                                )}
+                              </div>
+                              {proponente.membros_coletivo && (
+                                <div className="mt-2">
+                                  <span className="text-xs text-gray-500 font-medium">Membros:</span>
+                                  <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">{proponente.membros_coletivo}</p>
+                                </div>
+                              )}
+                            </div>
+                          )}
                           {(proponente.banco || proponente.agencia || proponente.conta || proponente.pix) && (
                             <div className="pt-2 border-t">
                               <h4 className="text-sm font-semibold text-gray-700 mb-2">Dados Bancários</h4>
@@ -1766,244 +1735,49 @@ export const ProponenteProponentes = () => {
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              Registrar {tipoRegistro === "PF" ? "Pessoa Física" : "Pessoa Jurídica"}
+              Registrar {tipoRegistro === "PF" ? "Pessoa Física" : tipoRegistro === "PJ" ? "Pessoa Jurídica" : "Coletivo"}
             </DialogTitle>
           </DialogHeader>
           
-          {/* Indicador de Progresso */}
-          <div className="mb-6">
-            <div className="flex items-center justify-between">
-              {Array.from({ length: tipoRegistro === "PF" ? totalStepsPF : totalStepsPJ }, (_, i) => i + 1).map((step) => (
-                <div key={step} className="flex items-center flex-1">
-                  <button
-                    onClick={() => goToStep(step)}
-                    className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all ${
-                      step === currentStep
-                        ? 'border-blue-600 bg-blue-600 text-white'
-                        : step < currentStep
-                        ? 'border-green-600 bg-green-600 text-white'
-                        : 'border-gray-300 bg-white text-gray-500'
-                    }`}
-                    disabled={step > currentStep}
-                  >
-                    {step < currentStep ? (
-                      <Check className="h-5 w-5" />
-                    ) : (
-                      step
-                    )}
-                  </button>
-                  {step < (tipoRegistro === "PF" ? totalStepsPF : totalStepsPJ) && (
-                    <div className={`h-1 flex-1 mx-2 ${
-                      step < currentStep ? 'bg-green-600' : 'bg-gray-300'
-                    }`} />
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-          
-          <div className="space-y-6">
-            {/* Renderização condicional de steps para PF */}
+          <div className="max-h-[60vh] overflow-y-auto space-y-8 px-4 py-2">
+            {/* Renderização unificada para PF */}
             {tipoRegistro === "PF" && (
               <>
-                {currentStep === 1 && <DadosBasicosPF formData={formData} handleInputChange={handleInputChange} tipoRegistro="PF" currentStep={currentStep} />}
-                {currentStep === 2 && <EnderecoPF formData={formData} handleInputChange={handleInputChange} tipoRegistro="PF" currentStep={currentStep} />}
-                {currentStep === 3 && <DadosPessoaisPF formData={formData} handleInputChange={handleInputChange} tipoRegistro="PF" currentStep={currentStep} />}
-                {currentStep === 4 && <PCDPF formData={formData} handleInputChange={handleInputChange} tipoRegistro="PF" currentStep={currentStep} />}
-                {currentStep === 5 && <FormacaoPF formData={formData} handleInputChange={handleInputChange} tipoRegistro="PF" currentStep={currentStep} />}
-                {currentStep === 6 && <ProgramasSociaisPF formData={formData} handleInputChange={handleInputChange} tipoRegistro="PF" currentStep={currentStep} />}
-                {currentStep === 7 && <CotasPF formData={formData} handleInputChange={handleInputChange} tipoRegistro="PF" currentStep={currentStep} />}
-                {currentStep === 8 && <ArtisticoPF formData={formData} handleInputChange={handleInputChange} tipoRegistro="PF" currentStep={currentStep} />}
-                {currentStep === 9 && <ColetivoPF formData={formData} handleInputChange={handleInputChange} tipoRegistro="PF" currentStep={currentStep} />}
-                {currentStep === 10 && <ExperienciaPF formData={formData} handleInputChange={handleInputChange} tipoRegistro="PF" currentStep={currentStep} />}
-                {currentStep === 11 && <BancarioPF formData={formData} handleInputChange={handleInputChange} tipoRegistro="PF" currentStep={currentStep} />}
+                <DadosBasicosPF formData={formData} handleInputChange={handleInputChange} tipoRegistro="PF" currentStep={1} />
+                <EnderecoPF formData={formData} handleInputChange={handleInputChange} tipoRegistro="PF" currentStep={1} />
+                <DadosPessoaisPF formData={formData} handleInputChange={handleInputChange} tipoRegistro="PF" currentStep={1} />
+                <PCDPF formData={formData} handleInputChange={handleInputChange} tipoRegistro="PF" currentStep={1} />
+                <FormacaoPF formData={formData} handleInputChange={handleInputChange} tipoRegistro="PF" currentStep={1} />
+                <ProgramasSociaisPF formData={formData} handleInputChange={handleInputChange} tipoRegistro="PF" currentStep={1} />
+                <CotasPF formData={formData} handleInputChange={handleInputChange} tipoRegistro="PF" currentStep={1} />
+                <ArtisticoPF formData={formData} handleInputChange={handleInputChange} tipoRegistro="PF" currentStep={1} />
+                <ColetivoPF formData={formData} handleInputChange={handleInputChange} tipoRegistro="PF" currentStep={1} />
+                <ExperienciaPF formData={formData} handleInputChange={handleInputChange} tipoRegistro="PF" currentStep={1} />
+                <BancarioPF formData={formData} handleInputChange={handleInputChange} tipoRegistro="PF" currentStep={1} />
               </>
             )}
 
-            {/* Renderização condicional de steps para PJ */}
+            {/* Renderização unificada para PJ */}
             {tipoRegistro === "PJ" && (
               <>
-                {currentStep === 1 && <DadosEmpresaPJ formData={formData} handleInputChange={handleInputChange} tipoRegistro="PJ" currentStep={currentStep} />}
-                {currentStep === 2 && <EnderecoPJ formData={formData} handleInputChange={handleInputChange} tipoRegistro="PJ" currentStep={currentStep} />}
-                {currentStep === 3 && <InscricoesPJ formData={formData} handleInputChange={handleInputChange} tipoRegistro="PJ" currentStep={currentStep} />}
-                {currentStep === 4 && <ResponsavelPJ formData={formData} handleInputChange={handleInputChange} tipoRegistro="PJ" currentStep={currentStep} />}
-                {currentStep === 5 && <BancarioPJ formData={formData} handleInputChange={handleInputChange} tipoRegistro="PJ" currentStep={currentStep} />}
+                <DadosEmpresaPJ formData={formData} handleInputChange={handleInputChange} tipoRegistro="PJ" currentStep={1} />
+                <EnderecoPJ formData={formData} handleInputChange={handleInputChange} tipoRegistro="PJ" currentStep={1} />
+                <InscricoesPJ formData={formData} handleInputChange={handleInputChange} tipoRegistro="PJ" currentStep={1} />
+                <ResponsavelPJ formData={formData} handleInputChange={handleInputChange} tipoRegistro="PJ" currentStep={1} />
+                <BancarioPJ formData={formData} handleInputChange={handleInputChange} tipoRegistro="PJ" currentStep={1} />
               </>
             )}
 
-            {/* Código antigo comentado - remover após verificar que está funcionando */}
-            {false && tipoRegistro === "PJ" && (
+            {/* Renderização unificada para COLETIVO */}
+            {tipoRegistro === "COLETIVO" && (
               <>
-                {/* Dados do Agente Cultural */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold border-b pb-2">1. DADOS DO AGENTE CULTURAL</h3>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="reg-razao">Razão Social *</Label>
-                      <Input
-                        id="reg-razao"
-                        value={formData.razaoSocial}
-                        onChange={(e) => handleInputChange("razaoSocial", e.target.value)}
-                        placeholder="Razão social da empresa"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="reg-nome-fantasia">Nome fantasia *</Label>
-                      <Input
-                        id="reg-nome-fantasia"
-                        value={formData.nomeFantasia}
-                        onChange={(e) => handleInputChange("nomeFantasia", e.target.value)}
-                        placeholder="Nome fantasia"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="reg-cnpj">CNPJ</Label>
-                    <Input
-                      id="reg-cnpj"
-                      value={formData.cnpj}
-                      onChange={(e) => handleInputChange("cnpj", e.target.value)}
-                      placeholder="00.000.000/0001-00"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="reg-cep-sede">CEP</Label>
-                    <Input
-                      id="reg-cep-sede"
-                      value={formData.cep}
-                      onChange={(e) => handleInputChange("cep", e.target.value)}
-                      placeholder="00000-000"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="reg-endereco-sede">Logradouro *</Label>
-                    <Input
-                      id="reg-endereco-sede"
-                      value={formData.enderecoSede}
-                      onChange={(e) => handleInputChange("enderecoSede", e.target.value)}
-                      placeholder="Rua, Avenida, etc."
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="reg-numero-sede">Número</Label>
-                      <Input
-                        id="reg-numero-sede"
-                        value={formData.numeroSede}
-                        onChange={(e) => handleInputChange("numeroSede", e.target.value)}
-                        placeholder="Número"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="reg-complemento-sede">Complemento</Label>
-                      <Input
-                        id="reg-complemento-sede"
-                        value={formData.complementoSede}
-                        onChange={(e) => handleInputChange("complementoSede", e.target.value)}
-                        placeholder="Apto, Bloco, etc."
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="reg-cidade">Cidade</Label>
-                      <Input
-                        id="reg-cidade"
-                        value={formData.cidade}
-                        onChange={(e) => handleInputChange("cidade", e.target.value)}
-                        placeholder="Cidade"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="reg-estado">Estado</Label>
-                      <Select value={formData.estado} onValueChange={(value) => handleInputChange("estado", value)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione o estado" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {ESTADOS_BRASILEIROS.map((estado) => (
-                            <SelectItem key={estado.sigla} value={estado.sigla}>
-                              {estado.nome}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Dados Adicionais PJ */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold border-b pb-2">2. DADOS ADICIONAIS</h3>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="reg-inscricao-estadual">Inscrição Estadual</Label>
-                      <Input
-                        id="reg-inscricao-estadual"
-                        value={formData.inscricaoEstadual}
-                        onChange={(e) => handleInputChange("inscricaoEstadual", e.target.value)}
-                        placeholder="Inscrição estadual"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="reg-inscricao-municipal">Inscrição Municipal</Label>
-                      <Input
-                        id="reg-inscricao-municipal"
-                        value={formData.inscricaoMunicipal}
-                        onChange={(e) => handleInputChange("inscricaoMunicipal", e.target.value)}
-                        placeholder="Inscrição municipal"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Responsável Legal */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold border-b pb-2">3. RESPONSÁVEL LEGAL</h3>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="reg-nome-responsavel">Nome do Responsável</Label>
-                      <Input
-                        id="reg-nome-responsavel"
-                        value={formData.nomeResponsavel}
-                        onChange={(e) => handleInputChange("nomeResponsavel", e.target.value)}
-                        placeholder="Nome completo"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="reg-cpf-responsavel">CPF do Responsável</Label>
-                      <Input
-                        id="reg-cpf-responsavel"
-                        value={formData.cpfResponsavel}
-                        onChange={(e) => handleInputChange("cpfResponsavel", e.target.value)}
-                        placeholder="000.000.000-00"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="reg-cargo-responsavel">Cargo</Label>
-                    <Input
-                      id="reg-cargo-responsavel"
-                      value={formData.cargoResponsavel}
-                      onChange={(e) => handleInputChange("cargoResponsavel", e.target.value)}
-                      placeholder="Cargo exercido"
-                    />
-                  </div>
-                </div>
+                <DadosBasicosColetivo formData={formData} handleInputChange={handleInputChange} tipoRegistro="COLETIVO" currentStep={1} />
+                <RepresentanteColetivo formData={formData} handleInputChange={handleInputChange} tipoRegistro="COLETIVO" currentStep={1} />
+                <EnderecoColetivo formData={formData} handleInputChange={handleInputChange} tipoRegistro="COLETIVO" currentStep={1} />
+                <MembrosColetivo formData={formData} handleInputChange={handleInputChange} tipoRegistro="COLETIVO" currentStep={1} />
+                <BancarioColetivo formData={formData} handleInputChange={handleInputChange} tipoRegistro="COLETIVO" currentStep={1} />
               </>
             )}
-
-            {/* Dados Bancários - Agora fazem parte dos steps (PF step 11, PJ step 5) */}
           </div>
 
           <DialogFooter>
@@ -2015,34 +1789,13 @@ export const ProponenteProponentes = () => {
               Cancelar
             </Button>
             
-            {currentStep > 1 && (
-              <Button
-                variant="outline"
-                onClick={prevStep}
-                disabled={isLoading}
-              >
-                <ChevronLeft className="mr-2 h-4 w-4" />
-                Anterior
-              </Button>
-            )}
-            
-            {currentStep < (tipoRegistro === "PF" ? totalStepsPF : totalStepsPJ) ? (
-              <Button
-                onClick={nextStep}
-                disabled={isLoading}
-              >
-                Próximo
-                <ChevronRight className="ml-2 h-4 w-4" />
-              </Button>
-            ) : (
-              <Button 
-                onClick={handleSalvarRegistro}
-                disabled={isLoading}
-              >
-                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Registrar Proponente
-              </Button>
-            )}
+            <Button 
+              onClick={handleSalvarRegistro}
+              disabled={isLoading}
+            >
+              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Registrar Proponente
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -2052,68 +1805,47 @@ export const ProponenteProponentes = () => {
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              Editar {proponenteEditando?.tipo === "PF" ? "Pessoa Física" : "Pessoa Jurídica"} - {proponenteEditando?.nome}
+              Editar {proponenteEditando?.tipo === "PF" ? "Pessoa Física" : proponenteEditando?.tipo === "PJ" ? "Pessoa Jurídica" : "Coletivo"} - {proponenteEditando?.nome}
             </DialogTitle>
           </DialogHeader>
           
-          {/* Indicador de Progresso */}
-          <div className="mb-6">
-            <div className="flex items-center justify-between">
-              {Array.from({ length: tipoRegistro === "PF" ? totalStepsPF : totalStepsPJ }, (_, i) => i + 1).map((step) => (
-                <div key={step} className="flex items-center flex-1">
-                  <button
-                    onClick={() => goToStep(step)}
-                    className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all ${
-                      step === currentStep
-                        ? 'border-blue-600 bg-blue-600 text-white'
-                        : step < currentStep
-                        ? 'border-green-600 bg-green-600 text-white'
-                        : 'border-gray-300 bg-white text-gray-500'
-                    }`}
-                    disabled={step > currentStep}
-                  >
-                    {step < currentStep ? (
-                      <Check className="h-5 w-5" />
-                    ) : (
-                      step
-                    )}
-                  </button>
-                  {step < (tipoRegistro === "PF" ? totalStepsPF : totalStepsPJ) && (
-                    <div className={`h-1 flex-1 mx-2 ${
-                      step < currentStep ? 'bg-green-600' : 'bg-gray-300'
-                    }`} />
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-          
-          <div className="space-y-6">
-            {/* Renderização condicional de steps para PF */}
+          <div className="max-h-[60vh] overflow-y-auto space-y-8 px-4 py-2">
+            {/* Renderização unificada para PF */}
             {tipoRegistro === "PF" && (
               <>
-                {currentStep === 1 && <DadosBasicosPF formData={formData} handleInputChange={handleInputChange} tipoRegistro="PF" currentStep={currentStep} />}
-                {currentStep === 2 && <EnderecoPF formData={formData} handleInputChange={handleInputChange} tipoRegistro="PF" currentStep={currentStep} />}
-                {currentStep === 3 && <DadosPessoaisPF formData={formData} handleInputChange={handleInputChange} tipoRegistro="PF" currentStep={currentStep} />}
-                {currentStep === 4 && <PCDPF formData={formData} handleInputChange={handleInputChange} tipoRegistro="PF" currentStep={currentStep} />}
-                {currentStep === 5 && <FormacaoPF formData={formData} handleInputChange={handleInputChange} tipoRegistro="PF" currentStep={currentStep} />}
-                {currentStep === 6 && <ProgramasSociaisPF formData={formData} handleInputChange={handleInputChange} tipoRegistro="PF" currentStep={currentStep} />}
-                {currentStep === 7 && <CotasPF formData={formData} handleInputChange={handleInputChange} tipoRegistro="PF" currentStep={currentStep} />}
-                {currentStep === 8 && <ArtisticoPF formData={formData} handleInputChange={handleInputChange} tipoRegistro="PF" currentStep={currentStep} />}
-                {currentStep === 9 && <ColetivoPF formData={formData} handleInputChange={handleInputChange} tipoRegistro="PF" currentStep={currentStep} />}
-                {currentStep === 10 && <ExperienciaPF formData={formData} handleInputChange={handleInputChange} tipoRegistro="PF" currentStep={currentStep} />}
-                {currentStep === 11 && <BancarioPF formData={formData} handleInputChange={handleInputChange} tipoRegistro="PF" currentStep={currentStep} />}
+                <DadosBasicosPF formData={formData} handleInputChange={handleInputChange} tipoRegistro="PF" currentStep={1} />
+                <EnderecoPF formData={formData} handleInputChange={handleInputChange} tipoRegistro="PF" currentStep={1} />
+                <DadosPessoaisPF formData={formData} handleInputChange={handleInputChange} tipoRegistro="PF" currentStep={1} />
+                <PCDPF formData={formData} handleInputChange={handleInputChange} tipoRegistro="PF" currentStep={1} />
+                <FormacaoPF formData={formData} handleInputChange={handleInputChange} tipoRegistro="PF" currentStep={1} />
+                <ProgramasSociaisPF formData={formData} handleInputChange={handleInputChange} tipoRegistro="PF" currentStep={1} />
+                <CotasPF formData={formData} handleInputChange={handleInputChange} tipoRegistro="PF" currentStep={1} />
+                <ArtisticoPF formData={formData} handleInputChange={handleInputChange} tipoRegistro="PF" currentStep={1} />
+                <ColetivoPF formData={formData} handleInputChange={handleInputChange} tipoRegistro="PF" currentStep={1} />
+                <ExperienciaPF formData={formData} handleInputChange={handleInputChange} tipoRegistro="PF" currentStep={1} />
+                <BancarioPF formData={formData} handleInputChange={handleInputChange} tipoRegistro="PF" currentStep={1} />
               </>
             )}
 
-            {/* Renderização condicional de steps para PJ */}
+            {/* Renderização unificada para PJ */}
             {tipoRegistro === "PJ" && (
               <>
-                {currentStep === 1 && <DadosEmpresaPJ formData={formData} handleInputChange={handleInputChange} tipoRegistro="PJ" currentStep={currentStep} />}
-                {currentStep === 2 && <EnderecoPJ formData={formData} handleInputChange={handleInputChange} tipoRegistro="PJ" currentStep={currentStep} />}
-                {currentStep === 3 && <InscricoesPJ formData={formData} handleInputChange={handleInputChange} tipoRegistro="PJ" currentStep={currentStep} />}
-                {currentStep === 4 && <ResponsavelPJ formData={formData} handleInputChange={handleInputChange} tipoRegistro="PJ" currentStep={currentStep} />}
-                {currentStep === 5 && <BancarioPJ formData={formData} handleInputChange={handleInputChange} tipoRegistro="PJ" currentStep={currentStep} />}
+                <DadosEmpresaPJ formData={formData} handleInputChange={handleInputChange} tipoRegistro="PJ" currentStep={1} />
+                <EnderecoPJ formData={formData} handleInputChange={handleInputChange} tipoRegistro="PJ" currentStep={1} />
+                <InscricoesPJ formData={formData} handleInputChange={handleInputChange} tipoRegistro="PJ" currentStep={1} />
+                <ResponsavelPJ formData={formData} handleInputChange={handleInputChange} tipoRegistro="PJ" currentStep={1} />
+                <BancarioPJ formData={formData} handleInputChange={handleInputChange} tipoRegistro="PJ" currentStep={1} />
+              </>
+            )}
+
+            {/* Renderização unificada para COLETIVO */}
+            {tipoRegistro === "COLETIVO" && (
+              <>
+                <DadosBasicosColetivo formData={formData} handleInputChange={handleInputChange} tipoRegistro="COLETIVO" currentStep={1} />
+                <RepresentanteColetivo formData={formData} handleInputChange={handleInputChange} tipoRegistro="COLETIVO" currentStep={1} />
+                <EnderecoColetivo formData={formData} handleInputChange={handleInputChange} tipoRegistro="COLETIVO" currentStep={1} />
+                <MembrosColetivo formData={formData} handleInputChange={handleInputChange} tipoRegistro="COLETIVO" currentStep={1} />
+                <BancarioColetivo formData={formData} handleInputChange={handleInputChange} tipoRegistro="COLETIVO" currentStep={1} />
               </>
             )}
           </div>
@@ -2127,34 +1859,13 @@ export const ProponenteProponentes = () => {
               Cancelar
             </Button>
             
-            {currentStep > 1 && (
-              <Button
-                variant="outline"
-                onClick={prevStep}
-                disabled={isLoading}
-              >
-                <ChevronLeft className="mr-2 h-4 w-4" />
-                Anterior
-              </Button>
-            )}
-            
-            {currentStep < (tipoRegistro === "PF" ? totalStepsPF : totalStepsPJ) ? (
-              <Button
-                onClick={nextStep}
-                disabled={isLoading}
-              >
-                Próximo
-                <ChevronRight className="ml-2 h-4 w-4" />
-              </Button>
-            ) : (
-              <Button 
-                onClick={handleSalvarEdicao}
-                disabled={isLoading}
-              >
-                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Salvar Alterações
-              </Button>
-            )}
+            <Button 
+              onClick={handleSalvarEdicao}
+              disabled={isLoading}
+            >
+              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Salvar Alterações
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

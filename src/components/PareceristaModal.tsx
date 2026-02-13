@@ -176,8 +176,8 @@ export const PareceristaModal = ({ open, onClose, onSave, parecerista, loading =
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="space-y-2 p-3">
               <Label htmlFor="nome">
                 Nome Completo <span className="text-red-500">*</span>
               </Label>
@@ -190,7 +190,7 @@ export const PareceristaModal = ({ open, onClose, onSave, parecerista, loading =
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 p-3">
               <Label htmlFor="email">
                 Email <span className="text-red-500">*</span>
               </Label>
@@ -204,7 +204,7 @@ export const PareceristaModal = ({ open, onClose, onSave, parecerista, loading =
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 p-3">
               <Label htmlFor="cpf">
                 CPF <span className="text-red-500">*</span>
               </Label>
@@ -218,7 +218,7 @@ export const PareceristaModal = ({ open, onClose, onSave, parecerista, loading =
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 p-3">
               <Label htmlFor="rg">RG</Label>
               <Input
                 id="rg"
@@ -227,9 +227,9 @@ export const PareceristaModal = ({ open, onClose, onSave, parecerista, loading =
                 placeholder="00.000.000-0"
                 maxLength={12}
               />
-            </div>
+            </div>  
 
-            <div className="space-y-2">
+            <div className="space-y-2 p-3">
               <Label htmlFor="telefone">Telefone</Label>
               <Input
                 id="telefone"
@@ -240,7 +240,7 @@ export const PareceristaModal = ({ open, onClose, onSave, parecerista, loading =
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 p-3">
               <Label htmlFor="area_atuacao">
                 Área de Atuação <span className="text-red-500">*</span>
               </Label>
@@ -253,7 +253,7 @@ export const PareceristaModal = ({ open, onClose, onSave, parecerista, loading =
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 p-3">
               <Label htmlFor="experiencia_anos">Anos de Experiência</Label>
               <Input
                 id="experiencia_anos"
@@ -266,7 +266,7 @@ export const PareceristaModal = ({ open, onClose, onSave, parecerista, loading =
             </div>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-2 p-3">
             <Label>Especialidades</Label>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
               {ESPECIALIDADES_OPTIONS.map((option) => (

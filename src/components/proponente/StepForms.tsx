@@ -7,7 +7,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 interface StepFormsProps {
   formData: any;
   handleInputChange: (field: string, value: any) => void;
-  tipoRegistro: "PF" | "PJ";
+  tipoRegistro: "PF" | "PJ" | "COLETIVO";
   currentStep: number;
 }
 
@@ -182,7 +182,7 @@ export const DadosPessoaisPF = ({ formData, handleInputChange }: StepFormsProps)
       <RadioGroup
         value={formData.comunidadeTradicional}
         onValueChange={(value) => handleInputChange("comunidadeTradicional", value)}
-        className="mt-2"
+        className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2"
         required
       >
         <div className="flex items-center space-x-2">
@@ -190,20 +190,16 @@ export const DadosPessoaisPF = ({ formData, handleInputChange }: StepFormsProps)
           <Label htmlFor="com-nao">Não pertenço a comunidade tradicional</Label>
         </div>
         <div className="flex items-center space-x-2">
-          <RadioGroupItem value="extrativistas" id="com-ext" />
-          <Label htmlFor="com-ext">Comunidades Extrativistas</Label>
-        </div>
-        <div className="flex items-center space-x-2">
-          <RadioGroupItem value="ribeirinhas" id="com-rib" />
-          <Label htmlFor="com-rib">Comunidades Ribeirinhas</Label>
-        </div>
-        <div className="flex items-center space-x-2">
-          <RadioGroupItem value="rurais" id="com-rur" />
-          <Label htmlFor="com-rur">Comunidades Rurais</Label>
-        </div>
-        <div className="flex items-center space-x-2">
           <RadioGroupItem value="indigenas" id="com-ind" />
-          <Label htmlFor="com-ind">Indígenas</Label>
+          <Label htmlFor="com-ind">Povos Indígenas</Label>
+        </div>
+        <div className="flex items-center space-x-2">
+          <RadioGroupItem value="quilombolas" id="com-quil" />
+          <Label htmlFor="com-quil">Comunidades Quilombolas</Label>
+        </div>
+        <div className="flex items-center space-x-2">
+          <RadioGroupItem value="terreiro" id="com-terr" />
+          <Label htmlFor="com-terr">Povos de Terreiro/Comunidades de Matriz Africana</Label>
         </div>
         <div className="flex items-center space-x-2">
           <RadioGroupItem value="ciganos" id="com-cig" />
@@ -214,12 +210,68 @@ export const DadosPessoaisPF = ({ formData, handleInputChange }: StepFormsProps)
           <Label htmlFor="com-pesc">Pescadores(as) Artesanais</Label>
         </div>
         <div className="flex items-center space-x-2">
-          <RadioGroupItem value="terreiro" id="com-terr" />
-          <Label htmlFor="com-terr">Povos de Terreiro</Label>
+          <RadioGroupItem value="extrativistas" id="com-ext" />
+          <Label htmlFor="com-ext">Comunidades Extrativistas</Label>
         </div>
         <div className="flex items-center space-x-2">
-          <RadioGroupItem value="quilombolas" id="com-quil" />
-          <Label htmlFor="com-quil">Quilombolas</Label>
+          <RadioGroupItem value="ribeirinhas" id="com-rib" />
+          <Label htmlFor="com-rib">Comunidades Ribeirinhas</Label>
+        </div>
+        <div className="flex items-center space-x-2">
+          <RadioGroupItem value="caboclos" id="com-cab" />
+          <Label htmlFor="com-cab">Caboclos</Label>
+        </div>
+        <div className="flex items-center space-x-2">
+          <RadioGroupItem value="caicaras" id="com-caic" />
+          <Label htmlFor="com-caic">Caiçaras</Label>
+        </div>
+        <div className="flex items-center space-x-2">
+          <RadioGroupItem value="jangadeiros" id="com-jan" />
+          <Label htmlFor="com-jan">Jangadeiros</Label>
+        </div>
+        <div className="flex items-center space-x-2">
+          <RadioGroupItem value="azorianos" id="com-azo" />
+          <Label htmlFor="com-azo">Azorianos</Label>
+        </div>
+        <div className="flex items-center space-x-2">
+          <RadioGroupItem value="campeiros" id="com-cam" />
+          <Label htmlFor="com-cam">Campeiros</Label>
+        </div>
+        <div className="flex items-center space-x-2">
+          <RadioGroupItem value="varzeiros" id="com-var" />
+          <Label htmlFor="com-var">Varzeiros</Label>
+        </div>
+        <div className="flex items-center space-x-2">
+          <RadioGroupItem value="pantaneiros" id="com-pan" />
+          <Label htmlFor="com-pan">Pantaneiros</Label>
+        </div>
+        <div className="flex items-center space-x-2">
+          <RadioGroupItem value="geraizeiros" id="com-ger" />
+          <Label htmlFor="com-ger">Geraizeiros</Label>
+        </div>
+        <div className="flex items-center space-x-2">
+          <RadioGroupItem value="veredeiros" id="com-ver" />
+          <Label htmlFor="com-ver">Veredeiros</Label>
+        </div>
+        <div className="flex items-center space-x-2">
+          <RadioGroupItem value="caatingueiros" id="com-caat" />
+          <Label htmlFor="com-caat">Caatingueiros</Label>
+        </div>
+        <div className="flex items-center space-x-2">
+          <RadioGroupItem value="retireiros" id="com-ret" />
+          <Label htmlFor="com-ret">Retireiros do Araguaia</Label>
+        </div>
+        <div className="flex items-center space-x-2">
+          <RadioGroupItem value="quebradeiras" id="com-queb" />
+          <Label htmlFor="com-queb">Quebradeiras de Coco de Babaçu</Label>
+        </div>
+        <div className="flex items-center space-x-2">
+          <RadioGroupItem value="faxinalenses" id="com-fax" />
+          <Label htmlFor="com-fax">Faxinalenses</Label>
+        </div>
+        <div className="flex items-center space-x-2">
+          <RadioGroupItem value="rurais" id="com-rur" />
+          <Label htmlFor="com-rur">Comunidades Rurais</Label>
         </div>
         <div className="flex items-center space-x-2">
           <RadioGroupItem value="outra" id="com-outra" />
@@ -573,7 +625,7 @@ export const ArtisticoPF = ({ formData, handleInputChange }: StepFormsProps) => 
       <RadioGroup
         value={formData.funcaoArtistica}
         onValueChange={(value) => handleInputChange("funcaoArtistica", value)}
-        className="mt-2"
+        className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2"
       >
         <div className="flex items-center space-x-2">
           <RadioGroupItem value="artista" id="func-artista" />
@@ -604,8 +656,12 @@ export const ArtisticoPF = ({ formData, handleInputChange }: StepFormsProps) => 
           <Label htmlFor="func-critico">Crítico(a), Pesquisador(a)</Label>
         </div>
         <div className="flex items-center space-x-2">
-          <RadioGroupItem value="outro" id="func-outro" />
-          <Label htmlFor="func-outro">Outro</Label>
+          <RadioGroupItem value="agente_cultural" id="func-agente" />
+          <Label htmlFor="func-agente">Agente Cultural</Label>
+        </div>
+        <div className="flex items-center space-x-2">
+          <RadioGroupItem value="outros" id="func-outros" />
+          <Label htmlFor="func-outros">Outros</Label>
         </div>
       </RadioGroup>
       {formData.funcaoArtistica === "outro" && (
@@ -1572,6 +1628,180 @@ export const ResponsavelPJ = ({ formData, handleInputChange }: StepFormsProps) =
     </div>
   </div>
 );
+
+export const DadosBasicosColetivo = ({ formData, handleInputChange }: StepFormsProps) => (
+  <div className="space-y-4">
+    <h3 className="text-lg font-semibold border-b pb-2">Dados do Coletivo</h3>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div>
+        <Label htmlFor="reg-nome-coletivo">Nome do Grupo/Coletivo *</Label>
+        <Input
+          id="reg-nome-coletivo"
+          value={formData.nomeGrupo}
+          onChange={(e) => handleInputChange("nomeGrupo", e.target.value)}
+          placeholder="Nome do grupo"
+          required
+        />
+      </div>
+      <div>
+        <Label htmlFor="reg-ano-coletivo">Ano de Fundação *</Label>
+        <Input
+          id="reg-ano-coletivo"
+          value={formData.anoCriacao}
+          onChange={(e) => handleInputChange("anoCriacao", e.target.value)}
+          placeholder="Ex: 2010"
+          required
+        />
+      </div>
+      <div>
+        <Label htmlFor="reg-quantidade">Quantidade de Pessoas *</Label>
+        <Input
+          id="reg-quantidade"
+          type="number"
+          value={formData.quantidadePessoas}
+          onChange={(e) => handleInputChange("quantidadePessoas", e.target.value)}
+          placeholder="Ex: 10"
+          required
+        />
+      </div>
+    </div>
+  </div>
+);
+
+export const RepresentanteColetivo = ({ formData, handleInputChange }: StepFormsProps) => (
+  <div className="space-y-4">
+    <h3 className="text-lg font-semibold border-b pb-2">Representante Legal</h3>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div>
+        <Label htmlFor="reg-nome-resp">Nome do Representante *</Label>
+        <Input
+          id="reg-nome-resp"
+          value={formData.nomeRepresentanteColetivo}
+          onChange={(e) => handleInputChange("nomeRepresentanteColetivo", e.target.value)}
+          placeholder="Nome completo"
+          required
+        />
+      </div>
+      <div>
+        <Label htmlFor="reg-cpf-resp">CPF do Representante *</Label>
+        <Input
+          id="reg-cpf-resp"
+          value={formData.cpfRepresentanteColetivo}
+          onChange={(e) => handleInputChange("cpfRepresentanteColetivo", e.target.value)}
+          placeholder="000.000.000-00"
+          required
+        />
+      </div>
+      <div>
+        <Label htmlFor="reg-tel-resp">Telefone de Contato *</Label>
+        <Input
+          id="reg-tel-resp"
+          value={formData.telefoneRepresentanteColetivo}
+          onChange={(e) => handleInputChange("telefoneRepresentanteColetivo", e.target.value)}
+          placeholder="(00) 00000-0000"
+          required
+        />
+      </div>
+      <div>
+        <Label htmlFor="reg-email-resp">E-mail de Contato *</Label>
+        <Input
+          id="reg-email-resp"
+          type="email"
+          value={formData.emailRepresentanteColetivo}
+          onChange={(e) => handleInputChange("emailRepresentanteColetivo", e.target.value)}
+          placeholder="representante@exemplo.com"
+          required
+        />
+      </div>
+    </div>
+  </div>
+);
+
+export const EnderecoColetivo = ({ formData, handleInputChange }: StepFormsProps) => (
+  <div className="space-y-4">
+    <h3 className="text-lg font-semibold border-b pb-2">Endereço da Sede</h3>
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="md:col-span-1">
+        <Label htmlFor="reg-cep-sede">CEP *</Label>
+        <Input
+          id="reg-cep-sede"
+          value={formData.cep}
+          onChange={(e) => handleInputChange("cep", e.target.value)}
+          placeholder="00000-000"
+          required
+        />
+      </div>
+      <div className="md:col-span-2">
+        <Label htmlFor="reg-endereco-sede">Endereço *</Label>
+        <Input
+          id="reg-endereco-sede"
+          value={formData.endereco}
+          onChange={(e) => handleInputChange("endereco", e.target.value)}
+          placeholder="Rua, Avenida, etc"
+          required
+        />
+      </div>
+      <div>
+        <Label htmlFor="reg-numero-sede">Número *</Label>
+        <Input
+          id="reg-numero-sede"
+          value={formData.numero}
+          onChange={(e) => handleInputChange("numero", e.target.value)}
+          placeholder="123"
+          required
+        />
+      </div>
+      <div>
+        <Label htmlFor="reg-comp-sede">Complemento</Label>
+        <Input
+          id="reg-comp-sede"
+          value={formData.complemento}
+          onChange={(e) => handleInputChange("complemento", e.target.value)}
+          placeholder="Apto, Bloco, etc"
+        />
+      </div>
+      <div>
+        <Label htmlFor="reg-estado-sede">Estado *</Label>
+        <Input
+          id="reg-estado-sede"
+          value={formData.estado}
+          onChange={(e) => handleInputChange("estado", e.target.value)}
+          placeholder="UF"
+          required
+        />
+      </div>
+      <div>
+        <Label htmlFor="reg-cidade-sede">Cidade *</Label>
+        <Input
+          id="reg-cidade-sede"
+          value={formData.cidade}
+          onChange={(e) => handleInputChange("cidade", e.target.value)}
+          placeholder="Município"
+          required
+        />
+      </div>
+    </div>
+  </div>
+);
+
+export const MembrosColetivo = ({ formData, handleInputChange }: StepFormsProps) => (
+  <div className="space-y-4">
+    <h3 className="text-lg font-semibold border-b pb-2">Membros do Coletivo</h3>
+    <div>
+      <Label htmlFor="reg-membros-list">Nome dos Principais Membros *</Label>
+      <Textarea
+        id="reg-membros-list"
+        value={formData.membrosColetivo}
+        onChange={(e) => handleInputChange("membrosColetivo", e.target.value)}
+        placeholder="Lista de nomes dos membros do coletivo ou grupo artístico"
+        rows={6}
+        required
+      />
+    </div>
+  </div>
+);
+
+export const BancarioColetivo = BancarioPF;
 
 export const BancarioPJ = BancarioPF; // Mesmo componente
 
