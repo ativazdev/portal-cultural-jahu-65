@@ -8,6 +8,10 @@ const ALLOWED_ORIGINS = [
   'http://localhost:8080',
   'http://localhost:5173',
   'http://localhost:3000',
+  'http://69.6.250.98:8080',
+  'http://pnabjau.com.br',
+  'https://www.pnabjau.com.br',
+  'https://pnabjau.com.br',
 ]
 
 // Função para obter headers CORS baseado na origem
