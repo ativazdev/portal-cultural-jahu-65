@@ -1,6 +1,7 @@
 import React, { ReactNode, useState, useEffect } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { 
   Menu, 
   X, 
@@ -268,133 +269,148 @@ export const PareceristaLayout = ({
           {/* Sidebar */}
           <aside 
             className={cn(
-              "fixed left-0 z-40 w-64 border-r bg-white transition-transform",
-              sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+              "fixed left-0 z-40 w-72 border-r border-slate-200 bg-white/80 backdrop-blur-xl transition-all duration-300 ease-in-out lg:translate-x-0 shadow-lg shadow-slate-200/50",
+              sidebarOpen ? "translate-x-0" : "-translate-x-full"
             )}
             style={{ top: '80px', height: 'calc(100vh - 80px)' }}
           >
             <div className="flex flex-col h-full">
-              {/* Logo / Header */}
-              <div className="flex items-center justify-between p-4 border-b">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-green-600 rounded flex items-center justify-center">
+              {/* Sidebar Header - App Brand */}
+              <div className="flex items-center justify-between p-6 border-b border-slate-100">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-200">
                     <CheckSquare className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <p className="font-semibold text-sm">Parecerista</p>
+                    <p className="font-bold text-slate-900 text-sm tracking-tight">Parecerista</p>
                     {prefeitura && (
-                      <p className="text-xs text-gray-500">{prefeitura.municipio}</p>
+                      <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest">{prefeitura.municipio}</p>
                     )}
                   </div>
                 </div>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="lg:hidden"
+                  className="lg:hidden rounded-xl hover:bg-slate-100"
                   onClick={() => setSidebarOpen(false)}
                 >
                   <X className="h-5 w-5" />
                 </Button>
               </div>
 
-              {/* Navigation */}
+              {/* Navigation Items */}
               {navigation.length > 0 && (
-                <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+                <nav className="flex-1 px-4 py-8 space-y-2 overflow-y-auto">
+                  <p className="px-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4">Menu Principal</p>
                   {navigation.map((item) => {
                     const Icon = item.icon;
                     const isActive = location.pathname === item.href;
                     return (
                       <Button
                         key={item.name}
-                        variant={isActive ? "secondary" : "ghost"}
+                        variant="ghost"
                         className={cn(
-                          "w-full justify-start",
-                          isActive && "bg-green-50 text-green-700 hover:bg-green-100"
+                          "w-full justify-start py-6 px-4 rounded-2xl transition-all duration-200 group relative",
+                          isActive 
+                            ? "bg-blue-50 text-blue-700 font-bold shadow-sm shadow-blue-100/50" 
+                            : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
                         )}
                         onClick={() => {
                           navigate(item.href);
                           setSidebarOpen(false);
                         }}
                       >
-                        <Icon className="mr-2 h-4 w-4" />
+                        {isActive && (
+                          <div className="absolute left-1 w-1 h-6 bg-blue-600 rounded-full" />
+                        )}
+                        <Icon className={cn(
+                          "mr-3 h-5 w-5 transition-colors",
+                          isActive ? "text-blue-600" : "text-slate-400 group-hover:text-slate-600"
+                        )} />
                         {item.name}
                       </Button>
                     );
                   })}
+                  
                   {linkTutorial && (
                     <Button
                       variant="ghost"
-                      className="w-full justify-start"
+                      className="w-full justify-start py-6 px-4 rounded-2xl text-slate-500 hover:bg-slate-50 hover:text-slate-900 group"
                       onClick={() => {
                         window.open(linkTutorial, '_blank', 'noopener,noreferrer');
                         setSidebarOpen(false);
                       }}
                     >
-                      <BookOpen className="mr-2 h-4 w-4" />
-                      Tutorial
+                      <BookOpen className="mr-3 h-5 w-5 text-slate-400 group-hover:text-slate-600" />
+                      Tutorial Interativo
                     </Button>
                   )}
                 </nav>
               )}
 
-              {/* Trocar Edital, Download Regulamento, Suporte e Logout */}
-              <div className="p-4 border-t space-y-2 bg-white">
+              {/* Bottom Actions */}
+              <div className="p-6 border-t border-slate-100 space-y-3 bg-slate-50/50">
                 {editalId && (
-                  <>
+                  <div className="grid grid-cols-1 gap-2">
                     <Button
                       variant="outline"
-                      className="w-full justify-start"
+                      className="w-full justify-start border-slate-200 hover:border-blue-200 hover:bg-blue-50 text-slate-600 hover:text-blue-700 rounded-xl transition-all h-11"
                       onClick={handleTrocarEdital}
                     >
-                      <FileText className="mr-2 h-4 w-4" />
+                      <ClipboardList className="mr-2 h-4 w-4" />
                       Trocar Edital
                     </Button>
                     <Button
                       variant="outline"
-                      className="w-full justify-start"
+                      className="w-full justify-start border-slate-200 hover:border-blue-200 hover:bg-blue-50 text-slate-600 hover:text-blue-700 rounded-xl transition-all h-11"
                       onClick={handleDownloadRegulamento}
                       disabled={loadingArquivos}
                     >
-                      <Download className={`mr-2 h-4 w-4 ${loadingArquivos ? 'animate-spin' : ''}`} />
-                      {loadingArquivos ? 'Baixando...' : 'Baixar Regulamento'}
+                      <Download className={cn("mr-2 h-4 w-4", loadingArquivos && "animate-spin")} />
+                      {loadingArquivos ? 'Baixando...' : 'Regulamento (.zip)'}
                     </Button>
-                  </>
+                  </div>
                 )}
+                
                 {temContatoSuporte && (
                   <Button
-                    variant="outline"
-                    className="w-full justify-start"
+                    variant="ghost"
+                    className="w-full justify-start text-slate-500 hover:bg-emerald-50 hover:text-emerald-700 rounded-xl h-11"
                     onClick={() => setModalSuporteOpen(true)}
                   >
                     <Headphones className="mr-2 h-4 w-4" />
-                    Suporte
+                    Central de Suporte
                   </Button>
                 )}
+                
                 <Button
                   variant="ghost"
-                  className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
+                  className="w-full justify-start text-red-500 hover:bg-red-50 hover:text-red-600 rounded-xl h-11"
                   onClick={handleLogout}
                 >
                   <LogOut className="mr-2 h-4 w-4" />
-                  Sair
+                  Encerrar Sessão
                 </Button>
               </div>
 
-              {/* User Info */}
-              <div className="p-4 border-t bg-white">
-                <div className="flex items-center gap-3 mb-3">
-                  <Avatar>
-                    <AvatarFallback className="bg-green-600 text-white">
+              {/* User Profile Footer */}
+              <div className="p-6 border-t border-slate-100 bg-white">
+                <div className="flex items-center gap-4">
+                  <Avatar className="h-11 w-11 border-2 border-slate-50 shadow-sm">
+                    <AvatarFallback className="bg-gradient-to-br from-blue-600 to-blue-700 text-white font-bold text-sm">
                       {parecerista.nome.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{parecerista.nome}</p>
-                    <p className="text-xs text-gray-500 truncate">{parecerista.email}</p>
+                    <p className="text-sm font-bold text-slate-900 truncate leading-tight">{parecerista.nome}</p>
+                    <p className="text-xs text-slate-500 truncate mt-0.5">{parecerista.email}</p>
                   </div>
                 </div>
-                <div className="text-center">
-                  <p className="text-xs text-muted-foreground">versão {APP_VERSION}</p>
+                <div className="mt-4 flex items-center justify-between px-1">
+                  <Badge variant="outline" className="text-[10px] font-mono py-0 text-slate-400 border-slate-200 rounded-full">
+                    v{APP_VERSION}
+                  </Badge>
+                  <p className="text-[10px] text-slate-300 font-medium tracking-tighter italic">CULTURAL JAHU</p>
                 </div>
               </div>
             </div>
@@ -410,7 +426,7 @@ export const PareceristaLayout = ({
           )}
 
           {/* Main Content */}
-          <div className="flex-1 flex flex-col overflow-hidden lg:pl-64 min-h-[calc(100vh-80px)]">
+          <div className="flex-1 flex flex-col overflow-hidden lg:pl-72 min-h-[calc(100vh-80px)]">
             {/* Top Header */}
             <header className="h-16 border-b bg-background">
               <div className="flex h-full items-center justify-between px-4">

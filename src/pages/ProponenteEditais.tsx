@@ -90,13 +90,26 @@ export const ProponenteEditais = () => {
         .from('editais')
         .select('id, codigo, nome, descricao, data_abertura, data_final_envio_projeto, valor_maximo, status, modalidades, regulamento, anexos, data_prorrogacao, has_accountability_phase')
         .eq('prefeitura_id', prefeituraId)
-        .eq('status', 'recebendo_projetos')
-        .order('data_final_envio_projeto', { ascending: true });
+        .neq('status', 'rascunho') // Não mostrar rascunhos da prefeitura
+        .order('data_final_envio_projeto', { ascending: false });
 
       if (error) throw error;
 
-      setEditais(data || []);
-      setFilteredEditais(data || []);
+      // Ordenação personalizada: 'recebendo_projetos' primeiro, depois os demais.
+      // Dentro de cada grupo, mantém a ordenação por data descrecente.
+      const ordenados = (data || []).sort((a, b) => {
+        if (a.status === 'recebendo_projetos' && b.status !== 'recebendo_projetos') return -1;
+        if (a.status !== 'recebendo_projetos' && b.status === 'recebendo_projetos') return 1;
+        
+        // Se ambos têm o mesmo status (ou ambos não são 'recebendo_projetos'),
+        // ordena por data de envio (mais recente primeiro)
+        const dateA = new Date(a.data_final_envio_projeto).getTime();
+        const dateB = new Date(b.data_final_envio_projeto).getTime();
+        return dateB - dateA;
+      });
+
+      setEditais(ordenados);
+      setFilteredEditais(ordenados);
     } catch (error) {
       console.error('❌ Erro ao carregar editais:', error);
       toast({
@@ -250,8 +263,8 @@ export const ProponenteEditais = () => {
                           </Badge>
                           {getStatusBadge(edital.status)}
                         </div>
-                        <CardTitle className="text-2xl">{edital.nome}</CardTitle>
-                        <CardDescription className="text-base">
+                         <CardTitle className="text-2xl">{edital.nome}</CardTitle>
+                        <CardDescription className="text-base line-clamp-2">
                           {edital.descricao}
                         </CardDescription>
                       </div>
@@ -307,22 +320,34 @@ export const ProponenteEditais = () => {
                       >
                         Ver Detalhes
                       </Button>
-                      <Button 
-                        className={`flex-1 ${
-                          edital.has_accountability_phase 
-                            ? 'bg-green-600 hover:bg-green-700' 
-                            : 'bg-blue-600 hover:bg-blue-700'
-                        }`}
-                        onClick={() => {
-                          if (edital.has_accountability_phase) {
-                             navigate(`/${nomePrefeitura}/proponente/edital/${edital.id}/prestar-contas`);
-                          } else {
-                             navigate(`/${nomePrefeitura}/proponente/editais/${edital.id}/cadastrar-projeto`);
-                          }
-                        }}
-                      >
-                        {edital.has_accountability_phase ? "Prestar Contas" : "Inscrever Projeto"}
-                      </Button>
+                      
+                      {(() => {
+                        const hoje = new Date();
+                        const dataFinal = edital.data_prorrogacao ? new Date(edital.data_prorrogacao) : new Date(edital.data_final_envio_projeto);
+                        const isAberto = edital.status === 'recebendo_projetos' && hoje <= dataFinal;
+                        
+                        if (isAberto) {
+                          return (
+                            <Button 
+                              className={`flex-1 ${
+                                edital.has_accountability_phase 
+                                  ? 'bg-green-600 hover:bg-green-700' 
+                                  : 'bg-blue-600 hover:bg-blue-700'
+                              }`}
+                              onClick={() => {
+                                if (edital.has_accountability_phase) {
+                                   navigate(`/${nomePrefeitura}/proponente/edital/${edital.id}/prestar-contas`);
+                                } else {
+                                   handleInscrever(edital.id);
+                                }
+                              }}
+                            >
+                              {edital.has_accountability_phase ? "Prestar Contas" : "Inscrever Projeto"}
+                            </Button>
+                          );
+                        }
+                        return null;
+                      })()}
                       {anexos.length > 0 && (
                         <Dialog>
                           <DialogTrigger asChild>

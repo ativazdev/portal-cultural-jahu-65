@@ -95,9 +95,21 @@ serve(async (req) => {
     const { projeto_id, ...projetoData } = await req.json()
 
     // Validar dados obrigatórios
-    if (!projetoData.nome || !projetoData.modalidade || !projetoData.descricao || !projetoData.objetivos) {
+    const isRascunho = projetoData.status === 'rascunho'
+
+    if (!projetoData.nome) {
       return new Response(
-        JSON.stringify({ error: 'Campos obrigatórios não preenchidos' }),
+        JSON.stringify({ error: 'O nome do projeto é obrigatório' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400 
+        }
+      )
+    }
+
+    if (!isRascunho && (!projetoData.modalidade || !projetoData.descricao || !projetoData.objetivos)) {
+      return new Response(
+        JSON.stringify({ error: 'Campos obrigatórios não preenchidos para submissão' }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 400 

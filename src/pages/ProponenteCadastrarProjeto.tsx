@@ -24,13 +24,23 @@ import {
   Plus,
   Save,
   Send,
-  Loader2
+  Loader2,
+  LayoutGrid,
+  ClipboardList,
+  ShieldCheck,
+  MapPin,
+  Activity,
+  ListTodo,
+  Banknote,
+  FileDown,
+  Paperclip
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { ProponenteLayout } from "@/components/layout/ProponenteLayout";
 import { supabase, getAuthenticatedSupabaseClient } from "@/integrations/supabase/client";
 import { useProponenteAuth } from "@/hooks/useProponenteAuth";
+import { ProjectAttachments } from "../components/proponente/ProjectAttachments";
 
 // Opções predefinidas
 const CategoriasOptions = [
@@ -109,6 +119,22 @@ const etapaOptions = [
   "Divulgação"
 ];
 
+const formatoOptions = [
+  { value: "presencial", label: "Presencial" },
+  { value: "itinerante", label: "Itinerante" },
+  { value: "remoto", label: "Remoto" },
+  { value: "hibrido", label: "Híbrido" },
+  { value: "outros", label: "Outros" },
+  { value: "nao_aplicavel", label: "Não aplicável" }
+];
+
+const cotaOptions = [
+  { value: "negro", label: "Sim - Pessoa Negra" },
+  { value: "indigena", label: "Sim - Pessoa Indígena" },
+  { value: "pcd", label: "Sim - Pessoa com Deficiência" },
+  { value: "nao", label: "Não" }
+];
+
 const unidadeMedidaOptions = [
   "Serviço",
   "Hora",
@@ -155,6 +181,38 @@ export const ProponenteCadastrarProjeto = () => {
   const { toast } = useToast();
   const { proponente } = useProponenteAuth();
 
+  const parseCurrency = (value: string | number) => {
+    if (typeof value === 'number') return value;
+    if (!value) return 0;
+    
+    const stringValue = String(value);
+    
+    // Se a string já estiver no formato de número decimal (ex: "0.2"), 
+    // retorna ela convertida diretamente para evitar o bug de tratar como centavos novamente.
+    if (!stringValue.includes(',') && !isNaN(Number(stringValue)) && stringValue.includes('.')) {
+      return parseFloat(stringValue);
+    }
+
+    const cleanValue = stringValue.replace(/\D/g, '');
+    return cleanValue ? parseInt(cleanValue) / 100 : 0;
+  };
+
+  const formatCurrency = (value: string | number) => {
+    if (value === undefined || value === null || value === '') return '';
+    const amount = typeof value === 'string' ? parseCurrency(value) : (typeof value === 'number' ? value : 0);
+    if (isNaN(amount)) return '';
+    if (amount === 0) return '0,00';
+    return amount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
+  const getOrcamentoTotal = (orcamento: any[]) => {
+    return (orcamento || []).reduce((sum, item) => {
+      const valor = parseCurrency(item.valor_unitario);
+      const qtd = parseFloat(String(item.quantidade)) || 0;
+      return sum + (valor * qtd);
+    }, 0);
+  };
+
   // Estados principais
   const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -164,6 +222,7 @@ export const ProponenteCadastrarProjeto = () => {
   const [projetoExistente, setProjetoExistente] = useState<any>(null);
   const [showWarningModal, setShowWarningModal] = useState(false);
   const [dadosCarregados, setDadosCarregados] = useState(false);
+  const [editalFiles, setEditalFiles] = useState<any[]>([]);
 
   // Formulário principal
   const [formData, setFormData] = useState<any>({
@@ -196,21 +255,32 @@ export const ProponenteCadastrarProjeto = () => {
     proponente_id: '',
     
     // Valor e Financiamento
-    valor_solicitado: '',
+    valor_solicitado: 0,
     outras_fontes: false,
     tipos_outras_fontes: [],
     detalhes_outras_fontes: '',
     
-    // Equipe
+    // Novos Campos das Imagens
+    concorre_cotas: false,
+    cotas_tipo: '',
+    formato: '',
+    cep_realizacao: '',
+    num_remunerados: '',
+    segmento_contemplado: '',
+    etapa_principal: '',
+    tematicas: '',
+    territorio_prioritario: false,
+    entregas_previstas: '',
+    mini_curriculo_proponente: '',
+    objetivos_especificos: '',
+    venda_produtos: false,
+    documentos_complementares: [],
+    aceite_lgpd: false,
+
+    // Coleções
     equipe: [],
-    
-    // Atividades
     atividades: [],
-    
-    // Metas
     metas: [],
-    
-    // Orçamento
     orcamento: []
   });
 
@@ -233,26 +303,20 @@ export const ProponenteCadastrarProjeto = () => {
     deficiencia: false,
     mini_curriculo: ''
   });
-  const [novoOrcamento, setNovoOrcamento] = useState({
+  const [novoOrcamento, setNovoOrcamento] = useState<any>({
     descricao: '',
     justificativa: '',
     unidade_medida: '',
-    valor_unitario: '',
+    valor_unitario: 0,
     quantidade: '',
     referencia_preco: ''
   });
 
   const steps = [
-    { id: 0, label: "Proponente", icon: User },
-    { id: 1, label: "Informações Básicas", icon: FileText },
-    { id: 2, label: "Público e Acessibilidade", icon: User },
-    { id: 3, label: "Acessibilidade Comunicacional e Atitudinal", icon: CheckCircle },
-    { id: 4, label: "Cronograma e Local", icon: Calendar },
-    { id: 5, label: "Valor e Financiamento", icon: DollarSign },
-    { id: 6, label: "Equipe do Projeto", icon: Users },
-    { id: 7, label: "Atividades Planejadas", icon: Calendar },
-    { id: 8, label: "Metas do Projeto", icon: Target },
-    { id: 9, label: "Orçamento Detalhado", icon: DollarSign }
+    { id: 0, label: "Dados do Projeto", icon: LayoutGrid },
+    { id: 1, label: "Plano de Trabalho", icon: ClipboardList },
+    { id: 2, label: "Termo de Ciência", icon: ShieldCheck },
+    { id: 3, label: "Anexos", icon: Paperclip }
   ];
 
   useEffect(() => {
@@ -269,9 +333,14 @@ export const ProponenteCadastrarProjeto = () => {
   }, [projetoExistente, loading, dadosCarregados, location.state]);
 
   const carregarDadosIniciais = async () => {
-    if (!proponente?.id || !editalId) return;
+    console.log('DEBUG: carregarDadosIniciais iniciada', { proponenteId: proponente?.id, editalId });
+    if (!proponente?.id || !editalId) {
+      console.log('DEBUG: carregarDadosIniciais retornou precocemente (proponente ou editalId ausentes)');
+      return;
+    }
 
     try {
+      console.log('DEBUG: Iniciando busca de dados...');
       setLoading(true);
       setDadosCarregados(false);
 
@@ -284,7 +353,62 @@ export const ProponenteCadastrarProjeto = () => {
         .single();
 
       if (editalError) throw editalError;
-      setEdital(editalData);
+      if (!editalData) throw new Error('Edital não encontrado');
+      
+      console.log('Edital carregado:', editalData);
+      setEdital(editalData as any);
+
+      // Carregar arquivos do edital separadamente para evitar erro de relacionamento
+      const { data: filesData, error: filesError } = await authClient
+        .from('arquivos_edital')
+        .select('*')
+        .eq('edital_id', editalId);
+      
+      const editalAny = editalData as any;
+      
+      if (filesError) {
+        console.error('Erro ao carregar arquivos do edital:', filesError);
+      } else {
+        console.log('Arquivos do edital carregados (arquivos_edital):', filesData);
+      }
+      
+      // Combinar arquivos da tabela arquivos_edital com os que podem estar no campo 'anexos' ou 'regulamento' do edital
+      let consolidatedFiles = [...(filesData || [])];
+      
+      // Adicionar arquivos do campo 'anexos' (JSON) se existirem
+      if (editalAny.anexos && Array.isArray(editalAny.anexos)) {
+        console.log('DEBUG: Arquivos encontrados no campo anexos:', editalAny.anexos);
+        editalAny.anexos.forEach((anexo: any, idx: number) => {
+          if (!consolidatedFiles.some(f => f.url === anexo.url)) {
+            consolidatedFiles.push({
+              id: `anexo-${idx}-${Date.now()}`,
+              edital_id: editalId,
+              nome: anexo.titulo || 'Documento',
+              titulo: anexo.titulo,
+              url: anexo.url,
+              tipo_mime: 'application/pdf'
+            });
+          }
+        });
+      }
+
+      // Fallback para 'regulamento' se estiver vazio
+      if (consolidatedFiles.length === 0 && editalAny.regulamento && Array.isArray(editalAny.regulamento)) {
+        console.log('DEBUG: Usando regulamento como fallback');
+        editalAny.regulamento.forEach((url: string, index: number) => {
+          consolidatedFiles.push({
+            id: `reg-${index}-${Date.now()}`,
+            edital_id: editalId,
+            nome: `Regulamento ${index + 1}`,
+            titulo: `Regulamento ${index + 1}`,
+            url: url,
+            tipo_mime: 'application/pdf'
+          });
+        });
+      }
+
+      console.log('DEBUG: Arquivos consolidados final:', consolidatedFiles);
+      setEditalFiles(consolidatedFiles);
 
       // Carregar proponentes do usuário usando cliente autenticado
       const { data: proponentesData, error: proponentesError } = await (authClient as any)
@@ -367,15 +491,22 @@ export const ProponenteCadastrarProjeto = () => {
     try {
       setSaving(true);
 
-      // Validações básicas
-      if (!formData.nome || !formData.modalidade || !formData.descricao || !formData.objetivos) {
-        toast({
-          title: "Campos obrigatórios",
-          description: "Por favor, preencha pelo menos as informações básicas",
-          variant: "destructive",
-        });
-        return;
-      }
+      const valorNum = parseCurrency(formData.valor_solicitado);
+
+    // Validações básicas para rascunho
+    if (
+      !formData.nome || 
+      !formData.formato || 
+      !formData.segmento_contemplado || 
+      valorNum <= 0
+    ) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Preencha Nome, Valor, Formato e Segmento para salvar o rascunho.",
+        variant: "destructive",
+      });
+      return false;
+    }
 
       if (!formData.proponente_id) {
         toast({
@@ -383,7 +514,7 @@ export const ProponenteCadastrarProjeto = () => {
           description: "Por favor, selecione um proponente",
           variant: "destructive",
         });
-        return;
+        return false;
       }
 
       // Buscar prefeitura_id usando cliente autenticado
@@ -454,9 +585,17 @@ export const ProponenteCadastrarProjeto = () => {
         edital_id: editalId,
         proponente_id: formData.proponente_id,
         nome: formData.nome,
-        modalidade: formData.modalidade,
-        descricao: formData.descricao,
-        objetivos: formData.objetivos,
+        modalidade: formData.segmento_contemplado, // Mapeando segmento para modalidade (ENUM)
+        formato: formData.formato,
+        segmento_contemplado: formData.segmento_contemplado,
+        descricao: formData.descricao || null,
+        objetivos: formData.objetivos || null,
+        valor_solicitado: valorNum,
+        outras_fontes: formData.outras_fontes || false,
+        tipos_outras_fontes: formData.tipos_outras_fontes || null,
+        detalhes_outras_fontes: formData.detalhes_outras_fontes || null,
+        
+        // Outros campos
         perfil_publico: formData.perfil_publico || null,
         publico_prioritario: formData.publico_prioritario || null,
         outro_publico_prioritario: formData.outro_publico_prioritario || null,
@@ -470,10 +609,19 @@ export const ProponenteCadastrarProjeto = () => {
         data_inicio: formData.data_inicio || null,
         data_final: formData.data_final || null,
         estrategia_divulgacao: formData.estrategia_divulgacao || null,
-        valor_solicitado: parseFloat(formData.valor_solicitado) || 0,
-        outras_fontes: formData.outras_fontes || false,
-        tipos_outras_fontes: formData.tipos_outras_fontes || null,
-        detalhes_outras_fontes: formData.detalhes_outras_fontes || null,
+        cep_realizacao: formData.cep_realizacao || null,
+        num_remunerados: formData.num_remunerados || null,
+        etapa_principal: formData.etapa_principal || null,
+        tematicas: formData.tematicas || null,
+        territorio_prioritario: formData.territorio_prioritario || false,
+        entregas_previstas: formData.entregas_previstas || null,
+        mini_curriculo_proponente: formData.mini_curriculo_proponente || null,
+        objetivos_especificos: formData.objetivos_especificos || null,
+        venda_produtos: formData.venda_produtos || false,
+        aceite_lgpd: formData.aceite_lgpd || false,
+        concorre_cotas: formData.concorre_cotas || false,
+        cotas_tipo: formData.cotas_tipo || null,
+
         status: 'rascunho'
       };
 
@@ -528,6 +676,7 @@ export const ProponenteCadastrarProjeto = () => {
         title: "Rascunho salvo",
         description: "Seu rascunho foi salvo com sucesso",
       });
+      return true;
     } catch (error: any) {
       console.error('Erro ao salvar rascunho:', error);
       toast({
@@ -535,6 +684,7 @@ export const ProponenteCadastrarProjeto = () => {
         description: error.message || "Erro ao salvar rascunho",
         variant: "destructive",
       });
+      return false;
     } finally {
       setSaving(false);
     }
@@ -775,6 +925,23 @@ export const ProponenteCadastrarProjeto = () => {
         outras_fontes: formData.outras_fontes || false,
         tipos_outras_fontes: formData.tipos_outras_fontes || null,
         detalhes_outras_fontes: formData.detalhes_outras_fontes || null,
+        
+        // Novos Campos
+        concorre_cotas: formData.concorre_cotas || false,
+        cotas_tipo: formData.cotas_tipo || null,
+        formato: formData.formato || null,
+        cep_realizacao: formData.cep_realizacao || null,
+        num_remunerados: formData.num_remunerados || null,
+        segmento_contemplado: formData.segmento_contemplado || null,
+        etapa_principal: formData.etapa_principal || null,
+        tematicas: formData.tematicas || null,
+        territorio_prioritario: formData.territorio_prioritario || false,
+        entregas_previstas: formData.entregas_previstas || null,
+        mini_curriculo_proponente: formData.mini_curriculo_proponente || null,
+        objetivos_especificos: formData.objetivos_especificos || null,
+        venda_produtos: formData.venda_produtos || false,
+        aceite_lgpd: formData.aceite_lgpd || false,
+
         status: 'aguardando_parecerista', // Projeto aguarda atribuição de pareceristas pela prefeitura
         data_submissao: new Date().toISOString(),
         numero_inscricao: numeroInscricao
@@ -968,27 +1135,37 @@ export const ProponenteCadastrarProjeto = () => {
   };
 
   const handleAdicionarOrcamento = () => {
-    if (!novoOrcamento.descricao || !novoOrcamento.unidade_medida || !novoOrcamento.valor_unitario || !novoOrcamento.quantidade) {
-      toast({
-        title: "Campos obrigatórios",
-        description: "Por favor, preencha todos os campos obrigatórios do orçamento",
-        variant: "destructive",
-      });
-      return;
-    }
-    setFormData({
-      ...formData,
-      orcamento: [...formData.orcamento, { ...novoOrcamento }]
+  if (!novoOrcamento.descricao || !novoOrcamento.valor_unitario || !novoOrcamento.quantidade) {
+    toast({
+      title: "Campos obrigatórios",
+      description: "Por favor, preencha descrição, valor e quantidade",
+      variant: "destructive",
     });
-    setNovoOrcamento({
-      descricao: '',
-      justificativa: '',
-      unidade_medida: '',
-      valor_unitario: '',
-      quantidade: '',
-      referencia_preco: ''
-    });
-  };
+    return;
+  }
+  
+  const valorNum = typeof novoOrcamento.valor_unitario === 'number' 
+    ? novoOrcamento.valor_unitario 
+    : parseCurrency(novoOrcamento.valor_unitario);
+
+  setFormData({
+    ...formData,
+    orcamento: [...formData.orcamento, { 
+      ...novoOrcamento, 
+      unidade_medida: novoOrcamento.unidade_medida || 'Unidade',
+      valor_unitario: valorNum
+    }]
+  });
+  
+  setNovoOrcamento({
+    descricao: '',
+    justificativa: '',
+    unidade_medida: '',
+    valor_unitario: 0,
+    quantidade: '',
+    referencia_preco: ''
+  });
+};
 
   if (loading) {
     return (
@@ -1013,1074 +1190,619 @@ export const ProponenteCadastrarProjeto = () => {
     );
   }
 
-  const renderStepContent = () => {
-    switch (currentStep) {
-      case 0: // Proponente
-        const proponenteSelecionado0 = proponentes.find(p => p.id === formData.proponente_id);
-        return (
-          <div className="space-y-6">
-            <div>
-              <Label htmlFor="proponente_id">Selecione o Proponente *</Label>
-              <Select value={formData.proponente_id} onValueChange={(value) => handleInputChange('proponente_id', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione um proponente" />
+  const renderStep0 = () => {
+    const proponenteSelecionado = proponentes.find(p => p.id === formData.proponente_id);
+    return (
+      <div className="space-y-8">
+        {/* Proponente Selection */}
+        <div className="bg-blue-50/50 p-6 rounded-xl border border-blue-100 shadow-sm space-y-4">
+          <div className="flex items-center gap-2 mb-2">
+            <User className="h-5 w-5 text-blue-600" />
+            <h3 className="font-bold text-blue-900">Identificação do Proponente</h3>
+          </div>
+          <Select 
+            value={formData.proponente_id} 
+            onValueChange={(value) => handleInputChange('proponente_id', value)}
+          >
+            <SelectTrigger className="bg-white border-blue-200">
+              <SelectValue placeholder="Selecione quem está inscrevendo o projeto" />
+            </SelectTrigger>
+            <SelectContent>
+              {proponentes.map(prop => (
+                <SelectItem key={prop.id} value={prop.id}>
+                  {prop.tipo === 'PJ' && prop.razao_social ? prop.razao_social : prop.nome} ({prop.tipo})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {proponenteSelecionado && (
+             <div className="bg-white p-4 rounded-lg border border-blue-100 text-sm grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <span className="text-gray-500 block mb-1">Documento:</span>
+                  <span className="font-semibold text-gray-800">{proponenteSelecionado.cpf || proponenteSelecionado.cnpj}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500 block mb-1">Email:</span>
+                  <span className="font-semibold text-gray-800">{proponenteSelecionado.email}</span>
+                </div>
+             </div>
+          )}
+        </div>
+
+        {/* Cotas */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-4 p-5 rounded-xl border border-gray-100 bg-gray-50/50">
+            <Label className="text-base font-bold flex items-center gap-2">
+              <Users className="h-4 w-4 text-purple-600" /> Concorrer a Cotas? *
+            </Label>
+            <div className="flex items-center space-x-2 bg-white p-3 rounded-md border">
+              <Checkbox 
+                id="concorre_cotas" 
+                checked={formData.concorre_cotas}
+                onCheckedChange={(checked) => handleInputChange('concorre_cotas', checked)}
+              />
+              <label htmlFor="concorre_cotas" className="text-sm font-medium leading-none cursor-pointer">
+                Sim, desejo concorrer a cotas
+              </label>
+            </div>
+            {formData.concorre_cotas && (
+              <Select value={formData.cotas_tipo} onValueChange={(v) => handleInputChange('cotas_tipo', v)}>
+                <SelectTrigger className="bg-white">
+                  <SelectValue placeholder="Selecione o tipo de cota" />
                 </SelectTrigger>
                 <SelectContent>
-                  {proponentes.map(prop => (
-                    <SelectItem key={prop.id} value={prop.id}>
-                      {prop.tipo === 'PJ' && prop.razao_social ? prop.razao_social : prop.nome} ({prop.tipo})
-                    </SelectItem>
-                  ))}
+                  {cotaOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
                 </SelectContent>
               </Select>
-              {proponentes.length === 0 && (
-                <div className="mt-2 space-y-2">
-                  <p className="text-sm text-red-500">Você não possui proponentes cadastrados. Cadastre primeiro em Proponentes.</p>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => navigate(`/${nomePrefeitura}/proponente/proponentes`)}
-                    className="w-full sm:w-auto"
+            )}
+          </div>
+
+          <div className="space-y-4 p-5 rounded-xl border border-gray-100 bg-gray-50/50">
+            <Label className="text-base font-bold flex items-center gap-2">
+              <LayoutGrid className="h-4 w-4 text-orange-600" /> Formato do Projeto *
+            </Label>
+            <Select value={formData.formato} onValueChange={(v) => handleInputChange('formato', v)}>
+              <SelectTrigger className="bg-white">
+                <SelectValue placeholder="Selecione o formato" />
+              </SelectTrigger>
+              <SelectContent>
+                {formatoOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {/* Core Info */}
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="md:col-span-2 space-y-2">
+              <Label className="font-bold">Nome do Projeto *</Label>
+              <Input 
+                value={formData.nome} 
+                onChange={(e) => handleInputChange('nome', e.target.value)}
+                placeholder="Ex: Festival de Cinema de Jahu"
+                className="h-11"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="font-bold">Valor Solicitado *</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-2.5 text-gray-400">R$</span>
+                <Input 
+                  value={formatCurrency(formData.valor_solicitado)} 
+                  onChange={(e) => handleInputChange('valor_solicitado', parseCurrency(e.target.value))}
+                  className="pl-9 h-11"
+                  placeholder="0,00"
+                />
+              </div>
+              {edital && (
+                <p className="text-[10px] text-gray-500 italic">Máximo: {edital.valor_maximo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+             <div className="space-y-2">
+                <Label className="font-bold">CEP de Realização *</Label>
+                <Input 
+                  value={formData.cep_realizacao} 
+                  onChange={(e) => handleInputChange('cep_realizacao', e.target.value)}
+                  placeholder="00000-000"
+                />
+             </div>
+             <div className="space-y-2">
+                <Label className="font-bold">Nº de Remunerados *</Label>
+                <Input 
+                  type="number"
+                  value={formData.num_remunerados} 
+                  onChange={(e) => handleInputChange('num_remunerados', e.target.value)}
+                  placeholder="0"
+                />
+             </div>
+             <div className="space-y-2">
+                <Label className="font-bold">Segmento Contemplado *</Label>
+                <Select value={formData.segmento_contemplado} onValueChange={(v) => handleInputChange('segmento_contemplado', v)}>
+                   <SelectTrigger>
+                     <SelectValue placeholder="Selecione o segmento" />
+                   </SelectTrigger>
+                   <SelectContent>
+                      {CategoriasOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                   </SelectContent>
+                </Select>
+             </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+             <div className="space-y-2">
+                <Label className="font-bold text-gray-700">Etapa Principal *</Label>
+                <Select value={formData.etapa_principal} onValueChange={(v) => handleInputChange('etapa_principal', v)}>
+                   <SelectTrigger>
+                     <SelectValue placeholder="Selecione a etapa" />
+                   </SelectTrigger>
+                   <SelectContent>
+                      {etapaOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                   </SelectContent>
+                </Select>
+             </div>
+             <div className="space-y-2">
+                <Label className="font-bold text-gray-700">Temáticas do Projeto *</Label>
+                <Input 
+                  value={formData.tematicas} 
+                  onChange={(e) => handleInputChange('tematicas', e.target.value)}
+                  placeholder="Ex: Educação, Inclusão, Patrimônio"
+                />
+             </div>
+          </div>
+
+          <div className="bg-orange-50 p-4 rounded-lg border border-orange-100 flex items-center justify-between">
+             <div className="space-y-1">
+                <Label className="font-bold text-orange-900 flex items-center gap-2">
+                   <MapPin className="h-4 w-4" /> Território Prioritário?
+                </Label>
+                <p className="text-xs text-orange-700">Marque se o projeto ocorre em região periférica ou vulnerável</p>
+             </div>
+             <Checkbox 
+                checked={formData.territorio_prioritario}
+                onCheckedChange={(checked) => handleInputChange('territorio_prioritario', checked)}
+                className="h-6 w-6 border-orange-300 data-[state=checked]:bg-orange-600"
+             />
+          </div>
+
+          <div className="space-y-2">
+             <Label className="font-bold">Resumo das Entregas Previstas *</Label>
+             <Textarea 
+               value={formData.entregas_previstas} 
+               onChange={(e) => handleInputChange('entregas_previstas', e.target.value)}
+               placeholder="Descreva brevemente o que será entregue (ex: 2 oficinas, 1 show, 1 álbum)"
+               className="min-h-[100px]"
+             />
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderStep1 = () => {
+    return (
+      <div className="space-y-8">
+        {/* Descritivos */}
+        <div className="space-y-6">
+           <div className="space-y-2">
+              <Label className="font-bold">Mini Currículo do Proponente *</Label>
+              <Textarea 
+                value={formData.mini_curriculo_proponente} 
+                onChange={(e) => handleInputChange('mini_curriculo_proponente', e.target.value)}
+                placeholder="Breve histórico de atuação na área cultural"
+                className="min-h-[120px]"
+              />
+           </div>
+           <div className="space-y-2">
+              <Label className="font-bold">Resumo do Projeto / Apresentação *</Label>
+              <Textarea 
+                value={formData.descricao} 
+                onChange={(e) => handleInputChange('descricao', e.target.value)}
+                placeholder="Descreva o projeto para o público/avaliadores"
+                className="min-h-[150px]"
+              />
+           </div>
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                 <Label className="font-bold">Objetivo Geral *</Label>
+                 <Textarea 
+                   value={formData.objetivos} 
+                   onChange={(e) => handleInputChange('objetivos', e.target.value)}
+                   placeholder="O que o projeto pretende alcançar de forma ampla"
+                   className="min-h-[100px]"
+                 />
+              </div>
+              <div className="space-y-2">
+                 <Label className="font-bold">Objetivos Específicos *</Label>
+                 <Textarea 
+                   value={formData.objetivos_especificos} 
+                   onChange={(e) => handleInputChange('objetivos_especificos', e.target.value)}
+                   placeholder="Ações diretas e mensuráveis"
+                   className="min-h-[100px]"
+                 />
+              </div>
+           </div>
+        </div>
+
+        {/* Metas Section */}
+        <div className="p-6 rounded-xl border border-gray-100 bg-gray-50/50 space-y-4">
+           <div className="flex items-center gap-2">
+              <Target className="h-5 w-5 text-red-600" />
+              <h3 className="font-bold">Metas do Projeto *</h3>
+           </div>
+           <div className="flex gap-2">
+              <Input 
+                value={novaMeta.descricao}
+                onChange={(e) => setNovaMeta({ descricao: e.target.value })}
+                placeholder="Descreva uma meta (ex: Alcançar 500 pessoas)"
+              />
+              <Button type="button" onClick={handleAdicionarMeta} className="bg-red-600 hover:bg-red-700">
+                <Plus className="h-4 w-4" />
+              </Button>
+           </div>
+           <div className="space-y-2">
+              {formData.metas.map((meta: any, idx: number) => (
+                <div key={idx} className="bg-white p-3 rounded-md border flex items-center justify-between group">
+                  <span className="text-sm">{meta.descricao}</span>
+                  <Button 
+                    variant="ghost" size="sm" 
+                    className="opacity-0 group-hover:opacity-100 text-red-500 hover:bg-red-50"
+                    onClick={() => handleInputChange('metas', formData.metas.filter((_: any, i: number) => i !== idx))}
                   >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Ir para Cadastro de Proponentes
+                    <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
-              )}
-            </div>
+              ))}
+           </div>
+        </div>
 
-            {/* Exibir dados do proponente selecionado */}
-            {proponenteSelecionado0 && (
-              <Card className="border-l-4" style={{ borderLeftColor: proponenteSelecionado0.tipo === 'PF' ? '#2563eb' : '#16a34a' }}>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-lg">
-                    Dados do Proponente Selecionado
-                    <Badge variant={proponenteSelecionado0.tipo === 'PF' ? 'default' : 'secondary'} className={proponenteSelecionado0.tipo === 'PF' ? 'bg-blue-600' : 'bg-green-600'}>
-                      {proponenteSelecionado0.tipo === 'PF' ? 'Pessoa Física' : 'Pessoa Jurídica'}
-                    </Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Nome principal */}
-                  <div>
-                    <h3 className="font-bold text-lg text-gray-900">
-                      {proponenteSelecionado0.tipo === 'PJ' && proponenteSelecionado0.razao_social ? proponenteSelecionado0.razao_social : proponenteSelecionado0.nome}
-                    </h3>
-                    {proponenteSelecionado0.tipo === 'PJ' && proponenteSelecionado0.nome_fantasia && (
-                      <p className="text-sm text-gray-600 italic">Nome Fantasia: {proponenteSelecionado0.nome_fantasia}</p>
-                    )}
-                    {proponenteSelecionado0.nome_artistico && (
-                      <p className="text-sm text-gray-600 italic">Nome Artístico: {proponenteSelecionado0.nome_artistico}</p>
-                    )}
-                  </div>
-
-                  {/* Dados de Identificação */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 border-t">
-                    {proponenteSelecionado0.cpf && (
-                      <div>
-                        <span className="text-xs text-gray-500 font-medium">CPF:</span>
-                        <p className="text-sm text-gray-700">{proponenteSelecionado0.cpf}</p>
-                      </div>
-                    )}
-                    {proponenteSelecionado0.cnpj && (
-                      <div>
-                        <span className="text-xs text-gray-500 font-medium">CNPJ:</span>
-                        <p className="text-sm text-gray-700">{proponenteSelecionado0.cnpj}</p>
-                      </div>
-                    )}
-                    {proponenteSelecionado0.rg && (
-                      <div>
-                        <span className="text-xs text-gray-500 font-medium">RG:</span>
-                        <p className="text-sm text-gray-700">{proponenteSelecionado0.rg}</p>
-                      </div>
-                    )}
-                    {proponenteSelecionado0.data_nascimento && (
-                      <div>
-                        <span className="text-xs text-gray-500 font-medium">Data de Nascimento:</span>
-                        <p className="text-sm text-gray-700">{new Date(proponenteSelecionado0.data_nascimento).toLocaleDateString('pt-BR')}</p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Contato */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 border-t">
-                    {proponenteSelecionado0.telefone && (
-                      <div>
-                        <span className="text-xs text-gray-500 font-medium">Telefone:</span>
-                        <p className="text-sm text-gray-700">{proponenteSelecionado0.telefone}</p>
-                      </div>
-                    )}
-                    {proponenteSelecionado0.email && (
-                      <div>
-                        <span className="text-xs text-gray-500 font-medium">Email:</span>
-                        <p className="text-sm text-gray-700">{proponenteSelecionado0.email}</p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Endereço */}
-                  {proponenteSelecionado0.endereco && (
-                    <div className="pt-2 border-t">
-                      <span className="text-xs text-gray-500 font-medium">Endereço:</span>
-                      <p className="text-sm text-gray-700">{proponenteSelecionado0.endereco}</p>
-                      <p className="text-sm text-gray-700">
-                        {[proponenteSelecionado0.cidade, proponenteSelecionado0.estado, proponenteSelecionado0.cep].filter(Boolean).join(' - ')}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Dados específicos de PJ */}
-                  {proponenteSelecionado0.tipo === 'PJ' && (
-                    <>
-                      {proponenteSelecionado0.inscricao_estadual && (
-                        <div className="pt-2 border-t">
-                          <span className="text-xs text-gray-500 font-medium">Inscrição Estadual:</span>
-                          <p className="text-sm text-gray-700">{proponenteSelecionado0.inscricao_estadual}</p>
-                        </div>
-                      )}
-                      {proponenteSelecionado0.nome_responsavel && (
-                        <div className="pt-2 border-t">
-                          <h4 className="text-sm font-semibold text-gray-700 mb-2">Responsável Legal</h4>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <div>
-                              <span className="text-xs text-gray-500 font-medium">Nome:</span>
-                              <p className="text-sm text-gray-700">{proponenteSelecionado0.nome_responsavel}</p>
-                            </div>
-                            {proponenteSelecionado0.cpf_responsavel && (
-                              <div>
-                                <span className="text-xs text-gray-500 font-medium">CPF:</span>
-                                <p className="text-sm text-gray-700">{proponenteSelecionado0.cpf_responsavel}</p>
-                              </div>
-                            )}
-                            {proponenteSelecionado0.email_responsavel && (
-                              <div>
-                                <span className="text-xs text-gray-500 font-medium">Email:</span>
-                                <p className="text-sm text-gray-700">{proponenteSelecionado0.email_responsavel}</p>
-                              </div>
-                            )}
-                            {proponenteSelecionado0.telefone_responsavel && (
-                              <div>
-                                <span className="text-xs text-gray-500 font-medium">Telefone:</span>
-                                <p className="text-sm text-gray-700">{proponenteSelecionado0.telefone_responsavel}</p>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        );
-
-      case 1: // Informações Básicas
-        return (
-          <div className="space-y-6">
-            <div>
-              <Label htmlFor="nome">Nome do Projeto *</Label>
-              <Input
-                id="nome"
-                value={formData.nome}
-                onChange={(e) => handleInputChange('nome', e.target.value)}
-                placeholder="Digite o nome do projeto"
-              />
-            </div>
-            <div>
-              <Label htmlFor="modalidade">Categoria *</Label>
-              <Select value={formData.modalidade} onValueChange={(value) => handleInputChange('modalidade', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione uma categoria" />
-                </SelectTrigger>
-                <SelectContent>
-                  {CategoriasOptions
-                    .filter(option => edital?.modalidades?.includes(option.value))
-                    .map(option => (
-                      <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-              {edital?.modalidades && edital.modalidades.length === 0 && (
-                <p className="text-sm text-amber-500 mt-1">Nenhuma categoria disponível para este edital</p>
-              )}
-            </div>
-            <div>
-              <Label htmlFor="descricao">Descrição *</Label>
-              <Textarea
-                id="descricao"
-                value={formData.descricao}
-                onChange={(e) => handleInputChange('descricao', e.target.value)}
-                placeholder="Descreva detalhadamente seu projeto cultural..."
-                rows={6}
-              />
-            </div>
-            <div>
-              <Label htmlFor="objetivos">Objetivos *</Label>
-              <Textarea
-                id="objetivos"
-                value={formData.objetivos}
-                onChange={(e) => handleInputChange('objetivos', e.target.value)}
-                placeholder="Descreva os objetivos do projeto..."
-                rows={6}
-              />
-            </div>
-          </div>
-        );
-
-      case 2: // Público e Acessibilidade (anteriormente case 1)
-        return (
-          <div className="space-y-6">
-            <div>
-              <Label htmlFor="perfil_publico">Perfil do Público</Label>
-              <Textarea
-                id="perfil_publico"
-                value={formData.perfil_publico}
+        {/* Público e Acessibilidade */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+           <div className="space-y-4">
+              <Label className="font-bold flex items-center gap-2">
+                 <Users className="h-4 w-4 text-blue-600" /> Público Alvo e Ação *
+              </Label>
+              <Textarea 
+                value={formData.perfil_publico} 
                 onChange={(e) => handleInputChange('perfil_publico', e.target.value)}
-                placeholder="Descreva o perfil do público-alvo..."
-                rows={3}
+                placeholder="Perfil do público contemplado e como será a ação com eles"
+                className="min-h-[100px]"
               />
-            </div>
-            <div>
-              <Label>Público Prioritário</Label>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
-                {publicoPrioritarioOptions.map(option => (
-                  <div key={option} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`publico-${option}`}
-                      checked={formData.publico_prioritario?.includes(option)}
-                      onCheckedChange={(checked) => {
-                        const current = formData.publico_prioritario || [];
-                        if (checked) {
-                          handleInputChange('publico_prioritario', [...current, option]);
-                        } else {
-                          handleInputChange('publico_prioritario', current.filter((p: string) => p !== option));
-                        }
-                      }}
-                    />
-                    <label htmlFor={`publico-${option}`} className="text-sm">{option}</label>
-                  </div>
-                ))}
-              </div>
-            </div>
-            {formData.publico_prioritario?.includes('Outros') && (
-              <div>
-                <Label htmlFor="outro_publico_prioritario">Outro Público Prioritário</Label>
-                <Input
-                  id="outro_publico_prioritario"
-                  value={formData.outro_publico_prioritario}
-                  onChange={(e) => handleInputChange('outro_publico_prioritario', e.target.value)}
-                  placeholder="Especifique outro público prioritário"
-                />
-              </div>
-            )}
-            <div>
-              <Label>Acessibilidade Arquitetônica</Label>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
-                {acessibilidadeArquitetonicaOptions.map(option => (
-                  <div key={option} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`arq-${option}`}
-                      checked={formData.acessibilidade_arquitetonica?.includes(option)}
-                      onCheckedChange={(checked) => {
-                        const current = formData.acessibilidade_arquitetonica || [];
-                        if (checked) {
-                          handleInputChange('acessibilidade_arquitetonica', [...current, option]);
-                        } else {
-                          handleInputChange('acessibilidade_arquitetonica', current.filter((a: string) => a !== option));
-                        }
-                      }}
-                    />
-                    <label htmlFor={`arq-${option}`} className="text-sm">{option}</label>
-                  </div>
-                ))}
-              </div>
-            </div>
-            {formData.acessibilidade_arquitetonica?.includes('Outra') && (
-              <div>
-                <Label htmlFor="outra_acessibilidade_arquitetonica">Outra Acessibilidade Arquitetônica</Label>
-                <Input
-                  id="outra_acessibilidade_arquitetonica"
-                  value={formData.outra_acessibilidade_arquitetonica}
-                  onChange={(e) => handleInputChange('outra_acessibilidade_arquitetonica', e.target.value)}
-                  placeholder="Especifique outra acessibilidade"
-                />
-              </div>
-            )}
-          </div>
-        );
-
-      case 3: // Acessibilidade Comunicacional e Atitudinal
-        return (
-          <div className="space-y-6">
-            <div>
-              <Label>Acessibilidade Comunicacional</Label>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
-                {acessibilidadeComunicacionalOptions.map(option => (
-                  <div key={option} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`com-${option}`}
-                      checked={formData.acessibilidade_comunicacional?.includes(option)}
-                      onCheckedChange={(checked) => {
-                        const current = formData.acessibilidade_comunicacional || [];
-                        if (checked) {
-                          handleInputChange('acessibilidade_comunicacional', [...current, option]);
-                        } else {
-                          handleInputChange('acessibilidade_comunicacional', current.filter((a: string) => a !== option));
-                        }
-                      }}
-                    />
-                    <label htmlFor={`com-${option}`} className="text-sm">{option}</label>
-                  </div>
-                ))}
-              </div>
-            </div>
-            {formData.acessibilidade_comunicacional?.includes('Outra') && (
-              <div>
-                <Label htmlFor="outra_acessibilidade_comunicacional">Outra Acessibilidade Comunicacional</Label>
-                <Input
-                  id="outra_acessibilidade_comunicacional"
-                  value={formData.outra_acessibilidade_comunicacional}
-                  onChange={(e) => handleInputChange('outra_acessibilidade_comunicacional', e.target.value)}
-                  placeholder="Especifique outra acessibilidade"
-                />
-              </div>
-            )}
-            <div>
-              <Label>Acessibilidade Atitudinal</Label>
-              <div className="space-y-2 mt-2">
-                {acessibilidadeAtitudinalOptions.map(option => (
-                  <div key={option} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`at-${option}`}
-                      checked={formData.acessibilidade_atitudinal?.includes(option)}
-                      onCheckedChange={(checked) => {
-                        const current = formData.acessibilidade_atitudinal || [];
-                        if (checked) {
-                          handleInputChange('acessibilidade_atitudinal', [...current, option]);
-                        } else {
-                          handleInputChange('acessibilidade_atitudinal', current.filter((a: string) => a !== option));
-                        }
-                      }}
-                    />
-                    <label htmlFor={`at-${option}`} className="text-sm">{option}</label>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="implementacao_acessibilidade">Implementação de Acessibilidade</Label>
-              <Textarea
-                id="implementacao_acessibilidade"
-                value={formData.implementacao_acessibilidade}
+           </div>
+           <div className="space-y-4 text-sm">
+              <Label className="font-bold block">Medidas de Acessibilidade *</Label>
+              <p className="text-gray-500 text-xs mb-2">Descreva como garantirá o acesso a pessoas com deficiência</p>
+              <Textarea 
+                value={formData.implementacao_acessibilidade} 
                 onChange={(e) => handleInputChange('implementacao_acessibilidade', e.target.value)}
-                placeholder="Descreva como as acessibilidades serão implementadas..."
-                rows={4}
+                placeholder="Libras, audiodescrição, rampas, etc."
+                className="min-h-[100px]"
               />
-            </div>
-          </div>
-        );
+           </div>
+        </div>
 
-      case 4: // Cronograma e Local
-        return (
-          <div className="space-y-6">
-            <div>
-              <Label htmlFor="local_execucao">Local de Execução</Label>
-              <Input
-                id="local_execucao"
-                value={formData.local_execucao}
-                onChange={(e) => handleInputChange('local_execucao', e.target.value)}
-                placeholder="Digite o local de execução"
-              />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="data_inicio">Data de Início</Label>
-                <Input
-                  id="data_inicio"
-                  type="date"
-                  value={formData.data_inicio}
-                  onChange={(e) => handleInputChange('data_inicio', e.target.value)}
-                />
+        {/* Divulgação, Cronograma, Equipe, Atividades, Orçamento, Venda */}
+        <div className="space-y-8 pt-4 border-t border-gray-100">
+           {/* Equipe Simp. */}
+           <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                 <h3 className="font-bold flex items-center gap-2">
+                   <Users className="h-5 w-5 text-teal-600" /> Ficha Técnica / Equipe *
+                 </h3>
+                 <span className="text-xs bg-teal-100 text-teal-800 px-2 py-1 rounded-full">{formData.equipe.length} membros</span>
               </div>
-              <div>
-                <Label htmlFor="data_final">Data Final</Label>
-                <Input
-                  id="data_final"
-                  type="date"
-                  value={formData.data_final}
-                  onChange={(e) => handleInputChange('data_final', e.target.value)}
-                />
-              </div>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+                 <Input 
+                   value={novoMembro.nome} 
+                   onChange={(e) => setNovoMembro({...novoMembro, nome: e.target.value})} 
+                   placeholder="Nome" className="md:col-span-2"
+                 />
+                 <Input 
+                   value={novoMembro.funcao} 
+                   onChange={(e) => setNovoMembro({...novoMembro, funcao: e.target.value})} 
+                   placeholder="Função"
+                 />
+                  <Button type="button" onClick={handleAdicionarMembro} className="bg-teal-600 hover:bg-teal-700">
+                    <Plus className="h-4 w-4" />
+                  </Button>
+               </div>
+               
+               {/* Listagem de Membros Adicionados */}
+               <div className="space-y-2 mt-2">
+                 {formData.equipe.map((membro: any, idx: number) => (
+                   <div key={idx} className="bg-white p-3 rounded-lg border border-teal-100 flex items-center justify-between group shadow-sm">
+                     <div className="flex items-center gap-3">
+                       <div className="bg-teal-50 p-2 rounded-full">
+                         <User className="h-4 w-4 text-teal-600" />
+                       </div>
+                       <div>
+                         <p className="text-sm font-bold text-gray-800">{membro.nome}</p>
+                         <p className="text-xs text-teal-600 font-medium">{membro.funcao}</p>
+                       </div>
+                     </div>
+                     <Button 
+                       variant="ghost" 
+                       size="sm" 
+                       className="text-red-500 hover:bg-red-50 hover:text-red-600"
+                       onClick={() => handleInputChange('equipe', formData.equipe.filter((_: any, i: number) => i !== idx))}
+                     >
+                       <Trash2 className="h-4 w-4" />
+                     </Button>
+                   </div>
+                 ))}
+               </div>
             </div>
-            <div>
-              <Label htmlFor="estrategia_divulgacao">Estratégia de Divulgação</Label>
-              <Textarea
-                id="estrategia_divulgacao"
-                value={formData.estrategia_divulgacao}
-                onChange={(e) => handleInputChange('estrategia_divulgacao', e.target.value)}
-                placeholder="Descreva a estratégia de divulgação..."
-                rows={4}
-              />
-            </div>
-          </div>
-        );
 
-      case 5: // Valor e Financiamento
-        return (
-          <div className="space-y-6">
-            <div>
-              <Label htmlFor="valor_solicitado">Valor Solicitado *</Label>
-              <Input
-                id="valor_solicitado"
-                type="number"
-                step="0.01"
-                min="0"
-                value={formData.valor_solicitado}
-                onChange={(e) => handleInputChange('valor_solicitado', e.target.value)}
-                placeholder="0.00"
-              />
-              {edital && (
-                <p className="text-sm text-gray-500 mt-1">Valor máximo permitido: {edital.valor_maximo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
-              )}
-            </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="outras_fontes"
-                checked={formData.outras_fontes}
-                onCheckedChange={(checked) => handleInputChange('outras_fontes', checked)}
-              />
-              <label htmlFor="outras_fontes" className="text-sm">Outras Fontes de Financiamento</label>
-            </div>
-            {formData.outras_fontes && (
-              <>
-                <div>
-                  <Label>Tipos de Outras Fontes</Label>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
-                    {tiposOutrasFontesOptions.map(option => (
-                      <div key={option} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`fonte-${option}`}
-                          checked={formData.tipos_outras_fontes?.includes(option)}
-                          onCheckedChange={(checked) => {
-                            const current = formData.tipos_outras_fontes || [];
-                            if (checked) {
-                              handleInputChange('tipos_outras_fontes', [...current, option]);
-                            } else {
-                              handleInputChange('tipos_outras_fontes', current.filter((t: string) => t !== option));
-                            }
-                          }}
-                        />
-                        <label htmlFor={`fonte-${option}`} className="text-sm">{option}</label>
-                      </div>
-                    ))}
+           {/* Orçamento Simp. */}
+           <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                 <h3 className="font-bold flex items-center gap-2">
+                   <DollarSign className="h-5 w-5 text-green-600" /> Orçamento *
+                 </h3>
+                  <div className="text-right">
+                     <span className="text-sm font-bold block">Total: R$ {formatCurrency(getOrcamentoTotal(formData.orcamento))}</span>
+                     {Math.abs(getOrcamentoTotal(formData.orcamento) - parseCurrency(formData.valor_solicitado)) > 0.05 && (
+                       <span className="text-[10px] text-red-500 font-medium animate-pulse">Divergente do valor solicitado!</span>
+                     )}
                   </div>
-                </div>
-                <div>
-                  <Label htmlFor="detalhes_outras_fontes">Detalhes das Outras Fontes</Label>
-                  <Textarea
-                    id="detalhes_outras_fontes"
-                    value={formData.detalhes_outras_fontes}
-                    onChange={(e) => handleInputChange('detalhes_outras_fontes', e.target.value)}
-                    placeholder="Detalhe as outras fontes de financiamento..."
-                    rows={3}
+              </div>
+               <div className="grid grid-cols-1 md:grid-cols-12 gap-2">
+                  <Input 
+                    value={novoOrcamento.descricao} 
+                    onChange={(e) => setNovoOrcamento({...novoOrcamento, descricao: e.target.value})} 
+                    placeholder="Item/Serviço" className="md:col-span-4"
                   />
+                  <Select 
+                    value={novoOrcamento.unidade_medida} 
+                    onValueChange={(v) => setNovoOrcamento({...novoOrcamento, unidade_medida: v})}
+                  >
+                    <SelectTrigger className="md:col-span-2">
+                       <SelectValue placeholder="Unid." />
+                    </SelectTrigger>
+                    <SelectContent>
+                       {unidadeMedidaOptions.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                   <div className="relative md:col-span-2">
+                     <span className="absolute left-2.5 top-2.5 text-gray-400 text-xs">R$</span>
+                     <Input 
+                       value={formatCurrency(novoOrcamento.valor_unitario)} 
+                       onChange={(e) => setNovoOrcamento({...novoOrcamento, valor_unitario: parseCurrency(e.target.value)})} 
+                       placeholder="0,00" className="pl-7 text-sm"
+                     />
+                   </div>
+                   <Input 
+                     type="number"
+                     value={novoOrcamento.quantidade} 
+                     onChange={(e) => setNovoOrcamento({...novoOrcamento, quantidade: e.target.value})} 
+                     placeholder="Qtd" className="md:col-span-2"
+                   />
+                   <Button type="button" onClick={handleAdicionarOrcamento} className="bg-green-600 hover:bg-green-700 md:col-span-2">
+                      <Plus className="h-4 w-4" />
+                   </Button>
                 </div>
-              </>
-            )}
-          </div>
-        );
 
-      case 6: // Equipe do Projeto
-        return (
-          <div className="space-y-6">
-            <div className="border rounded-lg p-4 space-y-4 bg-gray-50">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="membro_nome">Nome *</Label>
-                  <Input
-                    id="membro_nome"
-                    value={novoMembro.nome}
-                    onChange={(e) => setNovoMembro({ ...novoMembro, nome: e.target.value })}
-                    placeholder="Digite o nome"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="membro_funcao">Função *</Label>
-                  <Input
-                    id="membro_funcao"
-                    value={novoMembro.funcao}
-                    onChange={(e) => setNovoMembro({ ...novoMembro, funcao: e.target.value })}
-                    placeholder="Digite a função"
-                  />
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="membro_cpf_cnpj">CPF/CNPJ</Label>
-                <Input
-                  id="membro_cpf_cnpj"
-                  value={novoMembro.cpf_cnpj}
-                  onChange={(e) => setNovoMembro({ ...novoMembro, cpf_cnpj: aplicarMascaraDocumento(e.target.value) })}
-                  placeholder="000.000.000-00 ou 00.000.000/0000-00"
-                />
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="membro_indigena"
-                    checked={novoMembro.indigena}
-                    onCheckedChange={(checked) => setNovoMembro({ ...novoMembro, indigena: checked as boolean })}
-                  />
-                  <label htmlFor="membro_indigena" className="text-sm">Indígena</label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="membro_lgbtqiapn"
-                    checked={novoMembro.lgbtqiapn}
-                    onCheckedChange={(checked) => setNovoMembro({ ...novoMembro, lgbtqiapn: checked as boolean })}
-                  />
-                  <label htmlFor="membro_lgbtqiapn" className="text-sm">LGBTQIAPN+</label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="membro_preto_pardo"
-                    checked={novoMembro.preto_pardo}
-                    onCheckedChange={(checked) => setNovoMembro({ ...novoMembro, preto_pardo: checked as boolean })}
-                  />
-                  <label htmlFor="membro_preto_pardo" className="text-sm">Preto/Pardo</label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="membro_deficiencia"
-                    checked={novoMembro.deficiencia}
-                    onCheckedChange={(checked) => setNovoMembro({ ...novoMembro, deficiencia: checked as boolean })}
-                  />
-                  <label htmlFor="membro_deficiencia" className="text-sm">PCD</label>
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="membro_curriculo">Mini Currículo</Label>
-                <Textarea
-                  id="membro_curriculo"
-                  value={novoMembro.mini_curriculo}
-                  onChange={(e) => setNovoMembro({ ...novoMembro, mini_curriculo: e.target.value })}
-                  placeholder="Digite um mini currículo..."
-                  rows={3}
-                />
-              </div>
-              <Button type="button" onClick={handleAdicionarMembro} className="w-full">
-                <Plus className="mr-2 h-4 w-4" />
-                Adicionar Membro
-              </Button>
-            </div>
-
-            {formData.equipe && formData.equipe.length > 0 && (
-              <div className="space-y-2">
-                {formData.equipe.map((membro: any, index: number) => (
-                  <Card key={index}>
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <h4 className="font-medium">{membro.nome}</h4>
-                          <p className="text-sm text-gray-500">{membro.funcao}</p>
-                          {membro.cpf_cnpj && <p className="text-xs text-gray-400">CPF/CNPJ: {membro.cpf_cnpj}</p>}
-                          <div className="flex flex-wrap gap-2 mt-2">
-                            {membro.indigena && <Badge variant="outline" className="text-xs">Indígena</Badge>}
-                            {membro.lgbtqiapn && <Badge variant="outline" className="text-xs">LGBTQIAPN+</Badge>}
-                            {membro.preto_pardo && <Badge variant="outline" className="text-xs">Preto/Pardo</Badge>}
-                            {membro.deficiencia && <Badge variant="outline" className="text-xs">PCD</Badge>}
-                          </div>
-                          {membro.mini_curriculo && <p className="text-sm text-gray-600 mt-2 whitespace-pre-wrap">{membro.mini_curriculo}</p>}
+               {/* Listagem de Itens do Orçamento */}
+               <div className="space-y-2 mt-2">
+                  {formData.orcamento.map((item: any, idx: number) => (
+                    <div key={idx} className="bg-white p-3 rounded-lg border border-green-100 flex items-center justify-between group shadow-sm">
+                      <div className="flex-1">
+                        <p className="text-sm font-bold text-gray-800">{item.descricao}</p>
+                        <div className="flex items-center gap-4 text-xs text-gray-500 mt-1">
+                          <span>Qtd: {item.quantidade}</span>
+                          <span className="text-green-600 font-medium">Unit: R$ {formatCurrency(item.valor_unitario)}</span>
+                          <span className="bg-green-50 text-green-700 px-2 py-0.5 rounded font-bold">Subtotal: R$ {formatCurrency(parseCurrency(item.valor_unitario) * (parseFloat(String(item.quantidade)) || 0))}</span>
                         </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            const newEquipe = formData.equipe.filter((_: any, i: number) => i !== index);
-                            handleInputChange('equipe', newEquipe);
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </div>
-        );
-
-      case 7: // Atividades Planejadas
-        return (
-          <div className="space-y-6">
-            <div className="border rounded-lg p-4 space-y-4 bg-gray-50">
-              <div>
-                <Label htmlFor="atividade_nome">Nome da Atividade *</Label>
-                <Input
-                  id="atividade_nome"
-                  value={novaAtividade.nome_atividade}
-                  onChange={(e) => setNovaAtividade({ ...novaAtividade, nome_atividade: e.target.value })}
-                  placeholder="Digite o nome da atividade"
-                />
-              </div>
-              <div>
-                <Label htmlFor="atividade_etapa">Etapa *</Label>
-                <Select value={novaAtividade.etapa} onValueChange={(value) => setNovaAtividade({ ...novaAtividade, etapa: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione uma etapa" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {etapaOptions.map(option => (
-                      <SelectItem key={option} value={option}>{option}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="atividade_descricao">Descrição</Label>
-                <Textarea
-                  id="atividade_descricao"
-                  value={novaAtividade.descricao}
-                  onChange={(e) => setNovaAtividade({ ...novaAtividade, descricao: e.target.value })}
-                  placeholder="Descreva a atividade..."
-                  rows={3}
-                />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="atividade_data_inicio">Data de Início *</Label>
-                  <Input
-                    id="atividade_data_inicio"
-                    type="date"
-                    value={novaAtividade.data_inicio}
-                    onChange={(e) => setNovaAtividade({ ...novaAtividade, data_inicio: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="atividade_data_fim">Data Final *</Label>
-                  <Input
-                    id="atividade_data_fim"
-                    type="date"
-                    value={novaAtividade.data_fim}
-                    onChange={(e) => setNovaAtividade({ ...novaAtividade, data_fim: e.target.value })}
-                  />
-                </div>
-              </div>
-              <Button type="button" onClick={handleAdicionarAtividade} className="w-full">
-                <Plus className="mr-2 h-4 w-4" />
-                Adicionar Atividade
-              </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-red-500 hover:bg-red-50 hover:text-red-600"
+                        onClick={() => handleInputChange('orcamento', formData.orcamento.filter((_: any, i: number) => i !== idx))}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+               </div>
             </div>
 
-            {formData.atividades && formData.atividades.length > 0 && (
-              <div className="space-y-2">
-                {formData.atividades.map((atividade: any, index: number) => (
-                  <Card key={index}>
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <h4 className="font-medium">{atividade.nome_atividade}</h4>
-                          <p className="text-sm text-gray-500">Etapa: {atividade.etapa}</p>
-                          {atividade.descricao && <p className="text-sm text-gray-600 mt-1">{atividade.descricao}</p>}
-                          <p className="text-xs text-gray-400 mt-1">
-                            {new Date(atividade.data_inicio).toLocaleDateString('pt-BR')} - {new Date(atividade.data_fim).toLocaleDateString('pt-BR')}
-                          </p>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            const newAtividades = formData.atividades.filter((_: any, i: number) => i !== index);
-                            handleInputChange('atividades', newAtividades);
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+           {/* Venda de Produtos */}
+           <div className="flex items-center gap-3 p-4 bg-yellow-50 rounded-lg border border-yellow-100">
+              <Checkbox 
+                id="venda_produtos" 
+                checked={formData.venda_produtos}
+                onCheckedChange={(c) => handleInputChange('venda_produtos', c)}
+              />
+              <div>
+                <Label htmlFor="venda_produtos" className="font-bold text-yellow-900 leading-none">Venda de produtos ou cobrança de ingressos?</Label>
+                <p className="text-xs text-yellow-700 mt-1">Marque se o projeto prevê qualquer tipo de receita direta.</p>
+              </div>
+           </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderStep2 = () => {
+    return (
+      <div className="space-y-8 max-w-2xl mx-auto py-4">
+        <div className="bg-blue-50 p-8 rounded-2xl border-2 border-blue-100 space-y-6">
+           <div className="bg-white w-16 h-16 rounded-full flex items-center justify-center shadow-sm mx-auto mb-4">
+              <ShieldCheck className="h-8 w-8 text-blue-600" />
+           </div>
+           <h2 className="text-2xl font-bold text-center text-blue-900">Termo de Ciência</h2>
+           <div className="prose prose-blue text-blue-800 text-sm bg-white p-6 rounded-xl border border-blue-50 shadow-inner">
+              <p className="font-medium">Ao prosseguir com a inscrição, declaro estar ciente de que:</p>
+              <ul className="list-disc pl-5 space-y-2">
+                 <li>As informações prestadas são de minha inteira responsabilidade.</li>
+                 <li>Concordo com o tratamento dos meus dados pessoais conforme a <strong>LGPD (Lei Geral de Proteção de Dados)</strong> para fins exclusivos deste edital.</li>
+                 <li>A omissão de informações ou dados falsos poderá acarretar na desclassificação imediata do projeto.</li>
+                 <li>Verifiquei todos os anexos e o orçamento está condizente com o valor solicitado.</li>
+              </ul>
+           </div>
+           
+           <div className="flex items-start gap-3 p-4 bg-white rounded-xl border border-blue-200">
+              <Checkbox 
+                id="aceite_lgpd" 
+                checked={formData.aceite_lgpd}
+                onCheckedChange={(c) => handleInputChange('aceite_lgpd', c)}
+                className="mt-1 h-5 w-5"
+              />
+              <Label htmlFor="aceite_lgpd" className="text-sm font-semibold text-blue-900 cursor-pointer">
+                Li e concordo com os termos descritos acima e com a política de privacidade da plataforma.
+              </Label>
+           </div>
+        </div>
+
+        <div className="bg-amber-50 p-6 rounded-xl border border-amber-200 flex items-start gap-4">
+           <AlertTriangle className="h-6 w-6 text-amber-600 shrink-0 mt-1" />
+           <div className="space-y-1">
+              <h4 className="font-bold text-amber-900">Atenção!</h4>
+              <p className="text-sm text-amber-800">
+                Uma vez enviado, o projeto não poderá mais ser editado. Revise todas as etapas nos botões "Anterior" antes de clicar em "Inscrever-se".
+              </p>
+           </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderStep3 = () => {
+    return (
+      <div className="space-y-8">
+        <div className="bg-blue-50/50 p-6 rounded-xl border border-blue-100 shadow-sm space-y-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Paperclip className="h-5 w-5 text-blue-600" />
+            <h3 className="font-bold text-blue-900">Anexos do Projeto</h3>
+          </div>
+          <p className="text-sm text-gray-600">
+            Baixe os modelos abaixo para preencher e enviar nos campos específicos. Você também pode anexar outros documentos complementares no final da lista.
+          </p>
+
+          <div className="mt-6">
+            {projetoExistente?.id ? (
+              <ProjectAttachments projetoId={projetoExistente.id} editalFiles={editalFiles} />
+            ) : (
+              <div className="bg-white p-8 rounded-lg border-2 border-dashed border-gray-200 text-center">
+                <AlertTriangle className="h-8 w-8 text-yellow-500 mx-auto mb-2" />
+                <p className="text-gray-600">Salve seu rascunho clicando no botão "Salvar Rascunho" abaixo para habilitar o envio de arquivos.</p>
+                <Button 
+                  onClick={handleSalvarRascunho} 
+                  disabled={saving}
+                  className="mt-4"
+                  variant="outline"
+                >
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                  Salvar Rascunho Agora
+                </Button>
               </div>
             )}
           </div>
-        );
+        </div>
 
-      case 8: // Metas do Projeto
-        return (
-          <div className="space-y-6">
-            <div className="border rounded-lg p-4 space-y-4 bg-gray-50">
-              <div>
-                <Label htmlFor="meta_descricao">Descrição da Meta *</Label>
-                <Textarea
-                  id="meta_descricao"
-                  value={novaMeta.descricao}
-                  onChange={(e) => setNovaMeta({ ...novaMeta, descricao: e.target.value })}
-                  placeholder="Descreva a meta..."
-                  rows={3}
-                />
-              </div>
-              <Button type="button" onClick={handleAdicionarMeta} className="w-full">
-                <Plus className="mr-2 h-4 w-4" />
-                Adicionar Meta
-              </Button>
-            </div>
-
-            {formData.metas && formData.metas.length > 0 && (
-              <div className="space-y-2">
-                {formData.metas.map((meta: any, index: number) => (
-                  <Card key={index}>
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between">
-                        <p className="flex-1">{meta.descricao}</p>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            const newMetas = formData.metas.filter((_: any, i: number) => i !== index);
-                            handleInputChange('metas', newMetas);
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
+        <div className="bg-amber-50 p-6 rounded-xl border border-amber-200 flex items-start gap-4">
+          <AlertTriangle className="h-6 w-6 text-amber-600 shrink-0 mt-1" />
+          <div className="space-y-1">
+            <h4 className="font-bold text-amber-900">Atenção Final!</h4>
+            <p className="text-sm text-amber-800">
+              Esta é a última etapa. Após clicar em "Inscrever-se", você não poderá mais alterar os dados ou anexos do projeto.
+            </p>
           </div>
-        );
+        </div>
+      </div>
+    );
+  };
 
-      case 9: // Orçamento Detalhado
-        // Calcular valores para a barra de progresso
-        const totalOrcamento = formData.orcamento.reduce((sum: number, item: any) => {
-          const valor = parseFloat(item.valor_unitario) || 0;
-          const quantidade = parseInt(item.quantidade) || 0;
-          return sum + (valor * quantidade);
-        }, 0);
-        const valorSolicitado = parseFloat(formData.valor_solicitado || '0') || 0;
-        const valorEmAberto = Math.max(0, valorSolicitado - totalOrcamento);
-        const percentualPreenchido = valorSolicitado > 0 ? Math.min(100, (totalOrcamento / valorSolicitado) * 100) : 0;
-        
-        return (
-          <div className="space-y-6">
-            {/* Barra de Progresso do Orçamento */}
-            {valorSolicitado > 0 && (
-              <Card className="border-2">
-                <CardContent className="p-6">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-lg font-semibold">Progresso do Orçamento</h3>
-                      <span className="text-sm font-medium text-gray-600">
-                        {percentualPreenchido.toFixed(1)}% preenchido
-                      </span>
-                    </div>
-                    <Progress value={percentualPreenchido} className="h-3" />
-                    <div className="grid grid-cols-2 gap-4 pt-2">
-                      <div>
-                        <p className="text-sm text-gray-600 mb-1">Valor Preenchido</p>
-                        <p className="text-lg font-bold text-green-600">
-                          R$ {totalOrcamento.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-600 mb-1">Valor em Aberto</p>
-                        <p className="text-lg font-bold text-orange-600">
-                          R$ {valorEmAberto.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="pt-2 border-t">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-gray-700">Valor Solicitado Total</span>
-                        <span className="text-base font-bold text-gray-900">
-                          R$ {valorSolicitado.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-            
-            <div className="border rounded-lg p-4 space-y-4 bg-gray-50">
-              <div>
-                <Label htmlFor="orcamento_descricao">Descrição *</Label>
-                <Input
-                  id="orcamento_descricao"
-                  value={novoOrcamento.descricao}
-                  onChange={(e) => setNovoOrcamento({ ...novoOrcamento, descricao: e.target.value })}
-                  placeholder="Digite a descrição do item"
-                />
-              </div>
-              <div>
-                <Label htmlFor="orcamento_justificativa">Justificativa *</Label>
-                <Textarea
-                  id="orcamento_justificativa"
-                  value={novoOrcamento.justificativa}
-                  onChange={(e) => setNovoOrcamento({ ...novoOrcamento, justificativa: e.target.value })}
-                  placeholder="Justifique o item..."
-                  rows={2}
-                />
-              </div>
-              <div>
-                <Label htmlFor="orcamento_unidade">Unidade de Medida *</Label>
-                <Select value={novoOrcamento.unidade_medida} onValueChange={(value) => setNovoOrcamento({ ...novoOrcamento, unidade_medida: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione a unidade" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {unidadeMedidaOptions.map(option => (
-                      <SelectItem key={option} value={option}>{option}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="orcamento_valor">Valor Unitário *</Label>
-                  <Input
-                    id="orcamento_valor"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={novoOrcamento.valor_unitario}
-                    onChange={(e) => setNovoOrcamento({ ...novoOrcamento, valor_unitario: e.target.value })}
-                    placeholder="0.00"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="orcamento_quantidade">Quantidade *</Label>
-                  <Input
-                    id="orcamento_quantidade"
-                    type="number"
-                    min="1"
-                    value={novoOrcamento.quantidade}
-                    onChange={(e) => setNovoOrcamento({ ...novoOrcamento, quantidade: e.target.value })}
-                    placeholder="0"
-                  />
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="orcamento_referencia">Referência de Preço</Label>
-                <Input
-                  id="orcamento_referencia"
-                  value={novoOrcamento.referencia_preco}
-                  onChange={(e) => setNovoOrcamento({ ...novoOrcamento, referencia_preco: e.target.value })}
-                  placeholder="Ex: Cotação realizada em..."
-                />
-              </div>
-              <Button type="button" onClick={handleAdicionarOrcamento} className="w-full">
-                <Plus className="mr-2 h-4 w-4" />
-                Adicionar Item
-              </Button>
-            </div>
-
-            {formData.orcamento && formData.orcamento.length > 0 && (
-              <div className="space-y-2">
-                {formData.orcamento.map((item: any, index: number) => {
-                  const total = (parseFloat(item.valor_unitario) || 0) * (parseInt(item.quantidade) || 0);
-                  return (
-                    <Card key={index}>
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <h4 className="font-medium">{item.descricao}</h4>
-                            <p className="text-sm text-gray-500">{item.justificativa}</p>
-                            <p className="text-xs text-gray-400 mt-1">
-                              {item.quantidade} {item.unidade_medida} × R$ {item.valor_unitario.toLocaleString('pt-BR')}
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-medium">R$ {total.toLocaleString('pt-BR')}</p>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                const newOrcamento = formData.orcamento.filter((_: any, i: number) => i !== index);
-                                handleInputChange('orcamento', newOrcamento);
-                              }}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-                <Card className="bg-primary/5">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between font-bold text-lg">
-                      <span>Total do Orçamento</span>
-                      <span>
-                        R$ {formData.orcamento.reduce((sum: number, item: any) => {
-                          const valor = parseFloat(item.valor_unitario) || 0;
-                          const quantidade = parseInt(item.quantidade) || 0;
-                          return sum + (valor * quantidade);
-                        }, 0).toLocaleString('pt-BR')}
-                      </span>
-                    </div>
-                    {formData.valor_solicitado && (
-                      <div className="flex items-center justify-between mt-2">
-                        <span className="text-sm">Valor Solicitado</span>
-                        <span className={`text-sm font-medium ${Math.abs(parseFloat(formData.valor_solicitado) - formData.orcamento.reduce((sum: number, item: any) => {
-                          const valor = parseFloat(item.valor_unitario) || 0;
-                          const quantidade = parseInt(item.quantidade) || 0;
-                          return sum + (valor * quantidade);
-                        }, 0)) > 0.01 ? 'text-red-500' : 'text-green-600'}`}>
-                          R$ {parseFloat(formData.valor_solicitado || '0').toLocaleString('pt-BR')}
-                        </span>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-            )}
-          </div>
-        );
-
-      default:
-        return null;
+  const renderStepContent = () => {
+    switch (currentStep) {
+      case 0: return renderStep0();
+      case 1: return renderStep1();
+      case 2: return renderStep2();
+      case 3: return renderStep3();
+      default: return null;
     }
   };
 
   const canGoNext = () => {
-    // Validações básicas para cada step
     switch (currentStep) {
-      case 0: // Proponente
-        return formData.proponente_id;
+      case 0: // Dados do Projeto
+        return (
+          formData.proponente_id &&
+          formData.nome &&
+          parseCurrency(formData.valor_solicitado) > 0 &&
+          (!edital || parseCurrency(formData.valor_solicitado) <= edital.valor_maximo) &&
+          formData.formato !== '' &&
+          formData.cep_realizacao &&
+          formData.num_remunerados &&
+          formData.segmento_contemplado &&
+          formData.etapa_principal &&
+          formData.tematicas &&
+          formData.entregas_previstas
+        );
       
-      case 1: // Informações Básicas
-        return formData.nome && formData.modalidade && formData.descricao && formData.objetivos;
+      case 1: // Plano de Trabalho
+        const totalOrcamento = getOrcamentoTotal(formData.orcamento);
+        const valorSolicitado = parseCurrency(formData.valor_solicitado);
+
+        return (
+          formData.mini_curriculo_proponente &&
+          formData.descricao &&
+          formData.objetivos &&
+          formData.objetivos_especificos &&
+          formData.metas.length > 0 &&
+          formData.perfil_publico &&
+          formData.implementacao_acessibilidade &&
+          formData.equipe.length > 0 &&
+          formData.orcamento.length > 0 &&
+          Math.abs(totalOrcamento - valorSolicitado) <= 0.05
+        );
       
-      case 2: // Público e Acessibilidade
+      case 2: // Termo de Ciência
+        return formData.aceite_lgpd;
+
+      case 3: // Anexos
         return true; // Opcional
-      
-      case 3: // Acessibilidade Comunicacional e Atitudinal
-        return true; // Opcional
-      
-      case 4: // Cronograma e Local
-        return true; // Opcional
-      
-      case 5: // Valor e Financiamento
-        const valorSolicitado = parseFloat(formData.valor_solicitado);
-        // Verificar se foi preenchido
-        if (!valorSolicitado || valorSolicitado <= 0) return false;
-        // Verificar se não excede o máximo do edital
-        if (edital && valorSolicitado > edital.valor_maximo) return false;
-        return true;
-      
-      case 6: // Equipe do Projeto
-        return formData.equipe && formData.equipe.length > 0;
-      
-      case 7: // Atividades Planejadas
-        return formData.atividades && formData.atividades.length > 0;
-      
-      case 8: // Metas do Projeto
-        return formData.metas && formData.metas.length > 0;
-      
-      case 9: // Orçamento Detalhado
-        if (!formData.orcamento || formData.orcamento.length === 0) return false;
-        const totalOrcamento = formData.orcamento.reduce((sum: number, item: any) => {
-          const valor = parseFloat(item.valor_unitario) || 0;
-          const quantidade = parseInt(item.quantidade) || 0;
-          return sum + (valor * quantidade);
-        }, 0);
-        const valorSolicitadoOrc = parseFloat(formData.valor_solicitado) || 0;
-        return Math.abs(totalOrcamento - valorSolicitadoOrc) <= 0.01;
       
       default:
         return true;
     }
   };
 
-  const handleNextStep = () => {
+  const handleNextStep = async () => {
     if (!canGoNext()) {
-      // Exibir mensagens de erro específicas
-      switch (currentStep) {
-        case 0: // Proponente
-          toast({
-            title: "Proponente obrigatório",
-            description: "Por favor, selecione um proponente",
-            variant: "destructive",
-          });
-          break;
-        case 1: // Informações Básicas
-          toast({
-            title: "Campos obrigatórios",
-            description: "Por favor, preencha todas as informações básicas do projeto",
-            variant: "destructive",
-          });
-          break;
-        case 5: // Valor e Financiamento
-          const valorSolicitado = parseFloat(formData.valor_solicitado);
-          if (!valorSolicitado || valorSolicitado <= 0) {
-            toast({
-              title: "Valor inválido",
-              description: "Por favor, informe um valor solicitado válido",
-              variant: "destructive",
-            });
-          } else if (edital && valorSolicitado > edital.valor_maximo) {
-            toast({
-              title: "Valor excedido",
-              description: `O valor solicitado não pode ser maior que ${edital.valor_maximo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`,
-              variant: "destructive",
-            });
-          }
-          break;
-        case 6: // Equipe do Projeto
-          toast({
-            title: "Equipe obrigatória",
-            description: "Por favor, adicione pelo menos um membro à equipe do projeto",
-            variant: "destructive",
-          });
-          break;
-        case 7: // Atividades Planejadas
-          toast({
-            title: "Atividades obrigatórias",
-            description: "Por favor, adicione pelo menos uma atividade planejada",
-            variant: "destructive",
-          });
-          break;
-        case 8: // Metas do Projeto
-          toast({
-            title: "Metas obrigatórias",
-            description: "Por favor, adicione pelo menos uma meta do projeto",
-            variant: "destructive",
-          });
-          break;
-        case 9: // Orçamento Detalhado
-          if (!formData.orcamento || formData.orcamento.length === 0) {
-            toast({
-              title: "Orçamento obrigatório",
-              description: "Por favor, adicione pelo menos um item ao orçamento",
-              variant: "destructive",
-            });
-          } else {
-            const totalOrcamento = formData.orcamento.reduce((sum: number, item: any) => {
-              const valor = parseFloat(item.valor_unitario) || 0;
-              const quantidade = parseInt(item.quantidade) || 0;
-              return sum + (valor * quantidade);
-            }, 0);
-            const valorSolicitadoOrc = parseFloat(formData.valor_solicitado) || 0;
-            toast({
-              title: "Orçamento incompatível",
-              description: `O total do orçamento (${totalOrcamento.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}) deve ser igual ao valor solicitado (${valorSolicitadoOrc.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })})`,
-              variant: "destructive",
-            });
-          }
-          break;
+      if (currentStep === 0) {
+        toast({
+          title: "Dados incompletos",
+          description: "Por favor, preencha todos os campos obrigatórios (marcados com *) para continuar.",
+          variant: "destructive",
+        });
+      } else if (currentStep === 1) {
+        toast({
+          title: "Plano de trabalho incompleto",
+          description: "Certifique-se de preencher currículo, descritivos, metas, equipe e o orçamento (que deve bater com o total solicitado).",
+          variant: "destructive",
+        });
+      } else if (currentStep === 2) {
+        toast({
+          title: "Aceite obrigatório",
+          description: "Você deve aceitar os termos da LGPD para continuar.",
+          variant: "destructive",
+        });
       }
       return;
     }
-    
+
+    // Se estiver saindo do passo 2 (Termo de Ciência) para o 3 (Anexos), salvar rascunho para garantir que temos um projetoId
+    if (currentStep === 2 && !projetoExistente?.id) {
+      const success = await handleSalvarRascunho();
+      if (!success) return; // Se falhar em salvar, não avança
+    }
+
     setCurrentStep(Math.min(steps.length - 1, currentStep + 1));
   };
 

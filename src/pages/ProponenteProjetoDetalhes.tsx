@@ -37,6 +37,7 @@ import {
   Check,
   Search,
   Loader2,
+  Paperclip,
   Pencil,
   History as HistoryIcon
 } from "lucide-react";
@@ -44,7 +45,6 @@ import { useToast } from "@/hooks/use-toast";
 import { ProponenteLayout } from "@/components/layout/ProponenteLayout";
 import { useProjetoDetalhes } from "@/hooks/useProjetoDetalhes";
 import { useProponenteAuth } from "@/hooks/useProponenteAuth";
-import { usePendencias } from "@/hooks/usePendencias";
 import { useAvaliacoes } from "@/hooks/useAvaliacoes";
 import { usePrestacoesContas } from "@/hooks/usePrestacoesContas";
 import { useMovimentacoesFinanceiras } from "@/hooks/useMovimentacoesFinanceiras";
@@ -52,6 +52,7 @@ import { useContasMonitoradas } from "@/hooks/useContasMonitoradas";
 import { useDocumentosHabilitacao } from "@/hooks/useDocumentosHabilitacao";
 import { ProjetoWithDetails } from "@/services/projetoService";
 import { editalService, Anexo } from "@/services/editalService";
+import { useDiligencias } from "@/hooks/useDiligencias";
 import { supabase, getAuthenticatedSupabaseClient } from "@/integrations/supabase/client";
 
 // Opções para múltipla escolha
@@ -386,11 +387,6 @@ export const ProponenteProjetoDetalhes = () => {
     ordem: ''
   });
 
-  // Estados para modal de pendências
-  const [showPendenciaModal, setShowPendenciaModal] = useState(false);
-  const [novaPendencia, setNovaPendencia] = useState('');
-  const [arquivoUrl, setArquivoUrl] = useState('');
-
   // Estados para modal de solicitação de nova avaliação
   const [showNovaAvaliacaoModal, setShowNovaAvaliacaoModal] = useState(false);
 
@@ -428,6 +424,13 @@ export const ProponenteProjetoDetalhes = () => {
   // Estados para OpenBanking
   const [contaSelecionada, setContaSelecionada] = useState<string | null>(null);
 
+  // Estados para Resposta de Diligência
+  const [showResponderDiligenciaModal, setShowResponderDiligenciaModal] = useState(false);
+  const [diligenciaSelecionadaId, setDiligenciaSelecionadaId] = useState<string | null>(null);
+  const [respostaObs, setRespostaObs] = useState('');
+  const [respostaArquivo, setRespostaArquivo] = useState<File | null>(null);
+  const [enviandoResposta, setEnviandoResposta] = useState(false);
+
   const {
     projeto,
     loading,
@@ -435,13 +438,6 @@ export const ProponenteProjetoDetalhes = () => {
     updateStatus,
     refresh
   } = useProjetoDetalhes(projetoId || '', 'proponente');
-
-  const {
-    pendencias,
-    loading: loadingPendencias,
-    createPendencia,
-    refresh: refreshPendencias
-  } = usePendencias(projetoId || '');
 
   const {
     avaliacoes,
@@ -475,6 +471,13 @@ export const ProponenteProjetoDetalhes = () => {
     movimentacoes,
     loading: loadingMovimentacoes
   } = useMovimentacoesFinanceiras(projetoId || '', contaSelecionada || undefined);
+
+  const {
+    diligencias,
+    loading: loadingDiligencias,
+    responderDiligencia,
+    refresh: refreshDiligencias
+  } = useDiligencias(projetoId || '');
 
   useEffect(() => {
     if (projeto?.edital) {
@@ -1224,41 +1227,6 @@ export const ProponenteProjetoDetalhes = () => {
     setShowModalEditarItem(true);
   };
 
-  const handleSalvarPendencia = async () => {
-    if (!novaPendencia.trim()) {
-      toast({
-        title: "Erro",
-        description: "Digite uma descrição para a pendência",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      await createPendencia({
-        projeto_id: projetoId!,
-        text: novaPendencia,
-        arquivo: arquivoUrl || null
-      });
-
-      toast({
-        title: "Sucesso",
-        description: "Pendência adicionada com sucesso!",
-      });
-
-      setShowPendenciaModal(false);
-      setNovaPendencia('');
-      setArquivoUrl('');
-      refreshPendencias();
-    } catch (error: any) {
-      toast({
-        title: "Erro",
-        description: error.message || "Erro ao criar pendência",
-        variant: "destructive",
-      });
-    }
-  };
-
   const handleSolicitarNovaAvaliacao = async () => {
     // Verificar se só há uma avaliação
     if (avaliacoes.length !== 1) {
@@ -1628,6 +1596,52 @@ export const ProponenteProjetoDetalhes = () => {
     }
   };
 
+  const handleResponderDiligencia = async () => {
+    if (!diligenciaSelecionadaId || !respostaArquivo) {
+      toast({
+        title: "Atenção",
+        description: "Selecione um arquivo para enviar.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setEnviandoResposta(true);
+      const authClient = getAuthenticatedSupabaseClient('proponente');
+      
+      const fileExt = respostaArquivo.name.split('.').pop();
+      const fileName = `diligencia-${diligenciaSelecionadaId}-${Date.now()}.${fileExt}`;
+      
+      const { data: uploadData, error: uploadError } = await authClient.storage
+        .from('documentos_habilitacao') // Usando o mesmo bucket por conveniência
+        .upload(fileName, respostaArquivo);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = authClient.storage
+        .from('documentos_habilitacao')
+        .getPublicUrl(fileName);
+
+      const success = await responderDiligencia(diligenciaSelecionadaId, publicUrl, respostaObs);
+
+      if (success) {
+        setShowResponderDiligenciaModal(false);
+        setDiligenciaSelecionadaId(null);
+        setRespostaObs('');
+        setRespostaArquivo(null);
+      }
+    } catch (error: any) {
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao responder diligência",
+        variant: "destructive",
+      });
+    } finally {
+      setEnviandoResposta(false);
+    }
+  };
+
   const getAvaliacaoStatusConfig = (status: string) => {
     const configs = {
       'aguardando_parecerista': { label: 'Aguardando Parecerista', color: 'bg-yellow-100 text-yellow-800', icon: <Clock className="h-4 w-4" /> },
@@ -1783,8 +1797,8 @@ export const ProponenteProjetoDetalhes = () => {
   const todasAbas = [
     { value: 'informacoes', label: 'Informações Gerais' },
     { value: 'avaliacao', label: 'Avaliação' },
-    { value: 'documentacao', label: 'Documentação' },
     { value: 'pendencias', label: 'Pendências' },
+    { value: 'documentacao', label: 'Documentação' },
     { value: 'prestacao', label: 'Prestação de Contas' },
     { value: 'openbanking', label: 'OpenBanking' }
   ];
@@ -3367,71 +3381,85 @@ export const ProponenteProjetoDetalhes = () => {
           <TabsContent value="pendencias" className="space-y-6">
             <Card>
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <AlertTriangle className="h-5 w-5" />
-                      Pendências do Projeto
-                    </CardTitle>
-                    <CardDescription>
-                      Lista de pendências e questões a serem resolvidas
-                    </CardDescription>
-                  </div>
-                
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Paperclip className="h-5 w-5" />
+                    Pendências e Solicitações de Documentos
+                  </CardTitle>
+                  <CardDescription>
+                    Responda às solicitações de documentos complementares ou correções feitas pela prefeitura
+                  </CardDescription>
                 </div>
               </CardHeader>
               <CardContent>
-                {loadingPendencias ? (
-                  <div className="text-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                    <p className="mt-2 text-gray-500">Carregando pendências...</p>
+                {loadingDiligencias ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
                   </div>
-                ) : pendencias.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <AlertTriangle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>Nenhuma pendência no momento.</p>
+                ) : diligencias.length === 0 ? (
+                  <div className="text-center py-12 bg-gray-50 rounded-lg border border-dashed">
+                    <Paperclip className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-500">Você não possui pendências ou solicitações de documentos.</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {pendencias.map((pendencia) => (
-                      <div 
-                        key={pendencia.id} 
-                        className={`border rounded-lg p-4 ${
-                          pendencia.realizada 
-                            ? 'bg-green-50 border-green-200' 
-                            : 'bg-yellow-50 border-yellow-200'
-                        }`}
-                      >
+                    {diligencias.map((diligencia) => (
+                      <div key={diligencia.id} className="border rounded-lg p-4 bg-white shadow-sm">
                         <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <p className="text-gray-900 font-medium">{pendencia.text}</p>
-                              {pendencia.realizada && (
-                                <Badge variant="secondary" className="bg-green-100 text-green-800">
-                                  <Check className="h-3 w-3 mr-1" />
-                                  Realizada
-                                </Badge>
-                              )}
+                          <div className="space-y-2 flex-1">
+                            <div className="flex items-center gap-2">
+                              <h4 className="font-bold text-gray-900">{diligencia.titulo}</h4>
+                              <Badge className={
+                                diligencia.status === 'pendente' ? 'bg-orange-100 text-orange-800' :
+                                diligencia.status === 'respondido' ? 'bg-blue-100 text-blue-800' :
+                                diligencia.status === 'aceito' ? 'bg-green-100 text-green-800' :
+                                'bg-red-100 text-red-800'
+                              }>
+                                {diligencia.status === 'pendente' ? 'Pendente' :
+                                 diligencia.status === 'respondido' ? 'Enviado para Análise' :
+                                 diligencia.status === 'aceito' ? 'Aceito' : 'Recusado'}
+                              </Badge>
                             </div>
+                            <p className="text-sm text-gray-600">{diligencia.descricao}</p>
                             
-                            {pendencia.arquivo && (
-                              <div className="mb-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => window.open(pendencia.arquivo, '_blank')}
-                                  className="text-blue-600 hover:text-blue-700"
+                            {diligencia.modelo_url && (
+                              <div className="flex items-center gap-2 mt-2 p-2 bg-blue-50 border border-blue-100 rounded-md w-fit">
+                                <FileText className="h-4 w-4 text-blue-600" />
+                                <div className="flex flex-col">
+                                  <span className="text-[10px] font-bold text-blue-700 uppercase">Modelo Disponível</span>
+                                  <span className="text-xs font-medium text-gray-700">{diligencia.modelo_nome}</span>
+                                </div>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="h-8 px-2 text-blue-600 hover:text-blue-800 hover:bg-blue-100 ml-2"
+                                  onClick={() => window.open(diligencia.modelo_url, '_blank')}
                                 >
-                                  <ExternalLink className="h-4 w-4 mr-2" />
-                                  Abrir Arquivo
+                                  <Download className="h-4 w-4 mr-1" />
+                                  Baixar
+                                </Button>
+                              </div>
+                            )}
+
+                            {(diligencia.status === 'pendente' || diligencia.status === 'recusado') && (
+                              <div className="mt-4">
+                                <Button 
+                                  size="sm" 
+                                  onClick={() => {
+                                    setDiligenciaSelecionadaId(diligencia.id);
+                                    setShowResponderDiligenciaModal(true);
+                                  }}
+                                  className="bg-blue-600 hover:bg-blue-700"
+                                >
+                                  {diligencia.status === 'recusado' ? 'Reenviar Documento' : 'Responder Pendência'}
                                 </Button>
                               </div>
                             )}
                             
-                            <div className="flex items-center gap-4 text-sm text-gray-500">
-                              <span>Criado por: {pendencia.criado_por_nome}</span>
-                              <span>
-                                {new Date(pendencia.created_at).toLocaleDateString('pt-BR', {
+                            <div className="flex items-center gap-4 text-sm text-gray-500 mt-4 pt-2 border-t border-gray-50">
+                              <span className="flex items-center gap-1">
+                                <Calendar className="h-3 w-3" />
+                                {new Date(diligencia.created_at).toLocaleDateString('pt-BR', {
                                   day: '2-digit',
                                   month: '2-digit',
                                   year: 'numeric',
@@ -3794,61 +3822,6 @@ export const ProponenteProjetoDetalhes = () => {
         </Tabs>
       </div>
 
-      {/* Modal para criar pendência */}
-      <Dialog open={showPendenciaModal} onOpenChange={setShowPendenciaModal}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Nova Pendência</DialogTitle>
-            <DialogDescription>
-              Descreva a pendência ou questão que precisa ser resolvida para este projeto.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="pendencia-text">Descrição da Pendência</Label>
-              <Textarea
-                id="pendencia-text"
-                placeholder="Descreva a pendência..."
-                value={novaPendencia}
-                onChange={(e) => setNovaPendencia(e.target.value)}
-                className="mt-1"
-                rows={4}
-              />
-            </div>
-            <div>
-              <Label htmlFor="arquivo-url">URL do Arquivo (Opcional)</Label>
-              <Input
-                id="arquivo-url"
-                placeholder="https://exemplo.com/arquivo.pdf"
-                value={arquivoUrl}
-                onChange={(e) => setArquivoUrl(e.target.value)}
-                className="mt-1"
-              />
-              <p className="text-sm text-gray-500 mt-1">
-                Cole aqui o link para um arquivo relacionado à pendência
-              </p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowPendenciaModal(false);
-                setNovaPendencia('');
-                setArquivoUrl('');
-              }}
-            >
-              Cancelar
-            </Button>
-            <Button
-              onClick={handleSalvarPendencia}
-              disabled={!novaPendencia.trim()}
-            >
-              Criar Pendência
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Modal para solicitar nova avaliação */}
       <Dialog open={showNovaAvaliacaoModal} onOpenChange={setShowNovaAvaliacaoModal}>
@@ -5611,6 +5584,46 @@ export const ProponenteProjetoDetalhes = () => {
               ) : (
                 'Enviar'
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Responder Diligência */}
+      <Dialog open={showResponderDiligenciaModal} onOpenChange={setShowResponderDiligenciaModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Responder Diligência</DialogTitle>
+            <DialogDescription>
+              Anexe o documento solicitado e adicione observações, se necessário.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Documento Solicitado</Label>
+              <Input 
+                type="file" 
+                onChange={(e) => setRespostaArquivo(e.target.files?.[0] || null)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Observações</Label>
+              <Textarea 
+                placeholder="Adicione observações sobre o documento enviado..." 
+                value={respostaObs}
+                onChange={(e) => setRespostaObs(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowResponderDiligenciaModal(false)}>Cancelar</Button>
+            <Button onClick={handleResponderDiligencia} disabled={enviandoResposta}>
+              {enviandoResposta ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Enviando...
+                </>
+              ) : 'Enviar Resposta'}
             </Button>
           </DialogFooter>
         </DialogContent>

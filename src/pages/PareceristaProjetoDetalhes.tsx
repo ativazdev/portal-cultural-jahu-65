@@ -9,12 +9,14 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
-import { ArrowLeft, FileText, User, Calendar, DollarSign, Building2, Save, Loader2, BarChart3 } from "lucide-react";
+import { ArrowLeft, FileText, User, Calendar, DollarSign, Building2, Save, Loader2, BarChart3, Paperclip, Download, CheckSquare } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { PareceristaLayout } from "@/components/layout/PareceristaLayout";
 import { usePareceristaAuth } from "@/hooks/usePareceristaAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useProjetoDetalhes } from "@/hooks/useProjetoDetalhes";
 import { getAuthenticatedSupabaseClient } from "@/integrations/supabase/client";
+import { useDiligencias } from "@/hooks/useDiligencias";
 
 // Função para formatar datas sem problemas de timezone
 const formatarData = (dataString: string | Date): string => {
@@ -166,6 +168,25 @@ const etapaColor = (etapa?: string) => {
   }
 };
 
+const handleDownload = async (url: string, fileName: string) => {
+  try {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    const blobUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(blobUrl);
+  } catch (error) {
+    console.error('Erro ao baixar arquivo:', error);
+    // Fallback para abrir em nova aba se o fetch falhar (ex: CORS)
+    window.open(url, '_blank');
+  }
+};
+
 interface Avaliacao {
   id: string;
   nota_criterio_a?: number;
@@ -206,6 +227,11 @@ export const PareceristaProjetoDetalhes = () => {
   const [salvando, setSalvando] = useState(false);
   const [showRejeicaoModal, setShowRejeicaoModal] = useState(false);
   const [motivoRejeicao, setMotivoRejeicao] = useState('');
+  
+  const { 
+    diligencias: pendenciasSolicitadas, 
+    loading: loadingPendencias 
+  } = useDiligencias(projetoId || '');
   
   const [formData, setFormData] = useState({
     nota_criterio_a: [0],
@@ -318,6 +344,15 @@ export const PareceristaProjetoDetalhes = () => {
 
       setAvaliacao(data);
       setEditando(true);
+
+      // Chamar edge function para atualizar status do projeto para 'em_avaliacao'
+      try {
+        await (authClient as any).functions.invoke('atualizar-avaliacao-final', {
+          body: { projeto_id: projetoId }
+        });
+      } catch (updateError) {
+        console.error('Erro ao chamar função de atualização ao iniciar:', updateError);
+      }
 
       toast({
         title: "Avaliação iniciada",
@@ -521,29 +556,74 @@ export const PareceristaProjetoDetalhes = () => {
       description="Detalhes do projeto para avaliação"
       editalId={editalId}
     >
-      <div className="space-y-6">
-        {/* Status e Ações */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Badge className={getStatusConfig(projeto.status).color}>
-              {getStatusConfig(projeto.status).label}
-            </Badge>
+      <div className="space-y-8 pb-12">
+        {/* Modern Header / Status Bar */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white/50 backdrop-blur-sm p-6 rounded-[32px] border border-slate-200/60 shadow-sm">
+          <div className="flex items-center gap-4">
+            <div className="bg-slate-900 p-3 rounded-2xl shadow-lg shadow-slate-200">
+              <FileText className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <Badge className={cn("rounded-full uppercase text-[10px] font-bold tracking-widest px-3", getStatusConfig(projeto.status).color)}>
+                  {getStatusConfig(projeto.status).label}
+                </Badge>
+                {avaliacao?.status === 'em_avaliacao' && (
+                  <Badge className="bg-blue-100 text-blue-700 rounded-full uppercase text-[10px] font-bold tracking-widest px-3 border-blue-200 animate-pulse">
+                    Avaliação em Curso
+                  </Badge>
+                )}
+              </div>
+              <h1 className="text-2xl font-black text-slate-900 tracking-tight leading-none">
+                {projeto.nome}
+              </h1>
+            </div>
           </div>
+          
           <Button
             variant="outline"
             onClick={() => navigate(`/${nomePrefeitura}/parecerista/${editalId}/projetos`)}
+            className="rounded-2xl border-slate-200 hover:bg-slate-100 h-12 px-6 group transition-all"
           >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Voltar
+            <ArrowLeft className="h-4 w-4 mr-2 group-hover:-translate-x-1 transition-transform" />
+            Voltar para Projetos
           </Button>
         </div>
 
-        {/* Tabs */}
-        <Tabs defaultValue="informacoes" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="informacoes">Informações Gerais</TabsTrigger>
-            <TabsTrigger value="avaliacao">Avaliação</TabsTrigger>
-          </TabsList>
+        {/* Tabs System Redesign */}
+        <Tabs defaultValue="informacoes" className="space-y-8">
+          <div className="flex justify-center sm:justify-start">
+            <TabsList className="bg-slate-100/50 p-1.5 rounded-3xl border border-slate-200/60 h-auto">
+              <TabsTrigger 
+                value="informacoes" 
+                className="rounded-2xl px-8 py-3 data-[state=active]:bg-white data-[state=active]:text-blue-700 data-[state=active]:shadow-lg data-[state=active]:shadow-blue-500/10 font-bold transition-all"
+              >
+                Informações Gerais
+              </TabsTrigger>
+              <TabsTrigger 
+                value="pendencias" 
+                className="rounded-2xl px-8 py-3 data-[state=active]:bg-white data-[state=active]:text-blue-700 data-[state=active]:shadow-lg data-[state=active]:shadow-blue-500/10 font-bold transition-all relative"
+              >
+                <Paperclip className="h-4 w-4 mr-2" />
+                Pendências
+                {pendenciasSolicitadas.filter(d => d.status === 'respondido').length > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-5 w-5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-5 w-5 bg-blue-600 border-2 border-white items-center justify-center text-[10px] font-black text-white">
+                      {pendenciasSolicitadas.filter(d => d.status === 'respondido').length}
+                    </span>
+                  </span>
+                )}
+              </TabsTrigger>
+              <TabsTrigger 
+                value="avaliacao" 
+                className="rounded-2xl px-8 py-3 data-[state=active]:bg-white data-[state=active]:text-blue-700 data-[state=active]:shadow-lg data-[state=active]:shadow-blue-500/10 font-bold transition-all"
+              >
+                <CheckSquare className="h-4 w-4 mr-2" />
+                Avaliação Técnica
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* Informações Gerais */}
           <TabsContent value="informacoes" className="space-y-6">
@@ -735,7 +815,7 @@ export const PareceristaProjetoDetalhes = () => {
               </Card>
 
               {/* Proponente - detalhado */}
-              <Card className={`col-span-1 lg:col-span-2 ${projeto.proponente?.tipo === "PF" ? "border-l-4 border-l-blue-600" : "border-l-4 border-l-green-600"}`}>
+              <Card className={`col-span-1 lg:col-span-2 rounded-[32px] overflow-hidden ${projeto.proponente?.tipo === "PF" ? "border-l-4 border-l-blue-600 shadow-blue-500/5 shadow-xl" : "border-l-4 border-l-green-600 shadow-green-500/5 shadow-xl"}`}>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <User className="h-5 w-5" />
@@ -1362,6 +1442,84 @@ export const PareceristaProjetoDetalhes = () => {
                 </CardContent>
               </Card>
             )}
+          </TabsContent>
+
+          {/* Pendências */}
+          <TabsContent value="pendencias" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Paperclip className="h-5 w-5 text-blue-600" />
+                  Pendências e Solicitações
+                </CardTitle>
+                <CardDescription>
+                  Visualize as solicitações de documentos e pendências associadas a este projeto
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {loadingPendencias ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+                  </div>
+                ) : pendenciasSolicitadas.length === 0 ? (
+                  <div className="text-center py-12 text-gray-500 border-2 border-dashed rounded-lg">
+                    <Paperclip className="h-12 w-12 mx-auto mb-4 opacity-20" />
+                    <p>Nenhuma pendência ou solicitação encontrada para este projeto.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {pendenciasSolicitadas.map((pendencia) => (
+                      <div key={pendencia.id} className="border rounded-lg p-4 space-y-4">
+                        <div className="flex items-start justify-between">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <h4 className="font-semibold text-gray-900">{pendencia.titulo}</h4>
+                              <Badge className={
+                                pendencia.status === 'pendente' ? 'bg-yellow-100 text-yellow-800' :
+                                pendencia.status === 'respondido' ? 'bg-blue-100 text-blue-800' :
+                                pendencia.status === 'aceito' ? 'bg-green-100 text-green-800' :
+                                'bg-red-100 text-red-800'
+                              }>
+                                {pendencia.status === 'pendente' ? 'Pendente' :
+                                 pendencia.status === 'respondido' ? 'Respondida' :
+                                 pendencia.status === 'aceito' ? 'Aceita' : 'Recusada'}
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-gray-600">{pendencia.descricao}</p>
+                            <p className="text-xs text-gray-400">
+                              Criada em {formatarData(pendencia.created_at)}
+                            </p>
+                          </div>
+                        </div>
+
+                        {pendencia.arquivo_url && (
+                          <div className="p-4 bg-gray-50 rounded-lg space-y-2">
+                            <p className="text-sm font-medium">Resposta do Proponente:</p>
+                            {pendencia.observacoes_resposta && (
+                              <p className="text-sm text-gray-600">{pendencia.observacoes_resposta}</p>
+                            )}
+                             <Button 
+                               variant="outline" 
+                               size="sm" 
+                               className="w-full sm:w-auto"
+                               onClick={() => {
+                                 if (!pendencia.arquivo_url) return;
+                                 const extension = pendencia.arquivo_url.split('.').pop()?.split('?')[0] || 'pdf';
+                                 const cmp = (projeto?.numero_inscricao || 'PROJETO').replace(/\//g, '-');
+                                 handleDownload(pendencia.arquivo_url, `${cmp} - ${pendencia.titulo}.${extension}`);
+                               }}
+                             >
+                               <Download className="h-4 w-4 mr-2" />
+                               Visualizar Documento Enviado
+                             </Button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Avaliação */}

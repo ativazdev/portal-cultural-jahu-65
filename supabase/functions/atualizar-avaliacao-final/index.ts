@@ -314,10 +314,13 @@ serve(async (req) => {
       dadosAtualizacao.motivo_rejeicao = motivo_rejeicao
     }
 
-      // Se PELO MENOS UMA avaliação foi concluída, atualizar status (primeiro que avaliar, ganha)
+    // Calcular se há avaliações iniciadas ou concluídas
+    const totalEmAvaliacao = avaliacoes.filter(a => a.status === 'em_avaliacao').length
+
+    // Se PELO MENOS UMA avaliação foi concluída, atualizar status do projeto para 'avaliado'
     if (totalConcluidas >= 1 && totalAvaliacoes > 0) {
       dadosAtualizacao.status = 'avaliado'
-      // Ajustar para refletir que só restou 1
+      // Ajustar para refletir que só restou 1 (FCFS)
       dadosAtualizacao.quantidade_pareceristas = 1
       dadosAtualizacao.quantidade_avaliacoes_concluidas = 1
       
@@ -357,21 +360,21 @@ serve(async (req) => {
         console.log(`Removendo ${idsParaRemover.length} avaliações pendentes...`);
 
         // 2. Decrementar contadores dos pareceristas que serão removidos
-        for (const avaliacao of avaliacoesParaRemover) {
-           // Buscar parecerista para pegar o valor atual (segurança) ou decrementar direto
+        for (const av of avaliacoesParaRemover) {
+           // Buscar parecerista para pegar o valor atual e decrementar
            const { data: parecerista } = await supabase
              .from('pareceristas')
              .select('id, projetos_em_analise')
-             .eq('id', avaliacao.parecerista_id) // Assumindo que o select original trouxe parecerista_id, se não, precisa buscar
+             .eq('id', av.parecerista_id)
              .single();
              
-           // Nota: O select original em index.ts linha 123 NÃO traz parecerista_id. 
-           // Precisamos garantir que temos o parecerista_id.
-           // Vamos assumir que vamos corrigir o select lá em cima ou buscar aqui.
-           // Melhor buscar o parecerista_id da avaliação específica se não tivermos.
-           
-           // Como o objeto 'avaliacao' vem do select anterior, verificamos se tem a propriedade.
-           // Se não tiver, buscamos. Mas vamos adicionar parecerista_id no select principal.
+           if (parecerista) {
+             const novoValor = Math.max(0, (parecerista.projetos_em_analise || 0) - 1);
+             await supabase
+               .from('pareceristas')
+               .update({ projetos_em_analise: novoValor })
+               .eq('id', parecerista.id);
+           }
         }
 
         // 3. Deletar as avaliações pendentes
@@ -382,7 +385,6 @@ serve(async (req) => {
           
         if (deleteError) {
            console.error('Erro ao remover avaliações pendentes:', deleteError);
-           // Não vamos falhar o request todo por isso, mas logar erro
         }
       }
 
@@ -426,9 +428,25 @@ serve(async (req) => {
         }
       )
     } else {
-      // Ainda há avaliações pendentes - atualizar apenas quantidade
-      dadosAtualizacao.status = 'em_avaliacao'
+      // Nenhuma concluída ainda. Verificar se há alguma em andamento.
+      const novoStatusProjeto = totalEmAvaliacao > 0 ? 'em_avaliacao' : 'aguardando_avaliacao';
+      dadosAtualizacao.status = novoStatusProjeto;
       
+      // Atualizar status do projeto também
+      const { data: projetoAtualizado, error: updateProjetoError } = await supabase
+        .from('projetos')
+        .update({
+          status: novoStatusProjeto,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', projeto_id)
+        .select()
+        .single();
+
+      if (updateProjetoError) {
+        console.error('Erro ao atualizar status do projeto:', updateProjetoError);
+      }
+
       const { data: avaliacaoFinalAtualizada, error: updateAvaliacaoError } = await supabase
         .from('avaliacoes_final')
         .update(dadosAtualizacao)
@@ -450,7 +468,7 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           success: true,
-          message: 'Avaliação salva. Aguardando conclusão de todas as avaliações.',
+          message: `Avaliação salva. Status do projeto: ${novoStatusProjeto}`,
           avaliacao_final: avaliacaoFinalAtualizada,
           total_avaliacoes: totalAvaliacoes,
           avaliacoes_concluidas: totalConcluidas,

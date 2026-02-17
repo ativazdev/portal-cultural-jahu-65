@@ -9,8 +9,9 @@ import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Edital, Anexo, CriterioAvaliacao } from '@/services/editalService';
-import { Upload, X, Loader2, Calendar, FileText, Plus, Edit2, AlertCircle } from 'lucide-react';
+import { Upload, X, Loader2, Calendar, FileText, Plus, Edit2, AlertCircle, Paperclip } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { EDITAL_TEMPLATES, getTemplateLabel, isTemplateKey } from '@/constants/editalTemplates';
 
 interface EditalModalProps {
   open: boolean;
@@ -592,13 +593,90 @@ export const EditalModal = ({ open, onClose, onSave, edital, loading = false }: 
             </div>
           </section>
 
-          {/* Section 5: Anexos */}
+          {/* Section 6: Modelos de Documentos (Templates) */}
+          <section className="space-y-4">
+            <div className="flex items-center gap-2 pb-2 border-b border-gray-200">
+              <Upload className="w-5 h-5 text-purple-600" />
+              <h3 className="font-semibold text-gray-800">Modelos de Documentos (Templates)</h3>
+            </div>
+            <div className="bg-purple-50 p-5 rounded-lg border border-purple-100 grid grid-cols-1 md:grid-cols-2 gap-6">
+              {Object.entries(EDITAL_TEMPLATES).map(([key, label]) => {
+                const existing = formData.anexos.find(a => a.titulo === key || a.titulo === label);
+                return (
+                  <div key={key} className="space-y-2">
+                    <Label className="text-sm font-medium text-purple-900">{label}</Label>
+                    <div className="flex gap-2 items-center">
+                      {existing ? (
+                        <div className="flex-1 flex items-center justify-between bg-white px-3 py-2 rounded border border-purple-200 text-sm">
+                          <span className="truncate max-w-[150px] font-medium text-purple-700">{label}.pdf</span>
+                          <Button 
+                            type="button" 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-6 w-6 text-red-400 hover:text-red-600 hover:bg-red-50"
+                            onClick={() => removeAnexo(formData.anexos.indexOf(existing))}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex-1 relative">
+                          <input
+                            type="file"
+                            id={`upload-${key}`}
+                            accept=".pdf"
+                            className="hidden"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              setUploading(true);
+                              try {
+                                const fileExt = file.name.split('.').pop();
+                                // USANDO A CHAVE NO NOME DO ARQUIVO PARA IDENTIFICAÇÃO FÁCIL
+                                const fileName = `${key}.${fileExt}`;
+                                const { error: uploadError } = await supabase.storage.from('editais').upload(fileName, file, { upsert: true });
+                                if (uploadError) throw uploadError;
+                                const { data: { publicUrl } } = supabase.storage.from('editais').getPublicUrl(fileName);
+                                // SALVANDO O TÍTULO COMO A CHAVE (Conforme solicitado: "mesmo nome do campo no banco")
+                                const novoAnexo: Anexo = { titulo: key, url: publicUrl, tipo: 'pdf' };
+                                setFormData(prev => ({
+                                  ...prev,
+                                  anexos: [...prev.anexos, novoAnexo],
+                                  regulamento: [...prev.regulamento, publicUrl]
+                                }));
+                                toast({ title: "Sucesso", description: `${label} anexado.` });
+                              } catch (err) {
+                                console.error(err);
+                                toast({ title: "Erro", description: "Falha no upload.", variant: "destructive" });
+                              } finally {
+                                setUploading(false);
+                                e.target.value = '';
+                              }
+                            }}
+                          />
+                          <label
+                            htmlFor={`upload-${key}`}
+                            className="flex items-center justify-center gap-2 w-full px-4 py-2 border border-purple-200 rounded-md text-xs font-medium text-purple-700 bg-white hover:bg-purple-50 cursor-pointer"
+                          >
+                            <Plus className="w-3 h-3" /> Subir Modelo
+                          </label>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+
+          {/* Section 7: Anexos Diversos */}
           <section className="space-y-4">
              <div className="flex items-center gap-2 pb-2 border-b border-gray-200">
-                <FileText className="w-5 h-5 text-gray-600" />
+                <Paperclip className="w-5 h-5 text-gray-600" />
                 <h3 className="font-semibold text-gray-800">
-                    {formData.has_accountability_phase ? 'Documentação e Prestação de Contas' : 'Anexos do Edital'}
-                    <span className="ml-2 text-sm font-normal text-gray-500">({formData.anexos.length})</span>
+                    Anexos Diversos / Regulamento
+                    <span className="ml-2 text-sm font-normal text-gray-500">
+                      ({formData.anexos.filter(a => !isTemplateKey(a.titulo) && !Object.values(EDITAL_TEMPLATES).includes(a.titulo as any)).length})</span>
                 </h3>
              </div>
                 <div className="bg-blue-50 border border-blue-100 rounded-md p-4">
@@ -658,9 +736,10 @@ export const EditalModal = ({ open, onClose, onSave, edital, loading = false }: 
                                     </div>
                                     <div className="flex-1 mr-4">
                                         <Input
-                                          value={anexo.titulo}
+                                          value={getTemplateLabel(anexo.titulo)}
                                           onChange={(e) => updateAnexoTitulo(index, e.target.value)}
                                           className="h-8 text-sm font-medium border-transparent hover:border-gray-300 focus:border-blue-500 bg-transparent px-1.5 -ml-1.5 w-full transition-colors"
+                                          disabled={isTemplateKey(anexo.titulo)}
                                         />
                                         <a href={anexo.url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline block mt-0.5 ml-0.5">
                                             Visualizar/Baixar

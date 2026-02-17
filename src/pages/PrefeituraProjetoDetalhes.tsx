@@ -35,14 +35,14 @@ import {
   ExternalLink,
   Check,
   Search,
-  Loader2
+  Loader2,
+  Paperclip
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { PrefeituraLayout } from "@/components/layout/PrefeituraLayout";
 import { SidebarInset } from "@/components/ui/sidebar";
 import { useProjetoDetalhes } from "@/hooks/useProjetoDetalhes";
 import { usePrefeituraAuth } from "@/hooks/usePrefeituraAuth";
-import { usePendencias } from "@/hooks/usePendencias";
 import { useAvaliacoes } from "@/hooks/useAvaliacoes";
 import { usePrestacoesContas } from "@/hooks/usePrestacoesContas";
 import { useMovimentacoesFinanceiras } from "@/hooks/useMovimentacoesFinanceiras";
@@ -52,6 +52,7 @@ import { ProjetoWithDetails } from "@/services/projetoService";
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { editalService, Anexo } from "@/services/editalService";
+import { useDiligencias } from "@/hooks/useDiligencias";
 
 // Helpers (datas e Gantt)
 const formatarData = (data: string | Date) => {
@@ -207,10 +208,6 @@ export const PrefeituraProjetoDetalhes = () => {
   const { toast } = useToast();
   const { prefeitura, user, profile } = usePrefeituraAuth();
   
-  // Estados para modal de pendências
-  const [showPendenciaModal, setShowPendenciaModal] = useState(false);
-  const [novaPendencia, setNovaPendencia] = useState('');
-  const [arquivoUrl, setArquivoUrl] = useState('');
 
   // Estados para modal de avaliação
   const [showAvaliacaoModal, setShowAvaliacaoModal] = useState(false);
@@ -247,6 +244,13 @@ export const PrefeituraProjetoDetalhes = () => {
   const [motivoDesclassificacao, setMotivoDesclassificacao] = useState('');
   const [showSuplenteProjetoModal, setShowSuplenteProjetoModal] = useState(false);
   const [processandoAcao, setProcessandoAcao] = useState(false);
+
+  // Estados para Pendências (Solicitação de Documentos)
+  const [showPendenciaModal, setShowPendenciaModal] = useState(false);
+  const [novaPendenciaTitulo, setNovaPendenciaTitulo] = useState('');
+  const [novaPendenciaDescricao, setNovaPendenciaDescricao] = useState('');
+  const [novaPendenciaModelo, setNovaPendenciaModelo] = useState<File | null>(null);
+  const [enviandoModelo, setEnviandoModelo] = useState(false);
 
   const {
     projeto,
@@ -417,15 +421,6 @@ export const PrefeituraProjetoDetalhes = () => {
     }
   };
 
-  const {
-    pendencias,
-    loading: loadingPendencias,
-    error: errorPendencias,
-    createPendencia,
-    updatePendencia,
-    deletePendencia,
-    refresh: refreshPendencias
-  } = usePendencias(projetoId || '');
 
   const {
     avaliacoes,
@@ -461,18 +456,18 @@ export const PrefeituraProjetoDetalhes = () => {
     let avaliacaoFinalId: string | null = null;
     const { data: avaliacaoFinalExistente } = await supabase
       .from('avaliacoes_final')
-      .select('id')
+      .select('id, status')
       .eq('projeto_id', projetoId)
-      .single();
+      .maybeSingle();
 
     if (avaliacaoFinalExistente) {
-      avaliacaoFinalId = avaliacaoFinalExistente.id;
+      avaliacaoFinalId = (avaliacaoFinalExistente as any).id;
     } else {
       // Criar avaliação final primeiro
       const { data: novaAvaliacaoFinal, error: avaliacaoFinalError } = await (supabase
         .from('avaliacoes_final') as any)
         .insert({
-          prefeitura_id: projeto.prefeitura_id || prefeitura.id,
+          prefeitura_id: projeto?.prefeitura_id || prefeitura.id,
           projeto_id: projetoId,
           quantidade_pareceristas: ids.length,
           status: 'pendente'
@@ -487,16 +482,16 @@ export const PrefeituraProjetoDetalhes = () => {
     // Verificar quais pareceristas já têm avaliações
     const { data: avaliacoesExistentes } = await supabase
       .from('avaliacoes')
-      .select('parecerista_id')
+      .select('parecerista_id, status')
       .eq('projeto_id', projetoId);
 
-    const pareceristasJaAtribuidos = avaliacoesExistentes?.map(a => a.parecerista_id) || [];
+    const pareceristasJaAtribuidos = (avaliacoesExistentes as any[])?.map(a => a.parecerista_id) || [];
     const novosPareceristas = ids.filter(id => !pareceristasJaAtribuidos.includes(id));
 
     // Criar avaliações para os novos pareceristas vinculadas à avaliação final
     if (novosPareceristas.length > 0 && avaliacaoFinalId) {
       const avaliacoesParaCriar = novosPareceristas.map(pareceristaId => ({
-        prefeitura_id: projeto.prefeitura_id || prefeitura.id,
+        prefeitura_id: projeto?.prefeitura_id || prefeitura.id,
         projeto_id: projetoId,
         parecerista_id: pareceristaId,
         avaliacao_final_id: avaliacaoFinalId,
@@ -514,7 +509,10 @@ export const PrefeituraProjetoDetalhes = () => {
       const totalPareceristas = (avaliacoesExistentes?.length || 0) + novosPareceristas.length;
       await (supabase
         .from('avaliacoes_final') as any)
-        .update({ quantidade_pareceristas: totalPareceristas })
+        .update({ 
+          quantidade_pareceristas: totalPareceristas,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', avaliacaoFinalId);
 
       // Atualizar contador de projetos dos pareceristas
@@ -535,18 +533,24 @@ export const PrefeituraProjetoDetalhes = () => {
       }
     }
 
-    // Atualizar status do projeto para aguardando_avaliacao quando pareceristas são atribuídos
+    // Atualizar status do projeto conforme as avaliações
     const totalAvaliacoes = (avaliacoesExistentes?.length || 0) + novosPareceristas.length;
-    if (totalAvaliacoes > 0 && projeto.status === 'aguardando_parecerista') {
-      const { error: projetoError } = await (supabase
-        .from('projetos') as any)
-        .update({
-          status: 'aguardando_avaliacao',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', projetoId);
+    if (totalAvaliacoes > 0) {
+      const temAvaliacaoIniciada = [...((avaliacoesExistentes as any[]) || []), ...novosPareceristas.map(() => ({ status: 'pendente' }))].some(a => a.status === 'em_avaliacao' || a.status === 'avaliado');
+      
+      const novoStatusProjeto = temAvaliacaoIniciada ? 'em_avaliacao' : 'aguardando_avaliacao';
+      
+      if (projeto && projeto.status !== novoStatusProjeto && projeto.status !== 'avaliado' && projeto.status !== 'aprovado' && projeto.status !== 'rejeitado') {
+        const { error: projetoError } = await (supabase
+          .from('projetos') as any)
+          .update({
+            status: novoStatusProjeto,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', projetoId);
 
-      if (projetoError) throw projetoError;
+        if (projetoError) throw projetoError;
+      }
     }
   };
 
@@ -586,60 +590,95 @@ export const PrefeituraProjetoDetalhes = () => {
     deleteMovimentacao
   } = useMovimentacoesFinanceiras(projetoId || '', contaSelecionada || undefined);
 
+  const {
+    diligencias: pendenciasSolicitadas,
+    loading: loadingPendencias,
+    createDiligencia,
+    deleteDiligencia,
+    updateStatusDiligencia,
+    refresh: refreshPendencias
+  } = useDiligencias(projetoId || '');
+
   const handleCriarPendencia = async () => {
-    if (!novaPendencia.trim() || !projetoId || !user?.id) return;
-
-    const success = await createPendencia({
-      text: novaPendencia.trim(),
-      projeto_id: projetoId,
-      criado_por: user.id,
-      arquivo: arquivoUrl.trim() || undefined
-    });
-
-    if (success) {
+    if (!novaPendenciaTitulo.trim() || !novaPendenciaDescricao.trim()) {
       toast({
-        title: "Pendência criada",
-        description: "A pendência foi adicionada com sucesso.",
-      });
-      setNovaPendencia('');
-      setArquivoUrl('');
-      setShowPendenciaModal(false);
-    } else {
-      toast({
-        title: "Erro",
-        description: "Não foi possível criar a pendência.",
+        title: "Campos obrigatórios",
+        description: "Por favor, preencha o título e a descrição da pendência.",
         variant: "destructive",
       });
+      return;
+    }
+
+    setEnviandoModelo(true);
+    try {
+      let modeloUrl = undefined;
+      let modeloNome = undefined;
+
+      if (novaPendenciaModelo) {
+        const fileExt = novaPendenciaModelo.name.split('.').pop();
+        const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`;
+        const filePath = `modelos_pendencias/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('documentos_habilitacao')
+          .upload(filePath, novaPendenciaModelo);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('documentos_habilitacao')
+          .getPublicUrl(filePath);
+
+        modeloUrl = publicUrl;
+        modeloNome = novaPendenciaModelo.name;
+      }
+
+      const success = await createDiligencia(
+        novaPendenciaTitulo.trim(), 
+        novaPendenciaDescricao.trim(),
+        modeloUrl,
+        modeloNome
+      );
+      
+      if (success) {
+        toast({
+          title: "Sucesso",
+          description: "Pendência (solicitação de documento) criada com sucesso!",
+        });
+        setShowPendenciaModal(false);
+        setNovaPendenciaTitulo('');
+        setNovaPendenciaDescricao('');
+        setNovaPendenciaModelo(null);
+        refreshPendencias();
+      }
+    } catch (error: any) {
+      console.error('Erro ao criar pendência:', error);
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao criar pendência",
+        variant: "destructive",
+      });
+    } finally {
+      setEnviandoModelo(false);
     }
   };
 
-  const handleMarcarRealizada = async (id: number) => {
-    const success = await updatePendencia(id, { realizada: true });
-    if (success) {
-      toast({
-        title: "Sucesso",
-        description: "Pendência marcada como realizada!",
-      });
-    } else {
-      toast({
-        title: "Erro",
-        description: "Erro ao atualizar pendência. Tente novamente.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleDeletarPendencia = async (id: number) => {
-    const success = await deletePendencia(id);
-    if (success) {
-      toast({
-        title: "Pendência removida",
-        description: "A pendência foi removida com sucesso.",
-      });
-    } else {
+  const handleDeletarPendencia = async (id: string) => {
+    if (!confirm('Tem certeza que deseja excluir esta pendência?')) return;
+    
+    try {
+      const success = await deleteDiligencia(id);
+      if (success) {
+        toast({
+          title: "Sucesso",
+          description: "Pendência excluída com sucesso!",
+        });
+        refreshPendencias();
+      }
+    } catch (error: any) {
       toast({
         title: "Erro",
-        description: "Não foi possível remover a pendência.",
+        description: error.message || "Erro ao excluir pendência",
         variant: "destructive",
       });
     }
@@ -724,6 +763,7 @@ export const PrefeituraProjetoDetalhes = () => {
       });
     }
   };
+
 
   const handleAtribuirParecerista = async () => {
     if (!pareceristaSelecionado || !avaliacaoSelecionadaId) return;
@@ -1033,9 +1073,22 @@ export const PrefeituraProjetoDetalhes = () => {
         <Tabs defaultValue="informacoes" className="space-y-6">
           <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="informacoes">Informações Gerais</TabsTrigger>
-            <TabsTrigger value="avaliacao">Avaliação</TabsTrigger>
-            <TabsTrigger value="documentacao">Documentação</TabsTrigger>
-            <TabsTrigger value="pendencias">Pendências</TabsTrigger>
+            <TabsTrigger value="avaliacao" className="gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Avaliação
+            </TabsTrigger>
+            <TabsTrigger value="pendencias" className="gap-2">
+              <Paperclip className="h-4 w-4" />
+              Pendências
+              {pendenciasSolicitadas.filter(d => d.status === 'respondido').length > 0 && (
+                <Badge className="bg-blue-500 ml-1 px-1 min-w-[1.2rem] h-5">
+                  {pendenciasSolicitadas.filter(d => d.status === 'respondido').length}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="documentacao" className="gap-2">
+              Documentação
+            </TabsTrigger>
             <TabsTrigger value="prestacao">Prestação de Contas</TabsTrigger>
             <TabsTrigger value="openbanking">OpenBanking</TabsTrigger>
           </TabsList>
@@ -1055,6 +1108,19 @@ export const PrefeituraProjetoDetalhes = () => {
                   <div>
                     <label className="text-sm font-medium text-gray-500">Nome do Projeto</label>
                     <p className="text-sm font-medium">{projeto.nome}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Inscrição Municipal</label>
+                    <p className="text-sm">{(projeto.proponente as any).inscricao_municipal || 'Não informado'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Inscrição Estadual</label>
+                    <p className="text-sm">{projeto.proponente.inscricao_estadual || 'Não informado'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">E-mail</label>
+                    <p className="text-sm">{(projeto.proponente as any).email_responsavel || (projeto.proponente as any).telefone_responsavel ? '' : 'Não informado'}</p>
+                    <p className="text-sm">{(projeto.proponente as any).email_responsavel}</p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-500">Categoria</label>
@@ -1081,6 +1147,10 @@ export const PrefeituraProjetoDetalhes = () => {
                     <label className="text-sm font-medium text-gray-500">Número de Inscrição</label>
                     <p className="text-sm">{projeto.numero_inscricao || 'Não informado'}</p>
                   </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Nome</label>
+                    <p className="text-sm font-medium">{(projeto.proponente as any).nome_responsavel || 'Não informado'}</p>
+                  </div>
                 </CardContent>
               </Card>
 
@@ -1096,6 +1166,10 @@ export const PrefeituraProjetoDetalhes = () => {
                   <div>
                     <label className="text-sm font-medium text-gray-500">Perfil do Público</label>
                     <p className="text-sm">{projeto.perfil_publico || 'Não informado'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">CPF</label>
+                    <p className="text-sm">{(projeto.proponente as any).cpf_responsavel || 'Não informado'}</p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-500">Público Prioritário</label>
@@ -1210,6 +1284,10 @@ export const PrefeituraProjetoDetalhes = () => {
                     <p className="text-sm">
                       {projeto.data_inicio ? new Date(projeto.data_inicio).toLocaleDateString('pt-BR') : 'Não informado'}
                     </p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Data de Nascimento</label>
+                    <p className="text-sm">{(projeto.proponente as any).data_nascimento_responsavel ? formatarData((projeto.proponente as any).data_nascimento_responsavel) : 'Não informado'}</p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-500">Data de Final</label>
@@ -1435,6 +1513,9 @@ export const PrefeituraProjetoDetalhes = () => {
                       {/* Representante Legal */}
                       {(projeto.proponente.nome_responsavel || projeto.proponente.cpf_responsavel || projeto.proponente.cargo_responsavel) && (
                         <div className="pt-4 border-t">
+                          <CardDescription>
+                  Dados do representante legal {(projeto.proponente as any).nome_responsavel && `(${(projeto.proponente as any).cpf_responsavel})`} - {(projeto.proponente as any).cargo_responsavel}
+                </CardDescription>
                           <h4 className="text-sm font-semibold text-gray-700 mb-3">Representante Legal</h4>
                           <div className="space-y-4">
                             {/* Dados Básicos */}
@@ -1495,18 +1576,18 @@ export const PrefeituraProjetoDetalhes = () => {
                                 <h5 className="text-xs font-semibold text-gray-600 mb-2">Endereço</h5>
                                 <div className="space-y-1">
                                   <p className="text-sm text-gray-700">
-                                    {[
-                                      projeto.proponente.endereco_responsavel,
-                                      projeto.proponente.numero_responsavel,
-                                      projeto.proponente.complemento_responsavel
-                                    ].filter(Boolean).join(', ')}
+                                  <div className="flex gap-2">
+                      <p className="text-sm">{(projeto.proponente as any).endereco_responsavel},</p>
+                      <p className="text-sm">{(projeto.proponente as any).numero_responsavel}</p>
+                      <p className="text-sm">{(projeto.proponente as any).complemento_responsavel}</p>
+                    </div>
                                   </p>
                                   <p className="text-sm text-gray-700">
-                                    {[
-                                      projeto.proponente.cidade_responsavel,
-                                      projeto.proponente.estado_responsavel,
-                                      projeto.proponente.cep_responsavel
-                                    ].filter(Boolean).join(' - ')}
+                                  <div className="flex gap-2">
+                      <p className="text-sm">{(projeto.proponente as any).cidade_responsavel} -</p>
+                      <p className="text-sm">{(projeto.proponente as any).estado_responsavel}</p>
+                      <p className="text-sm">{(projeto.proponente as any).cep_responsavel}</p>
+                    </div>
                                   </p>
                                 </div>
                               </div>
@@ -1515,6 +1596,9 @@ export const PrefeituraProjetoDetalhes = () => {
                             {/* Dados Pessoais */}
                             {(projeto.proponente.comunidade_tradicional_responsavel || projeto.proponente.genero_responsavel || projeto.proponente.raca_responsavel || projeto.proponente.escolaridade_responsavel || projeto.proponente.renda_mensal_responsavel) && (
                               <div className="pt-4 border-t">
+                                <CardDescription>
+                  Dados sociais do representante legal {(projeto.proponente as any).comunidade_tradicional_responsavel}, {(projeto.proponente as any).genero_responsavel}, {(projeto.proponente as any).raca_responsavel}, {(projeto.proponente as any).escolaridade_responsavel}, {(projeto.proponente as any).renda_mensal_responsavel}
+                </CardDescription>
                                 <h5 className="text-xs font-semibold text-gray-600 mb-3">Dados Pessoais</h5>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                   {projeto.proponente.comunidade_tradicional_responsavel && (
@@ -1572,6 +1656,9 @@ export const PrefeituraProjetoDetalhes = () => {
                             {/* Atividade Artística */}
                             {(projeto.proponente.funcao_artistica_responsavel || projeto.proponente.profissao_responsavel) && (
                               <div className="pt-4 border-t">
+                                <CardDescription>
+                  Dados profissionais do representante legal {(projeto.proponente as any).funcao_artistica_responsavel} - {(projeto.proponente as any).profissao_responsavel}
+                </CardDescription>
                                 <h5 className="text-xs font-semibold text-gray-600 mb-3">Atividade Profissional</h5>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                   {projeto.proponente.funcao_artistica_responsavel && (
@@ -1653,6 +1740,10 @@ export const PrefeituraProjetoDetalhes = () => {
                   <div>
                     <label className="text-sm font-medium text-gray-500">Venda de Produtos</label>
                     <p className="text-sm">{projeto.venda_produtos ? 'Sim' : 'Não'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Comunidade Tradicional</label>
+                    <p className="text-sm">{traduzirComunidade((projeto.proponente as any).comunidade_tradicional_responsavel || '')}</p>
                   </div>
                   {projeto.venda_produtos && projeto.detalhes_venda_produtos && (
                     <div>
@@ -2310,27 +2401,36 @@ export const PrefeituraProjetoDetalhes = () => {
                     </CardDescription>
                   </div>
                   <div className="flex items-center gap-2">
-                    {projeto?.status === 'avaliado' && (
-                      <>
-                        <Button
-                          variant="default"
-                          className="bg-green-600 hover:bg-green-700"
-                          onClick={handleHabilitar}
-                          disabled={processandoAcao}
-                        >
-                          <CheckCircle className="h-4 w-4 mr-2" />
-                          Habilitar Projeto
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          onClick={() => setShowInabilitarProjetoModal(true)}
-                          disabled={processandoAcao}
-                        >
-                          <XCircle className="h-4 w-4 mr-2" />
-                          Inabilitar Projeto
-                        </Button>
-                      </>
-                    )}
+                    {(() => {
+                      const temAvaliacaoConcluida = avaliacoes.some(a => a.status === 'avaliado');
+                      const podeHabilitar = projeto?.status === 'avaliado' || 
+                        (['aguardando_avaliacao', 'em_avaliacao', 'recebido', 'aguardando_parecerista'].includes(projeto?.status || '') && temAvaliacaoConcluida);
+                      
+                      if (podeHabilitar) {
+                        return (
+                          <>
+                            <Button
+                              variant="default"
+                              className="bg-green-600 hover:bg-green-700"
+                              onClick={handleHabilitar}
+                              disabled={processandoAcao}
+                            >
+                              <CheckCircle className="h-4 w-4 mr-2" />
+                              Habilitar Projeto
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              onClick={() => setShowInabilitarProjetoModal(true)}
+                              disabled={processandoAcao}
+                            >
+                              <XCircle className="h-4 w-4 mr-2" />
+                              Inabilitar Projeto
+                            </Button>
+                          </>
+                        );
+                      }
+                      return null;
+                    })()}
                     {/*projeto?.proponente?.tipo && documentos.length === 0 && (
                       <Button 
                         variant="outline"
@@ -2406,7 +2506,11 @@ export const PrefeituraProjetoDetalhes = () => {
                               <Button 
                                 variant="ghost" 
                                 size="sm" 
-                                onClick={() => handleDownload(anexo.url, anexo.titulo)}
+                                onClick={() => {
+                                  const extension = anexo.url.split('.').pop()?.split('?')[0] || 'pdf';
+                                  const cmp = (projeto?.numero_inscricao || 'MODELO').replace(/\//g, '-');
+                                  handleDownload(anexo.url, `${cmp} - ${anexo.titulo}.${extension}`);
+                                }}
                                 className="shrink-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 h-8"
                               >
                                 <Download className="h-4 w-4 mr-1" />
@@ -2470,6 +2574,9 @@ export const PrefeituraProjetoDetalhes = () => {
                                   {doc.tipo === 'complementar' && (
                                     <Badge variant="secondary" className="bg-blue-100 text-blue-800 text-xs">Documento Complementar</Badge>
                                   )}
+                                  {doc.tipo === 'anexo_projeto' && (
+                                    <Badge variant="secondary" className="bg-purple-100 text-purple-800 text-xs">Anexo de Inscrição</Badge>
+                                  )}
                                   <Badge className={statusConfig.color}>
                                     {statusConfig.icon}
                                     <span className="ml-1">{statusConfig.label}</span>
@@ -2483,7 +2590,7 @@ export const PrefeituraProjetoDetalhes = () => {
                                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm text-gray-600">
                                   <div>
                                     <span className="font-medium">Tipo:</span>
-                                    <p>{doc.tipo === 'complementar' ? 'Complementar' : (doc.tipo || 'Habilitação')}</p>
+                                    <p>{doc.tipo === 'complementar' ? 'Complementar' : doc.tipo === 'anexo_projeto' ? 'Anexo de Inscrição' : (doc.tipo || 'Habilitação')}</p>
                                   </div>
                                   {doc.data_upload && (
                                     <div>
@@ -2498,7 +2605,13 @@ export const PrefeituraProjetoDetalhes = () => {
                                     <Button
                                       variant="outline"
                                       size="sm"
-                                      onClick={() => doc.arquivo_url && handleDownload(doc.arquivo_url, doc.arquivo_nome || 'documento')}
+                                      onClick={() => {
+                                        if (!doc.arquivo_url) return;
+                                        const extension = doc.arquivo_url.split('.').pop()?.split('?')[0] || 'pdf';
+                                        const cmp = (projeto?.numero_inscricao || 'PROJETO').replace(/\//g, '-');
+                                        // Usar o nome que aparece na UI para o arquivo baixado
+                                        handleDownload(doc.arquivo_url, `${cmp} - ${doc.nome}.${extension}`);
+                                      }}
                                       className="flex items-center gap-2"
                                     >
                                       <Download className="h-4 w-4" />
@@ -2549,18 +2662,18 @@ export const PrefeituraProjetoDetalhes = () => {
             </Card>
           </TabsContent>
 
-          {/* Pendências */}
+          {/* Pendências (ex-Diligências) */}
           <TabsContent value="pendencias" className="space-y-6">
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="flex items-center gap-2">
-                      <AlertTriangle className="h-5 w-5" />
-                      Pendências do Projeto
+                      <Paperclip className="h-5 w-5" />
+                      Pendências e Solicitações
                     </CardTitle>
                     <CardDescription>
-                      Lista de pendências e questões a serem resolvidas
+                      Solicite documentos complementares ou correções ao proponente
                     </CardDescription>
                   </div>
                   <Button onClick={() => setShowPendenciaModal(true)}>
@@ -2571,98 +2684,101 @@ export const PrefeituraProjetoDetalhes = () => {
               </CardHeader>
               <CardContent>
                 {loadingPendencias ? (
-                  <div className="text-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                    <p className="mt-2 text-gray-500">Carregando pendências...</p>
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
                   </div>
-                ) : errorPendencias ? (
-                  <div className="text-center py-8 text-red-500">
-                    <AlertTriangle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>Erro ao carregar pendências: {errorPendencias}</p>
-                    <Button onClick={refreshPendencias} className="mt-4">
-                      Tentar Novamente
-                    </Button>
-                  </div>
-                ) : pendencias.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <AlertTriangle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>Nenhuma pendência no momento.</p>
-                    <p className="text-sm">Clique em "Nova Pendência" para adicionar uma questão.</p>
+                ) : pendenciasSolicitadas.length === 0 ? (
+                  <div className="text-center py-12 bg-gray-50 rounded-lg border border-dashed">
+                    <Paperclip className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-500">Nenhuma pendência criada para este projeto.</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {pendencias.map((pendencia) => (
-                      <div 
-                        key={pendencia.id} 
-                        className={`border rounded-lg p-4 ${
-                          pendencia.realizada 
-                            ? 'bg-green-50 border-green-200' 
-                            : 'bg-yellow-50 border-yellow-200'
-                        }`}
-                      >
+                    {pendenciasSolicitadas.map((pendencia) => (
+                      <div key={pendencia.id} className="border rounded-lg p-4 bg-white shadow-sm">
                         <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <p className="text-gray-900 font-medium">{pendencia.text}</p>
-                              {pendencia.realizada && (
-                                <Badge variant="secondary" className="bg-green-100 text-green-800">
-                                  <Check className="h-3 w-3 mr-1" />
-                                  Realizada
-                                </Badge>
-                              )}
+                          <div className="space-y-2 flex-1">
+                            <div className="flex items-center gap-2">
+                              <h4 className="font-bold text-gray-900">{pendencia.titulo}</h4>
+                              <Badge className={
+                                pendencia.status === 'pendente' ? 'bg-orange-100 text-orange-800' :
+                                pendencia.status === 'respondido' ? 'bg-blue-100 text-blue-800' :
+                                pendencia.status === 'aceito' ? 'bg-green-100 text-green-800' :
+                                'bg-red-100 text-red-800'
+                              }>
+                                {pendencia.status === 'pendente' ? 'Pendente' :
+                                 pendencia.status === 'respondido' ? 'Respondido' :
+                                 pendencia.status === 'aceito' ? 'Aceito' : 'Recusado'}
+                              </Badge>
                             </div>
+                            <p className="text-sm text-gray-600">{pendencia.descricao}</p>
                             
-                            {pendencia.arquivo && (
-                              <div className="mb-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => pendencia.arquivo && handleDownload(pendencia.arquivo, 'pendencia')}
-                                  className="text-blue-600 hover:text-blue-700"
+                            {pendencia.modelo_url && (
+                              <div className="flex items-center gap-2 mt-2 p-2 bg-gray-50 border border-dashed rounded-md w-fit">
+                                <FileText className="h-4 w-4 text-primary" />
+                                <span className="text-xs font-medium text-gray-700">Modelo: {pendencia.modelo_nome}</span>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="h-6 px-2 text-primary hover:text-primary-dark"
+                                  onClick={() => window.open(pendencia.modelo_url, '_blank')}
                                 >
-                                  <ExternalLink className="h-4 w-4 mr-2" />
-                                  Abrir Arquivo
+                                  <Download className="h-3 w-3 mr-1" />
+                                  Baixar
                                 </Button>
                               </div>
                             )}
-                            
-                            <div className="flex items-center gap-4 text-sm text-gray-500">
-                              <span>Criado por: {pendencia.criado_por_nome}</span>
-                              <span>
-                                {new Date(pendencia.created_at).toLocaleDateString('pt-BR', {
-                                  day: '2-digit',
-                                  month: '2-digit',
-                                  year: 'numeric',
-                                  hour: '2-digit',
-                                  minute: '2-digit'
-                                })}
-                              </span>
-                            </div>
-                          </div>
-                          
-                          <div className="flex items-center gap-2">
-                            {!pendencia.realizada && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleMarcarRealizada(pendencia.id)}
-                                className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                                title="Marcar como realizada"
-                              >
-                                <Check className="h-4 w-4" />
-                              </Button>
+
+                            {pendencia.status === 'respondido' && (
+                              <div className="mt-4 p-3 bg-blue-50 border border-blue-100 rounded-md">
+                                <h5 className="text-xs font-bold text-blue-800 uppercase mb-2">Resposta do Proponente</h5>
+                                <p className="text-sm text-blue-900 mb-3">{pendencia.observacoes_resposta || 'Sem observações.'}</p>
+                                {pendencia.arquivo_url && (
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline" 
+                                    className="bg-white border-blue-200 text-blue-700 hover:bg-blue-100"
+                                    onClick={() => {
+                                      if (!pendencia.arquivo_url) return;
+                                      const extension = pendencia.arquivo_url.split('.').pop()?.split('?')[0] || 'pdf';
+                                      const cmp = (projeto?.numero_inscricao || 'PROJETO').replace(/\//g, '-');
+                                      handleDownload(pendencia.arquivo_url, `${cmp} - ${pendencia.titulo}.${extension}`);
+                                    }}
+                                  >
+                                    <Download className="h-4 w-4 mr-2" />
+                                    Visualizar Documento
+                                  </Button>
+                                )}
+                                
+                                <div className="flex gap-2 mt-4">
+                                  <Button 
+                                    size="sm" 
+                                    className="bg-green-600 hover:bg-green-700"
+                                    onClick={() => updateStatusDiligencia(pendencia.id, 'aceito')}
+                                  >
+                                    <Check className="h-4 w-4 mr-2" />
+                                    Aceitar
+                                  </Button>
+                                  <Button 
+                                    size="sm" 
+                                    variant="destructive"
+                                    onClick={() => updateStatusDiligencia(pendencia.id, 'recusado')}
+                                  >
+                                    <XCircle className="h-4 w-4 mr-2" />
+                                    Recusar
+                                  </Button>
+                                </div>
+                              </div>
                             )}
-                            
-                            {!pendencia.realizada && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleDeletarPendencia(pendencia.id)}
-                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                title="Remover pendência"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                          </div>
+                          <div className="text-right ml-4">
+                            <span className="text-[10px] text-gray-400 block">
+                              Criada em: {new Date(pendencia.created_at).toLocaleDateString('pt-BR')}
+                            </span>
+                            {pendencia.data_resposta && (
+                              <span className="text-[10px] text-gray-400 block mt-1">
+                                Respondida em: {new Date(pendencia.data_resposta).toLocaleDateString('pt-BR')}
+                              </span>
                             )}
                           </div>
                         </div>
@@ -2673,6 +2789,7 @@ export const PrefeituraProjetoDetalhes = () => {
               </CardContent>
             </Card>
           </TabsContent>
+
 
           {/* Prestação de Contas */}
           <TabsContent value="prestacao" className="space-y-6">
@@ -3150,61 +3267,6 @@ export const PrefeituraProjetoDetalhes = () => {
         </Tabs>
       </div>
 
-      {/* Modal para criar pendência */}
-      <Dialog open={showPendenciaModal} onOpenChange={setShowPendenciaModal}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Nova Pendência</DialogTitle>
-            <DialogDescription>
-              Descreva a pendência ou questão que precisa ser resolvida para este projeto.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="pendencia-text">Descrição da Pendência</Label>
-              <Textarea
-                id="pendencia-text"
-                placeholder="Descreva a pendência..."
-                value={novaPendencia}
-                onChange={(e) => setNovaPendencia(e.target.value)}
-                className="mt-1"
-                rows={4}
-              />
-            </div>
-            <div>
-              <Label htmlFor="arquivo-url">URL do Arquivo (Opcional)</Label>
-              <Input
-                id="arquivo-url"
-                placeholder="https://exemplo.com/arquivo.pdf"
-                value={arquivoUrl}
-                onChange={(e) => setArquivoUrl(e.target.value)}
-                className="mt-1"
-              />
-              <p className="text-sm text-gray-500 mt-1">
-                Cole aqui o link para um arquivo relacionado à pendência
-              </p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowPendenciaModal(false);
-                setNovaPendencia('');
-                setArquivoUrl('');
-              }}
-            >
-              Cancelar
-            </Button>
-            <Button
-              onClick={handleCriarPendencia}
-              disabled={!novaPendencia.trim()}
-            >
-              Criar Pendência
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Modal para criar avaliação */}
       <Dialog open={showAvaliacaoModal} onOpenChange={(open) => {
@@ -3963,6 +4025,88 @@ export const PrefeituraProjetoDetalhes = () => {
               disabled={!motivoDesclassificacao.trim() || processandoAcao}
             >
               {processandoAcao ? "Processando..." : "Desclassificar Projeto"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showPendenciaModal} onOpenChange={setShowPendenciaModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Nova Pendência</DialogTitle>
+            <DialogDescription>
+              Solicite documentos complementares ou correções ao proponente.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="pendencia-titulo">Título da Pendência</Label>
+              <Input
+                id="pendencia-titulo"
+                placeholder="Ex: Documento de Identidade Legível"
+                value={novaPendenciaTitulo}
+                onChange={(e) => setNovaPendenciaTitulo(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="pendencia-descricao">Descrição detalhada</Label>
+              <Textarea
+                id="pendencia-descricao"
+                placeholder="Descreva exatamente o que o proponente precisa enviar ou corrigir..."
+                value={novaPendenciaDescricao}
+                onChange={(e) => setNovaPendenciaDescricao(e.target.value)}
+                className="mt-1"
+                rows={4}
+              />
+            </div>
+            <div>
+              <Label htmlFor="pendencia-modelo" className="text-sm font-medium flex items-center gap-1.5 mb-2 mt-4">
+                <Paperclip className="w-4 h-4 text-slate-500" />
+                Anexar Modelo/Template (Opcional)
+              </Label>
+              <Input
+                id="pendencia-modelo"
+                type="file"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) setNovaPendenciaModelo(file);
+                }}
+                className="bg-white"
+              />
+              <p className="text-[11px] text-gray-500 mt-1">
+                Se for algo que a pessoa deve preencher, anexe o arquivo aqui para ela baixar.
+              </p>
+              {novaPendenciaModelo && (
+                <p className="text-[11px] text-green-600 font-medium flex items-center gap-1 mt-1">
+                  <CheckCircle className="h-3 w-3" /> Selecionado: {novaPendenciaModelo.name}
+                </p>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowPendenciaModal(false);
+                setNovaPendenciaTitulo('');
+                setNovaPendenciaDescricao('');
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleCriarPendencia}
+              disabled={!novaPendenciaTitulo.trim() || !novaPendenciaDescricao.trim() || enviandoModelo}
+            >
+              {enviandoModelo ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Criando...
+                </>
+              ) : (
+                'Criar Pendência'
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
