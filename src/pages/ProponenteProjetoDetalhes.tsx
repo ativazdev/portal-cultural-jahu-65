@@ -424,9 +424,9 @@ export const ProponenteProjetoDetalhes = () => {
   // Estados para OpenBanking
   const [contaSelecionada, setContaSelecionada] = useState<string | null>(null);
 
-  // Estados para Resposta de Diligência
-  const [showResponderDiligenciaModal, setShowResponderDiligenciaModal] = useState(false);
-  const [diligenciaSelecionadaId, setDiligenciaSelecionadaId] = useState<string | null>(null);
+  // Estados para Resposta de Pendência
+  const [showResponderPendenciaModal, setShowResponderPendenciaModal] = useState(false);
+  const [pendenciaSelecionadaId, setPendenciaSelecionadaId] = useState<string | null>(null);
   const [respostaObs, setRespostaObs] = useState('');
   const [respostaArquivo, setRespostaArquivo] = useState<File | null>(null);
   const [enviandoResposta, setEnviandoResposta] = useState(false);
@@ -473,10 +473,10 @@ export const ProponenteProjetoDetalhes = () => {
   } = useMovimentacoesFinanceiras(projetoId || '', contaSelecionada || undefined);
 
   const {
-    diligencias,
-    loading: loadingDiligencias,
-    responderDiligencia,
-    refresh: refreshDiligencias
+    diligencias: pendenciasSolicitadas,
+    loading: loadingPendencias,
+    responderDiligencia: responderPendencia,
+    refresh: refreshPendencias
   } = useDiligencias(projetoId || '');
 
   useEffect(() => {
@@ -709,10 +709,10 @@ export const ProponenteProjetoDetalhes = () => {
       }
 
       const authClient = getAuthenticatedSupabaseClient('proponente');
-      const { data, error } = await authClient
-        .from('projetos')
+      const { data, error } = await (authClient
+        .from('projetos') as any)
         .update(dadosUpdate)
-        .eq('id', projeto.id)
+        .eq('id', (projeto as any).id)
         .select();
 
       if (error) throw error;
@@ -1597,7 +1597,7 @@ export const ProponenteProjetoDetalhes = () => {
   };
 
   const handleResponderDiligencia = async () => {
-    if (!diligenciaSelecionadaId || !respostaArquivo) {
+    if (!pendenciaSelecionadaId || !respostaArquivo) {
       toast({
         title: "Atenção",
         description: "Selecione um arquivo para enviar.",
@@ -1611,7 +1611,7 @@ export const ProponenteProjetoDetalhes = () => {
       const authClient = getAuthenticatedSupabaseClient('proponente');
       
       const fileExt = respostaArquivo.name.split('.').pop();
-      const fileName = `diligencia-${diligenciaSelecionadaId}-${Date.now()}.${fileExt}`;
+      const fileName = `diligencia-${pendenciaSelecionadaId}-${Date.now()}.${fileExt}`;
       
       const { data: uploadData, error: uploadError } = await authClient.storage
         .from('documentos_habilitacao') // Usando o mesmo bucket por conveniência
@@ -1623,18 +1623,18 @@ export const ProponenteProjetoDetalhes = () => {
         .from('documentos_habilitacao')
         .getPublicUrl(fileName);
 
-      const success = await responderDiligencia(diligenciaSelecionadaId, publicUrl, respostaObs);
+      const success = await responderPendencia(pendenciaSelecionadaId, publicUrl, respostaObs);
 
       if (success) {
-        setShowResponderDiligenciaModal(false);
-        setDiligenciaSelecionadaId(null);
+        setShowResponderPendenciaModal(false);
+        setPendenciaSelecionadaId(null);
         setRespostaObs('');
         setRespostaArquivo(null);
       }
     } catch (error: any) {
       toast({
         title: "Erro",
-        description: error.message || "Erro ao responder diligência",
+        description: error.message || "Erro ao responder pendência",
         variant: "destructive",
       });
     } finally {
@@ -3392,18 +3392,18 @@ export const ProponenteProjetoDetalhes = () => {
                 </div>
               </CardHeader>
               <CardContent>
-                {loadingDiligencias ? (
+                {loadingPendencias ? (
                   <div className="flex items-center justify-center py-12">
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
                   </div>
-                ) : diligencias.length === 0 ? (
+                ) : pendenciasSolicitadas.length === 0 ? (
                   <div className="text-center py-12 bg-gray-50 rounded-lg border border-dashed">
                     <Paperclip className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                     <p className="text-gray-500">Você não possui pendências ou solicitações de documentos.</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {diligencias.map((diligencia) => (
+                    {pendenciasSolicitadas.map((diligencia) => (
                       <div key={diligencia.id} className="border rounded-lg p-4 bg-white shadow-sm">
                         <div className="flex items-start justify-between">
                           <div className="space-y-2 flex-1">
@@ -3446,8 +3446,8 @@ export const ProponenteProjetoDetalhes = () => {
                                 <Button 
                                   size="sm" 
                                   onClick={() => {
-                                    setDiligenciaSelecionadaId(diligencia.id);
-                                    setShowResponderDiligenciaModal(true);
+                                    setPendenciaSelecionadaId(diligencia.id);
+                                    setShowResponderPendenciaModal(true);
                                   }}
                                   className="bg-blue-600 hover:bg-blue-700"
                                 >
@@ -5589,11 +5589,11 @@ export const ProponenteProjetoDetalhes = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Modal Responder Diligência */}
-      <Dialog open={showResponderDiligenciaModal} onOpenChange={setShowResponderDiligenciaModal}>
+      {/* Modal Responder Pendência */}
+      <Dialog open={showResponderPendenciaModal} onOpenChange={setShowResponderPendenciaModal}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Responder Diligência</DialogTitle>
+            <DialogTitle>Responder Pendência</DialogTitle>
             <DialogDescription>
               Anexe o documento solicitado e adicione observações, se necessário.
             </DialogDescription>
@@ -5616,7 +5616,7 @@ export const ProponenteProjetoDetalhes = () => {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowResponderDiligenciaModal(false)}>Cancelar</Button>
+            <Button variant="outline" onClick={() => setShowResponderPendenciaModal(false)}>Cancelar</Button>
             <Button onClick={handleResponderDiligencia} disabled={enviandoResposta}>
               {enviandoResposta ? (
                 <>

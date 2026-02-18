@@ -467,7 +467,7 @@ export const PrefeituraProjetoDetalhes = () => {
       const { data: novaAvaliacaoFinal, error: avaliacaoFinalError } = await (supabase
         .from('avaliacoes_final') as any)
         .insert({
-          prefeitura_id: projeto?.prefeitura_id || prefeitura.id,
+          prefeitura_id: projeto?.prefeitura_id || prefeitura?.id,
           projeto_id: projetoId,
           quantidade_pareceristas: ids.length,
           status: 'pendente'
@@ -491,7 +491,7 @@ export const PrefeituraProjetoDetalhes = () => {
     // Criar avaliações para os novos pareceristas vinculadas à avaliação final
     if (novosPareceristas.length > 0 && avaliacaoFinalId) {
       const avaliacoesParaCriar = novosPareceristas.map(pareceristaId => ({
-        prefeitura_id: projeto?.prefeitura_id || prefeitura.id,
+        prefeitura_id: projeto?.prefeitura_id || prefeitura?.id,
         projeto_id: projetoId,
         parecerista_id: pareceristaId,
         avaliacao_final_id: avaliacaoFinalId,
@@ -540,7 +540,7 @@ export const PrefeituraProjetoDetalhes = () => {
       
       const novoStatusProjeto = temAvaliacaoIniciada ? 'em_avaliacao' : 'aguardando_avaliacao';
       
-      if (projeto && projeto.status !== novoStatusProjeto && projeto.status !== 'avaliado' && projeto.status !== 'aprovado' && projeto.status !== 'rejeitado') {
+      if (projeto && (projeto as any).status !== novoStatusProjeto && (projeto as any).status !== 'avaliado' && (projeto as any).status !== 'aprovado' && (projeto as any).status !== 'rejeitado') {
         const { error: projetoError } = await (supabase
           .from('projetos') as any)
           .update({

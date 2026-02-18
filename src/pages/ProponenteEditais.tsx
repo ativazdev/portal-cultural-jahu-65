@@ -97,7 +97,7 @@ export const ProponenteEditais = () => {
 
       // Ordenação personalizada: 'recebendo_projetos' primeiro, depois os demais.
       // Dentro de cada grupo, mantém a ordenação por data descrecente.
-      const ordenados = (data || []).sort((a, b) => {
+      const ordenados = ((data as any[]) || []).sort((a, b) => {
         if (a.status === 'recebendo_projetos' && b.status !== 'recebendo_projetos') return -1;
         if (a.status !== 'recebendo_projetos' && b.status === 'recebendo_projetos') return 1;
         
@@ -324,7 +324,12 @@ export const ProponenteEditais = () => {
                       {(() => {
                         const hoje = new Date();
                         const dataFinal = edital.data_prorrogacao ? new Date(edital.data_prorrogacao) : new Date(edital.data_final_envio_projeto);
-                        const isAberto = edital.status === 'recebendo_projetos' && hoje <= dataFinal;
+                        
+                        // O edital está aberto se:
+                        // 1. O status for 'recebendo_projetos' e estiver dentro do prazo
+                        // 2. OU se for um edital de prestação de contas e o status for 'ativo' ou 'em_execucao'
+                        const isAberto = (edital.status === 'recebendo_projetos' && hoje <= dataFinal) || 
+                                         (edital.has_accountability_phase && (edital.status === 'ativo' || edital.status === 'em_execucao' || edital.status === 'recebendo_projetos'));
                         
                         if (isAberto) {
                           return (

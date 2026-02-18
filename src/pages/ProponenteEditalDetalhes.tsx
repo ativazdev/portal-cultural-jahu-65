@@ -178,7 +178,7 @@ export const ProponenteEditalDetalhes = () => {
                       </div>
                     </div>
                     <Button 
-                      onClick={() => handleDownload(edital.regulamento!, `Edital_${edital.codigo}.pdf`)}
+                      onClick={() => handleDownload(edital.regulamento![0], `Edital_${edital.codigo}.pdf`)}
                       variant="outline"
                       size="sm"
                     >
@@ -220,31 +220,50 @@ export const ProponenteEditalDetalhes = () => {
           </div>
 
           <div className="space-y-6">
-            {/*<Card className="bg-primary/5 border-primary/20">
+            <Card className="bg-primary/5 border-primary/20">
               <CardHeader>
                 <CardTitle>Ações</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {edital.status === 'recebendo_projetos' ? (
-                  <Button 
-                    className="w-full text-lg py-6"
-                    onClick={() => navigate(`/${nomePrefeitura}/proponente/editais/${editalId}/cadastrar-projeto`)}
-                  >
-                    Inscrever Projeto
-                  </Button>
-                ) : (
-                  <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
-                    <p className="text-sm text-amber-800 text-center font-medium">
-                      Inscrições indisponíveis no momento. Status: {edital.status}
-                    </p>
-                  </div>
-                )}
+                {(() => {
+                  const hoje = new Date();
+                  const dataFinal = edital.data_prorrogacao ? new Date(edital.data_prorrogacao) : new Date(edital.data_final_envio_projeto);
+                  const isAberto = (edital.status === 'recebendo_projetos' && hoje <= dataFinal) || 
+                                   (edital.has_accountability_phase && (['ativo', 'em_execucao', 'recebendo_projetos'].includes(edital.status)));
+                  
+                  if (isAberto) {
+                    return (
+                      <Button 
+                        className={`w-full text-lg py-6 ${
+                          edital.has_accountability_phase ? "bg-green-600 hover:bg-green-700" : ""
+                        }`}
+                        onClick={() => {
+                          if (edital.has_accountability_phase) {
+                            navigate(`/${nomePrefeitura}/proponente/edital/${editalId}/prestar-contas`);
+                          } else {
+                            navigate(`/${nomePrefeitura}/proponente/editais/${editalId}/cadastrar-projeto`);
+                          }
+                        }}
+                      >
+                        {edital.has_accountability_phase ? "Prestar Contas" : "Inscrever Projeto"}
+                      </Button>
+                    );
+                  }
+                  
+                  return (
+                    <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
+                      <p className="text-sm text-amber-800 text-center font-medium">
+                        Inscrições indisponíveis no momento. Status: {edital.status}
+                      </p>
+                    </div>
+                  );
+                })()}
                 
                 <p className="text-xs text-gray-500 text-center">
                   Certifique-se de ler todo o regulamento antes de realizar sua inscrição.
                 </p>
               </CardContent>
-            </Card>*/}
+            </Card>
 
             <Card>
               <CardHeader>
