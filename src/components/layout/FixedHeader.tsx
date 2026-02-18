@@ -6,7 +6,7 @@ export const FixedHeader = () => {
         <header className="fixed top-0 left-0 w-full z-50 h-20 bg-white border-b-8 border-[#044D8B] shadow-sm flex items-center justify-between px-8">
             <div className="flex items-center gap-4">
                 <div className="flex flex-col">
-                    <span className="text-3xl font-bold text-[#044D8B] tracking-tighter">P+</span>
+                    <span className="text-3xl font-bold text-[#044D8B] tracking-tighter">PNAB+</span>
                 </div>
                 <div className="h-8 w-px bg-gray-300 mx-2"></div>
                 <span className="text-sm font-medium text-gray-600">
